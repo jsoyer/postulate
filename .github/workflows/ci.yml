@@ -1,0 +1,239 @@
+name: CI
+
+# Polyglot CI for the postulate monorepo.
+# Jobs are split per language and gated by path filters so that only the
+# affected subprojects run on a given change. The workflow file itself is
+# included in every filter so CI changes re-run everything.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Change detection — decides which language jobs need to run.
+  # ---------------------------------------------------------------------------
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      node: ${{ steps.filter.outputs.node }}
+      python: ${{ steps.filter.outputs.python }}
+      rust: ${{ steps.filter.outputs.rust }}
+      manager: ${{ steps.filter.outputs.manager }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      extension: ${{ steps.filter.outputs.extension }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            go:
+              - 'apps/api/**'
+              - 'apps/tui-go/**'
+              - '.github/workflows/ci.yml'
+            node:
+              - 'apps/manager/**'
+              - 'apps/mobile/**'
+              - 'apps/browser-extension/**'
+              - '.github/workflows/ci.yml'
+            manager:
+              - 'apps/manager/**'
+              - '.github/workflows/ci.yml'
+            mobile:
+              - 'apps/mobile/**'
+              - '.github/workflows/ci.yml'
+            extension:
+              - 'apps/browser-extension/**'
+              - '.github/workflows/ci.yml'
+            python:
+              - 'apps/tui-py/**'
+              - 'packages/pipeline/**'
+              - '.github/workflows/ci.yml'
+            rust:
+              - 'apps/tui-rs/**'
+              - '.github/workflows/ci.yml'
+
+  # ---------------------------------------------------------------------------
+  # Go — apps/api (go 1.25), apps/tui-go (go 1.26). Version read from each go.mod.
+  # ---------------------------------------------------------------------------
+  go:
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [apps/api, apps/tui-go]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ matrix.project }}/go.mod
+          cache-dependency-path: ${{ matrix.project }}/go.sum
+      - name: Build
+        run: go build ./...
+      - name: Test
+        run: go test ./... -race -cover -count=1
+
+  # ---------------------------------------------------------------------------
+  # Node/pnpm — each app is independent (own pnpm-lock.yaml, no root workspace).
+  # ---------------------------------------------------------------------------
+  node-manager:
+    needs: changes
+    if: needs.changes.outputs.manager == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/manager
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/manager/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Test
+        run: pnpm test
+
+  node-mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/mobile/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # mobile is an Expo app with no test script; type-checking is the CI gate.
+      - name: Type-check
+        run: pnpm typecheck
+
+  node-extension:
+    needs: changes
+    if: needs.changes.outputs.extension == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/browser-extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/browser-extension/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: pnpm build
+      - name: Test
+        run: pnpm test
+
+  # Extension lint is intentionally NON-BLOCKING.
+  # TODO: the browser-extension carries known lint debt inherited from cv-browser-extension
+  # (see Sprint 3 handoff notes). Remove `continue-on-error` once the debt is cleared.
+  node-extension-lint:
+    needs: changes
+    if: needs.changes.outputs.extension == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: apps/browser-extension
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: apps/browser-extension/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Lint (non-blocking, tracked debt)
+        run: pnpm lint
+
+  # ---------------------------------------------------------------------------
+  # Python — apps/tui-py (3.12, hatchling), packages/pipeline (3.11, requirements).
+  # ---------------------------------------------------------------------------
+  python:
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: apps/tui-py
+            python-version: "3.12"
+            install: pip install -e . pytest pytest-cov
+            test: pytest --cov=cv_tui --cov-report=term-missing
+          - project: packages/pipeline
+            python-version: "3.11"
+            install: pip install -r requirements.txt -r requirements-dev.txt
+            test: pytest tests/ -v --tb=short
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: ${{ matrix.install }}
+      - name: Test
+        run: ${{ matrix.test }}
+
+  # ---------------------------------------------------------------------------
+  # Rust — apps/tui-rs (edition 2021). Uses rustls, so no OpenSSL is required.
+  # ---------------------------------------------------------------------------
+  rust:
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/tui-rs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tui-rs
+      - name: Build
+        run: cargo build --locked
+      - name: Test
+        run: cargo test --locked
