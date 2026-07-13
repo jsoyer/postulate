@@ -1,0 +1,55 @@
+{
+  "task": "improvements",
+  "created": "2026-04-28",
+  "sprints": [
+    {
+      "id": 1,
+      "name": "OpenAPI cv-api Completion",
+      "status": "completed",
+      "batch": 1,
+      "dependencies": []
+    },
+    {
+      "id": 2,
+      "name": "Job Matching AI (cv-pipeline)",
+      "status": "completed",
+      "batch": 1,
+      "dependencies": []
+    },
+    {
+      "id": 4,
+      "name": "RSS Job Discovery",
+      "status": "completed",
+      "batch": 1,
+      "dependencies": []
+    },
+    {
+      "id": 5,
+      "name": "PDF/A Accessibility",
+      "status": "completed",
+      "batch": 1,
+      "dependencies": []
+    },
+    {
+      "id": 3,
+      "name": "Job Matching AI (cv-api + cv-manager)",
+      "status": "completed",
+      "batch": 2,
+      "dependencies": [2]
+    }
+  ],
+  "batches": [
+    {
+      "id": 1,
+      "sprints": [1, 2, 4, 5],
+      "parallel": true,
+      "status": "completed"
+    },
+    {
+      "id": 2,
+      "sprints": [3],
+      "parallel": false,
+      "status": "completed"
+    }
+  ]
+}

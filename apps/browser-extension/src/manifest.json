@@ -1,0 +1,92 @@
+{
+  "manifest_version": 3,
+  "name": "CV Pipeline",
+  "version": "0.1.0",
+  "description": "Detect job postings and trigger your CV tailoring pipeline with one click.",
+
+  "permissions": [
+    "activeTab",
+    "storage",
+    "notifications",
+    "alarms",
+    "tabs"
+  ],
+
+  "host_permissions": [
+    "https://www.linkedin.com/*",
+    "https://linkedin.com/*",
+    "https://www.indeed.com/*",
+    "https://indeed.com/*",
+    "https://www.welcometothejungle.com/*",
+    "https://welcometothejungle.com/*"
+  ],
+
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.linkedin.com/jobs/view/*",
+        "https://linkedin.com/jobs/view/*"
+      ],
+      "js": ["content/index.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.indeed.com/viewjob*",
+        "https://indeed.com/viewjob*",
+        "https://www.indeed.com/rc/clk*",
+        "https://indeed.com/rc/clk*"
+      ],
+      "js": ["content/index.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.welcometothejungle.com/*/companies/*/jobs/*",
+        "https://welcometothejungle.com/*/companies/*/jobs/*"
+      ],
+      "js": ["content/index.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "CV Pipeline"
+  },
+
+  "options_ui": {
+    "page": "options/index.html",
+    "open_in_tab": true
+  },
+
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "cv-pipeline@extension",
+      "strict_min_version": "109.0"
+    }
+  }
+}

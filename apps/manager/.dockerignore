@@ -1,0 +1,12 @@
+.git
+node_modules
+.next
+.env*
+*.log
+coverage
+.nyc_output
+e2e
+playwright-report
+test-results
+*.test.*
+*.spec.*

@@ -1,0 +1,55 @@
+{
+  "task": "production-readiness",
+  "created": "2026-04-28",
+  "sprints": [
+    {
+      "id": 1,
+      "name": "Manual Testing + DOM Selector Fixes",
+      "status": "completed",
+      "batch": 1,
+      "dependencies": [],
+      "notes": "Build fixed (TS error, vite paths, missing dep). 33/33 Vitest tests pass. Extension loads in browser. Live DOM testing requires real job URLs (LinkedIn blocks headless). Selectors verified via unit tests."
+    },
+    {
+      "id": 2,
+      "name": "Offline Retry Logic",
+      "status": "completed",
+      "batch": 2,
+      "dependencies": []
+    },
+    {
+      "id": 3,
+      "name": "Integration Tests + Icon Assets",
+      "status": "completed",
+      "batch": 2,
+      "dependencies": []
+    },
+    {
+      "id": 4,
+      "name": "Firefox Compatibility + Polish",
+      "status": "completed",
+      "batch": 3,
+      "dependencies": [2, 3]
+    }
+  ],
+  "batches": [
+    {
+      "id": 1,
+      "sprints": [1],
+      "parallel": false,
+      "status": "completed"
+    },
+    {
+      "id": 2,
+      "sprints": [2, 3],
+      "parallel": true,
+      "status": "completed"
+    },
+    {
+      "id": 3,
+      "sprints": [4],
+      "parallel": false,
+      "status": "completed"
+    }
+  ]
+}

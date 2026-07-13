@@ -1,0 +1,28 @@
+name: "🔦 Lighthouse CI"
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm install --legacy-peer-deps
+      - run: npm run build
+        env:
+          CV_API_URL: http://localhost:8000
+          CV_API_KEY: test
+          CV_PATH: /tmp/cv
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            http://localhost:3000
+          budgetPath: ./lighthouse-budget.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true

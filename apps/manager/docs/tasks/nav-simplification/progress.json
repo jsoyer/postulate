@@ -1,0 +1,61 @@
+{
+  "task": "nav-simplification",
+  "created": "2026-04-28",
+  "sprints": [
+    {
+      "id": 1,
+      "name": "Collapse Actions into Dynamic Page",
+      "status": "completed",
+      "batch": 1,
+      "dependencies": []
+    },
+    {
+      "id": 5,
+      "name": "localStorage Migration to API",
+      "status": "completed",
+      "batch": 1,
+      "dependencies": []
+    },
+    {
+      "id": 2,
+      "name": "Contextual Actions from Application Detail",
+      "status": "completed",
+      "batch": 2,
+      "dependencies": [1]
+    },
+    {
+      "id": 3,
+      "name": "Sidebar Simplification & Reports Merge",
+      "status": "completed",
+      "batch": 2,
+      "dependencies": [1]
+    },
+    {
+      "id": 4,
+      "name": "Split Monolithic Components",
+      "status": "completed",
+      "batch": 3,
+      "dependencies": [2, 3]
+    }
+  ],
+  "batches": [
+    {
+      "id": 1,
+      "sprints": [1, 5],
+      "parallel": true,
+      "status": "completed"
+    },
+    {
+      "id": 2,
+      "sprints": [2, 3],
+      "parallel": true,
+      "status": "completed"
+    },
+    {
+      "id": 3,
+      "sprints": [4],
+      "parallel": false,
+      "status": "completed"
+    }
+  ]
+}

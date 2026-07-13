@@ -1,0 +1,15 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm ci",
+  "env": {
+    "CV_API_URL": "@cv-api-url",
+    "CV_API_KEY": "@cv-api-key"
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
+}

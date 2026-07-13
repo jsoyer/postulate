@@ -1,0 +1,31 @@
+# Podman: use podman-compose or podman play kube
+
+services:
+  cv-manager:
+    image: ghcr.io/jsoyer/cv-manager:${VERSION:-latest}
+    build:
+      context: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - "${CV_PATH:-./cv-data}:/cv:ro"
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      CV_PATH: /cv
+      CV_API_URL: "${CV_API_URL:-}"
+      CV_API_KEY: "${CV_API_KEY:-}"
+      AUTH_SECRET: "${AUTH_SECRET:-change-me-in-production}"
+      AUTH_USERNAME: "${AUTH_USERNAME:-jerome}"
+      AUTH_PASSWORD: "${AUTH_PASSWORD:-cvmanager}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
