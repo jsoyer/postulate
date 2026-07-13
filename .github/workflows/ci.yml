@@ -25,7 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       go: ${{ steps.filter.outputs.go }}
-      node: ${{ steps.filter.outputs.node }}
       python: ${{ steps.filter.outputs.python }}
       rust: ${{ steps.filter.outputs.rust }}
       manager: ${{ steps.filter.outputs.manager }}
@@ -197,7 +196,7 @@ jobs:
         include:
           - project: apps/tui-py
             python-version: "3.12"
-            install: pip install -e . pytest pytest-cov
+            install: pip install -e .[dev]
             test: pytest --cov=cv_tui --cov-report=term-missing
           - project: packages/pipeline
             python-version: "3.11"

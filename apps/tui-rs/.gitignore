@@ -1,5 +1,7 @@
 /target
-Cargo.lock
+# Cargo.lock is intentionally committed: tui-rs is a binary/app (not a
+# library), so its lockfile is tracked for reproducible CI builds
+# (`cargo build --locked` / `cargo test --locked`).
 
 # IDE
 .idea/
