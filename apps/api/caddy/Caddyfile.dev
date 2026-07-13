@@ -1,0 +1,17 @@
+# Development Caddyfile — HTTP only, no TLS, no ACME challenge.
+# Used automatically via docker-compose.override.yml.
+
+:80 {
+    reverse_proxy cv-api:3001
+
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options        "DENY"
+        -Server
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}

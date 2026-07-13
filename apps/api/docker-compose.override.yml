@@ -1,0 +1,29 @@
+# Development overrides — applied automatically by `docker compose up`.
+#
+# Exposes cv-api (:3001) and cv-runner (:3002) directly for local debugging.
+# Caddy uses HTTP-only config (no TLS, no ACME).
+#
+# Production only (no overrides):
+#   docker compose -f docker-compose.yml up -d
+
+services:
+
+  cv-runner:
+    ports:
+      - "3002:3002"
+    healthcheck:
+      start_period: 3s
+
+  cv-api:
+    ports:
+      - "3001:3001"
+    environment:
+      COOKIE_SECURE: "false"
+      COOKIE_DOMAIN: "localhost"
+      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173,http://localhost:4321"
+    healthcheck:
+      start_period: 3s
+
+  caddy:
+    volumes:
+      - ./caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro

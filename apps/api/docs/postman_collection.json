@@ -1,0 +1,954 @@
+{
+  "info": {
+    "_postman_id": "cv-api-collection-v1",
+    "name": "cv-api",
+    "description": "Complete API collection for the CV management system. Set the `apiKey` collection variable before sending requests. After login the test script will populate `jwtToken` automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "your-api-key-here",
+      "type": "string"
+    },
+    {
+      "key": "jwtToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "appName",
+      "value": "2024-03-example-company",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set(\"jwtToken\", json.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"changeme\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Validates credentials and sets a JWT session cookie. The test script saves the token to the `jwtToken` collection variable."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Clears the session cookie."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "List applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications?status=applied&sort=created_at&order=desc&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "applied",
+                  "description": "Filter by status"
+                },
+                {
+                  "key": "company",
+                  "value": "",
+                  "description": "Filter by company name substring",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "created_at"
+                },
+                {
+                  "key": "order",
+                  "value": "desc"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "description": "Pagination cursor from X-Next-Cursor header",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create application",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"company\": \"Example Company\",\n  \"position\": \"Senior Software Engineer\",\n  \"url\": \"https://example.com/jobs/123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications"]
+            }
+          }
+        },
+        {
+          "name": "Get application",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}"]
+            }
+          }
+        },
+        {
+          "name": "Update application",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"interviewing\",\n  \"followup_date\": \"2024-04-01\",\n  \"deadline\": \"2024-04-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}"]
+            }
+          }
+        },
+        {
+          "name": "Bulk update applications",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"names\": [\"{{appName}}\", \"2024-02-another-corp\"],\n  \"update\": {\n    \"status\": \"rejected\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/applications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications"]
+            }
+          }
+        },
+        {
+          "name": "Export applications (JSON)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/export?format=json",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "export"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "json"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Export applications (CSV)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/export?format=csv",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "export"],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "csv"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notes",
+      "item": [
+        {
+          "name": "Get notes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}/notes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}", "notes"]
+            }
+          }
+        },
+        {
+          "name": "Update notes",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "text/plain"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "# Interview Notes\n\n## Phone Screen - 2024-03-15\n\n- Discussed role requirements and team structure\n- Achieved 40% reduction in latency on previous project\n- Led team of 5 engineers to deliver feature on time\n"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}/notes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}", "notes"]
+            }
+          }
+        },
+        {
+          "name": "List note versions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}/notes/versions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}", "notes", "versions"]
+            }
+          }
+        },
+        {
+          "name": "Get note version",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}/notes/versions/notes.2024-03-15T120000Z.md",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}", "notes", "versions", "notes.2024-03-15T120000Z.md"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "Upload file",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "Select a file to upload (e.g. cover-letter.pdf)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}/files",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}", "files"]
+            }
+          }
+        },
+        {
+          "name": "Get file",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}/files/cover-letter.pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}", "files", "cover-letter.pdf"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Actions",
+      "item": [
+        {
+          "name": "Execute action",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"application\": \"{{appName}}\",\n  \"args\": {\n    \"url\": \"https://example.com/jobs/senior-engineer\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/actions/fetch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "actions", "fetch"]
+            },
+            "description": "Execute a Make target. Replace `fetch` with any allowed target name."
+          }
+        },
+        {
+          "name": "Get job status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/actions/jobs/job-id-here",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "actions", "jobs", "job-id-here"]
+            }
+          }
+        },
+        {
+          "name": "List targets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/targets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "targets"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Streaming",
+      "item": [
+        {
+          "name": "SSE stream",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stream/fetch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stream", "fetch"]
+            },
+            "description": "Server-Sent Events stream for a running Make target. Replace `fetch` with the target name."
+          }
+        },
+        {
+          "name": "WebSocket actions stream",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Upgrade",
+                "value": "websocket"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ws/actions/fetch",
+              "host": ["{{baseUrl}}"],
+              "path": ["ws", "actions", "fetch"]
+            },
+            "description": "WebSocket endpoint for streaming action output. Use a WebSocket client — Postman supports WebSocket requests via New > WebSocket Request."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Intelligence",
+      "item": [
+        {
+          "name": "Skills gap analysis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}/skills-gap",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}", "skills-gap"]
+            }
+          }
+        },
+        {
+          "name": "CV health audit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}/health-audit",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}", "health-audit"]
+            }
+          }
+        },
+        {
+          "name": "CV health audit history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}/health-audit/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}", "health-audit", "history"]
+            }
+          }
+        },
+        {
+          "name": "Preview CV",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/applications/{{appName}}/preview",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "applications", "{{appName}}", "preview"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/search?q=engineer",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "engineer",
+                  "description": "Full-text search query"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Get stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "item": [
+        {
+          "name": "Get settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "settings"]
+            }
+          }
+        },
+        {
+          "name": "Update settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"theme\": \"tech-blue\",\n  \"default_view\": \"list\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "settings"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Themes",
+      "item": [
+        {
+          "name": "List themes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/themes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "themes"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sessions (admin)",
+      "item": [
+        {
+          "name": "List sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions"]
+            }
+          }
+        },
+        {
+          "name": "Revoke session",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/session-id-here",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "session-id-here"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "API Keys (admin)",
+      "item": [
+        {
+          "name": "List API keys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/api-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "api-keys"]
+            }
+          }
+        },
+        {
+          "name": "Generate API key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"ci-pipeline\",\n  \"role\": \"editor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/api-keys",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "api-keys"]
+            }
+          }
+        },
+        {
+          "name": "Revoke API key",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/api-keys/abcd1234",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "api-keys", "abcd1234"]
+            },
+            "description": "Replace `abcd1234` with the key prefix returned at generation time."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit & Backup (admin)",
+      "item": [
+        {
+          "name": "Get audit log",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-log",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "audit-log"]
+            }
+          }
+        },
+        {
+          "name": "Download backup",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/backup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "backup"]
+            },
+            "description": "Streams a tar.gz archive of all applications. Save the response body to a .tar.gz file."
+          }
+        },
+        {
+          "name": "Restore backup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-API-Key",
+                "value": "{{apiKey}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "backup",
+                  "type": "file",
+                  "src": "",
+                  "description": "Select a cv-applications-backup-*.tar.gz file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/restore",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "restore"]
+            },
+            "description": "Uploads a tar.gz backup and extracts it into the applications directory. Max 100 MB. Overwrites existing files."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Observability",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Prometheus metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics",
+              "host": ["{{baseUrl}}"],
+              "path": ["metrics"]
+            }
+          }
+        },
+        {
+          "name": "OpenAPI spec",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/docs/openapi.yml",
+              "host": ["{{baseUrl}}"],
+              "path": ["docs", "openapi.yml"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

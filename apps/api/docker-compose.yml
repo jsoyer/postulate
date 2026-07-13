@@ -1,0 +1,124 @@
+# Production deployment — cv-api + cv-runner + Caddy (TLS).
+#
+# Compatible with Docker Compose v2+ and Podman Compose (podman 4.x+).
+#
+# Quick start:
+#   cp .env.example .env
+#   cp config/targets.example.yml config/targets.yml
+#   chown -R 1000:1000 /path/to/cv-project
+#   docker compose up -d        # or: podman compose up -d
+
+services:
+
+  cv-runner:
+    image: ghcr.io/jsoyer/cv-runner:${VERSION:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+      args:
+        VERSION: "${VERSION:-dev}"
+    container_name: cv-runner
+    restart: unless-stopped
+    environment:
+      CV_PATH: /cv
+      RUNNER_PORT: "3002"
+      RUNNER_SECRET: "${RUNNER_SECRET:?RUNNER_SECRET must be set in .env}"
+      TARGETS_FILE: /etc/cv-runner/targets.yml
+      MAX_CONCURRENT: "${MAX_CONCURRENT:-3}"
+      GEMINI_API_KEY:        "${GEMINI_API_KEY:-}"
+      ANTHROPIC_API_KEY:     "${ANTHROPIC_API_KEY:-}"
+      OPENAI_API_KEY:        "${OPENAI_API_KEY:-}"
+      MISTRAL_API_KEY:       "${MISTRAL_API_KEY:-}"
+      OLLAMA_HOST:           "${OLLAMA_HOST:-}"
+      OLLAMA_MODEL:          "${OLLAMA_MODEL:-llama3}"
+      SLACK_WEBHOOK_URL:     "${SLACK_WEBHOOK_URL:-}"
+      DISCORD_WEBHOOK_URL:   "${DISCORD_WEBHOOK_URL:-}"
+      TELEGRAM_BOT_TOKEN:    "${TELEGRAM_BOT_TOKEN:-}"
+      TELEGRAM_CHAT_ID:      "${TELEGRAM_CHAT_ID:-}"
+      LINKEDIN_ACCESS_TOKEN: "${LINKEDIN_ACCESS_TOKEN:-}"
+      NOTION_TOKEN:          "${NOTION_TOKEN:-}"
+      NOTION_DATABASE_ID:    "${NOTION_DATABASE_ID:-}"
+    volumes:
+      - "${CV_PATH:?CV_PATH must be set in .env}:/cv:rw"
+      - ./config/targets.yml:/etc/cv-runner/targets.yml:ro
+    networks:
+      - internal
+    expose:
+      - "3002"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  cv-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: "${VERSION:-dev}"
+    image: ghcr.io/jsoyer/cv-api:${VERSION:-latest}
+    container_name: cv-api
+    restart: unless-stopped
+    environment:
+      CV_PATH: /cv
+      PORT: "3001"
+      TARGETS_FILE: /etc/cv-api/targets.yml
+      RUNNER_URL: "http://cv-runner:3002"
+      AUTH_SECRET:       "${AUTH_SECRET:?AUTH_SECRET must be set in .env}"
+      AUTH_USERNAME:     "${AUTH_USERNAME:-admin}"
+      AUTH_PASSWORD:     "${AUTH_PASSWORD:?AUTH_PASSWORD must be set in .env}"
+      AUTH_TOTP_SECRET:  "${AUTH_TOTP_SECRET:-}"
+      RUNNER_SECRET:     "${RUNNER_SECRET:?RUNNER_SECRET must be set in .env}"
+      API_KEYS:          "${API_KEYS:-}"
+      VIEWER_API_KEYS:   "${VIEWER_API_KEYS:-}"
+      ALLOWED_ORIGINS:   "${ALLOWED_ORIGINS:-}"
+      COOKIE_DOMAIN:     "${COOKIE_DOMAIN:-localhost}"
+      COOKIE_SECURE:     "${COOKIE_SECURE:-true}"
+      MAX_CONCURRENT:    "${MAX_CONCURRENT:-3}"
+      DEFAULT_TIMEOUT:   "${DEFAULT_TIMEOUT:-5m}"
+      MAX_TIMEOUT:       "${MAX_TIMEOUT:-30m}"
+      EXPENSIVE_TARGETS: "${EXPENSIVE_TARGETS:-tailor,research,batch,interview-sim}"
+    volumes:
+      - "${CV_PATH:?CV_PATH must be set in .env}:/cv:rw"
+      - ./config/targets.yml:/etc/cv-api/targets.yml:ro
+    networks:
+      - internal
+    expose:
+      - "3001"
+    depends_on:
+      cv-runner:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: cv-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - internal
+    depends_on:
+      cv-api:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    driver: bridge

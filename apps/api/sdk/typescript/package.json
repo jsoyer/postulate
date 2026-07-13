@@ -1,0 +1,11 @@
+{
+  "name": "@cv-api/sdk-typescript",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for cv-api",
+  "scripts": {
+    "generate": "openapi-typescript ../../docs/openapi.yml -o types.gen.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0"
+  }
+}

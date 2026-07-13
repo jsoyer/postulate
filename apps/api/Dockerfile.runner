@@ -1,0 +1,135 @@
+# cv-runner — Make execution backend.
+#
+# Base: debian:bookworm-slim + minimal TeX Live packages (~1.5 GB vs ~5 GB full).
+# Multi-arch: amd64 + arm64 (texlive/texlive was amd64-only).
+# Python + Make + pandoc are layered on top for CV project scripting.
+# The Go binary is compiled in a separate stage and copied in.
+#
+# Build:
+#   docker build -f Dockerfile.runner -t cv-runner:latest .
+#
+# The CV project is NOT baked in — it is bind-mounted at runtime (CV_PATH).
+# awesome-cv submodule must be present inside the mounted CV directory.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 1: Go builder
+# ─────────────────────────────────────────────────────────────────────────────
+FROM golang:1.25-alpine AS go-builder
+
+WORKDIR /build
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+ARG VERSION=dev
+RUN CGO_ENABLED=0 GOOS=linux go build \
+        -ldflags="-s -w -X main.version=${VERSION}" \
+        -trimpath \
+        -o cv-runner ./cmd/cv-runner
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage 2: runtime — TeX Live (minimal) + Python + cv-runner binary
+#
+# Instead of the full texlive/texlive image (amd64-only, ~5 GB), we install
+# only the TeX Live packages actually needed by awesome-cv:
+#
+#   texlive-xetex              — XeLaTeX engine
+#     -> pulls texlive-latex-extra (tcolorbox, enumitem, xstring, xifthen,
+#        accsupp, environ, trimspaces, draftwatermark)
+#     -> pulls texlive-pictures (pgf/tikz)
+#     -> pulls texlive-latex-base (geometry, hyperref, fancyhdr, bookmark,
+#        tabularx, array)
+#   texlive-latex-recommended  — fontspec, xcolor, unicode-math, ragged2e,
+#                                parskip, setspace, etoolbox
+#   texlive-fonts-extra        — Source Sans Pro, fontawesome5
+#   texlive-lang-french        — French language/hyphenation support
+#
+# fontawesome6 is NOT in Debian bookworm's TeX Live; installed via tlmgr.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM debian:bookworm-slim AS final
+
+LABEL org.opencontainers.image.title="cv-runner" \
+      org.opencontainers.image.description="Make execution backend for the CV project" \
+      org.opencontainers.image.base.name="docker.io/library/debian:bookworm-slim"
+
+# TeX Live (minimal set for awesome-cv) + tools required by the CV Makefile.
+# pandoc:        make docx (CV.tex -> CV.docx)
+# poppler-utils: pdfinfo — page count check in app/render targets
+# imagemagick:   convert  — visual-diff target
+# aspell:        spell checking — lint/doctor targets
+# chktex:        LaTeX linting  — lint target
+# perl:          text substitution in apply/new targets
+# fontconfig:    fc-list — awesome-cv font detection
+# wget:          health check CMD
+RUN apt-get update -qq \
+    && apt-get install -y -qq --no-install-recommends \
+        texlive-xetex \
+        texlive-latex-recommended \
+        texlive-fonts-extra \
+        texlive-lang-french \
+        python3-pip \
+        python3-venv \
+        make \
+        git \
+        curl \
+        jq \
+        pandoc \
+        poppler-utils \
+        imagemagick \
+        aspell \
+        aspell-en \
+        aspell-fr \
+        chktex \
+        perl \
+        fontconfig \
+        wget \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# fontawesome6 is not in Debian bookworm's TeX Live (2022); install via tlmgr.
+RUN tlmgr init-usertree 2>/dev/null; \
+    tlmgr install fontawesome6 2>/dev/null || true
+
+# Python deps for the CV project scripts.
+COPY requirements.runner.txt /tmp/requirements.cv.txt
+RUN python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
+    && /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.cv.txt \
+    && rm /tmp/requirements.cv.txt
+
+# Optional AI provider SDKs — install all so every `make tailor AI=*` variant works.
+# These are intentionally separate from requirements.txt (no hard dep in CV project).
+RUN /opt/venv/bin/pip install --no-cache-dir \
+    google-generativeai \
+    anthropic \
+    openai \
+    mistralai
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+# TEXINPUTS: include awesome-cv from the bind-mounted CV project at runtime.
+# The trailing ':' preserves TeX Live's default search paths.
+# This mirrors what the CV project Makefile sets: TEXINPUTS := $(CURDIR)/awesome-cv/:
+ENV TEXINPUTS=/cv/awesome-cv/:
+
+# Non-root user with fixed UID 1000.
+# Host CV directory must be owned by UID 1000 before mounting:
+#   chown -R 1000:1000 /path/to/cv-project
+RUN groupadd --force --gid 1000 cvrunner \
+    && useradd --uid 1000 --gid 1000 --no-create-home --shell /usr/sbin/nologin cvrunner 2>/dev/null || true
+
+COPY --from=go-builder /build/cv-runner /usr/local/bin/cv-runner
+COPY --from=go-builder /build/config/targets.example.yml /etc/cv-runner/targets.yml
+
+USER cvrunner
+WORKDIR /cv
+
+EXPOSE 3002
+
+# Longer start_period: TeX Live initialises its font cache on first run.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD wget -qO- http://localhost:3002/health || exit 1
+
+ENTRYPOINT ["cv-runner"]

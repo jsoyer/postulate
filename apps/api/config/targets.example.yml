@@ -1,0 +1,603 @@
+# Allowed Make targets configuration.
+# Copy to targets.yml and customize.
+# Only targets listed here can be executed via the API.
+
+targets:
+
+  # ── Workflow ──────────────────────────────────────────────────────────────
+
+  - name: apply
+    category: workflow
+    description: "Run the full apply pipeline (fetch, tailor, render, score)"
+    args: [url]
+    timeout: 300s
+
+  - name: fetch
+    category: workflow
+    description: "Fetch job description from a URL"
+    args: [url]
+    timeout: 30s
+
+  - name: tailor
+    category: workflow
+    description: "AI-tailor CV for a specific application"
+    args: [app]
+    timeout: 120s
+
+  - name: score
+    category: workflow
+    description: "ATS score the tailored CV against the job"
+    args: [app]
+    timeout: 60s
+
+  - name: ats-rank
+    category: workflow
+    description: "Rank all applications by ATS score"
+    args: []
+    timeout: 120s
+
+  - name: ats-text
+    category: workflow
+    description: "Extract plain text from application PDF for ATS analysis"
+    args: [app]
+    timeout: 30s
+
+  - name: ats-history
+    category: workflow
+    description: "Show ATS score history across tailoring iterations"
+    args: [app]
+    timeout: 30s
+
+  - name: diff
+    category: workflow
+    description: "Show diff between base CV and tailored version"
+    args: [app]
+    timeout: 10s
+
+  - name: visual-diff
+    category: workflow
+    description: "Side-by-side PDF visual diff (requires ImageMagick)"
+    args: [app]
+    timeout: 30s
+
+  - name: compare
+    category: workflow
+    description: "Compare two application CVs side-by-side"
+    args: [app1, app2]
+    timeout: 10s
+
+  - name: archive
+    category: workflow
+    description: "Archive a completed application"
+    args: [app]
+    timeout: 10s
+
+  - name: batch
+    category: workflow
+    description: "Batch process all pending applications"
+    args: []
+    timeout: 600s
+
+  - name: batch-dry
+    category: workflow
+    description: "Dry-run batch processing (no changes)"
+    args: []
+    timeout: 120s
+
+  - name: validate-all
+    category: workflow
+    description: "Validate all cv*.yml files against schema"
+    args: []
+    timeout: 30s
+
+  - name: url-check
+    category: workflow
+    description: "Check all job URLs are still reachable"
+    args: []
+    timeout: 60s
+
+  # ── CV Generation ─────────────────────────────────────────────────────────
+
+  - name: preview
+    category: cv
+    description: "Generate a PDF preview with a specific theme"
+    args: [app, theme]
+    timeout: 2m
+
+  - name: render
+    category: cv
+    description: "Render YAML CV to PDF via XeLaTeX"
+    args: [app]
+    timeout: 60s
+
+  - name: docx
+    category: cv
+    description: "Export CV as DOCX via pandoc"
+    args: [app]
+    timeout: 30s
+
+  - name: export
+    category: cv
+    description: "Export CV as JSON/Markdown"
+    args: [app]
+    timeout: 10s
+
+  - name: export-csv
+    category: cv
+    description: "Export all applications as CSV"
+    args: []
+    timeout: 30s
+
+  - name: json-resume
+    category: cv
+    description: "Export CV in JSON Resume format"
+    args: []
+    timeout: 10s
+
+  - name: cv-health
+    category: cv
+    description: "Audit CV for completeness and quality"
+    args: []
+    timeout: 30s
+
+  - name: cv-keywords
+    category: cv
+    description: "Extract and rank keywords from CV"
+    args: []
+    timeout: 10s
+
+  - name: cv-versions
+    category: cv
+    description: "List all generated CV versions"
+    args: []
+    timeout: 10s
+
+  - name: cv-fr-tailor
+    category: cv
+    description: "AI-tailor French CV variant for application"
+    args: [app]
+    timeout: 120s
+
+  - name: length
+    category: cv
+    description: "Check CV length and suggest optimizations"
+    args: [app]
+    timeout: 10s
+
+  - name: lint
+    category: cv
+    description: "Lint LaTeX source with chktex"
+    args: []
+    timeout: 30s
+
+  - name: accent
+    category: cv
+    description: "Change CV theme accent color"
+    args: [color]
+    timeout: 10s
+
+  - name: portfolio
+    category: cv
+    description: "Generate static HTML portfolio from applications"
+    args: []
+    timeout: 30s
+
+  - name: portfolio-fr
+    category: cv
+    description: "Generate French static HTML portfolio"
+    args: []
+    timeout: 30s
+
+  # ── Intelligence ──────────────────────────────────────────────────────────
+
+  - name: research
+    category: intelligence
+    description: "AI company research"
+    args: [app]
+    timeout: 120s
+
+  - name: contacts
+    category: intelligence
+    description: "Find recruiter and hiring manager contacts"
+    args: [app]
+    timeout: 60s
+
+  - name: competitor-map
+    category: intelligence
+    description: "Map competitors for the target company"
+    args: [app]
+    timeout: 60s
+
+  - name: job-fit
+    category: intelligence
+    description: "Calculate job fit score"
+    args: [app]
+    timeout: 60s
+
+  - name: cover-angles
+    category: intelligence
+    description: "Generate cover letter angles"
+    args: [app]
+    timeout: 60s
+
+  - name: skills-gap
+    category: intelligence
+    description: "Analyze skills gap between CV and job"
+    args: [app]
+    timeout: 60s
+
+  - name: blind-spots
+    category: intelligence
+    description: "Identify blind spots in CV vs job requirements"
+    args: [app]
+    timeout: 60s
+
+  - name: keyword-trends
+    category: intelligence
+    description: "Analyze keyword trends across applications"
+    args: []
+    timeout: 60s
+
+  - name: trends
+    category: intelligence
+    description: "Market trends for target roles"
+    args: []
+    timeout: 60s
+
+  - name: semantic
+    category: intelligence
+    description: "Semantic search across applications (TF-IDF)"
+    args: [query]
+    timeout: 10s
+
+  - name: salary-bench
+    category: intelligence
+    description: "Salary benchmarking for position"
+    args: [app]
+    timeout: 60s
+
+  - name: effectiveness
+    category: intelligence
+    description: "Analyze application effectiveness metrics"
+    args: []
+    timeout: 30s
+
+  - name: predict
+    category: intelligence
+    description: "Predict interview probability for application"
+    args: [app]
+    timeout: 10s
+
+  # ── Interview ─────────────────────────────────────────────────────────────
+
+  - name: prep
+    category: interview
+    description: "Generate interview preparation notes"
+    args: [app]
+    timeout: 120s
+
+  - name: prep-star
+    category: interview
+    description: "Generate STAR story bank"
+    args: [app]
+    timeout: 120s
+
+  - name: prep-quiz
+    category: interview
+    description: "Generate technical prep quiz"
+    args: [app]
+    timeout: 60s
+
+  - name: interview-brief
+    category: interview
+    description: "Generate morning-of interview brief"
+    args: [app]
+    timeout: 60s
+
+  - name: interview-debrief
+    category: interview
+    description: "Post-interview debrief template"
+    args: [app]
+    timeout: 30s
+
+  - name: interview-sim
+    category: interview
+    description: "AI interview simulation"
+    args: [app]
+    timeout: 120s
+
+  - name: questions
+    category: interview
+    description: "Generate questions to ask the interviewer"
+    args: [app]
+    timeout: 60s
+
+  - name: question-bank
+    category: interview
+    description: "Build question bank from all applications"
+    args: []
+    timeout: 30s
+
+  - name: quiz
+    category: interview
+    description: "Technical quiz based on job requirements"
+    args: [app]
+    timeout: 60s
+
+  - name: milestone
+    category: interview
+    description: "Log an interview milestone"
+    args: [app, stage]
+    timeout: 10s
+
+  - name: elevator-pitch
+    category: interview
+    description: "Generate elevator pitch for application"
+    args: [app]
+    timeout: 30s
+
+  - name: onboarding-plan
+    category: interview
+    description: "Generate 30/60/90 day onboarding plan"
+    args: [app]
+    timeout: 30s
+
+  # ── Salary & Negotiation ──────────────────────────────────────────────────
+
+  - name: negotiate
+    category: salary
+    description: "Generate negotiation strategy"
+    args: [app]
+    timeout: 60s
+
+  - name: thankyou
+    category: salary
+    description: "Generate thank-you email"
+    args: [app]
+    timeout: 30s
+
+  - name: followup
+    category: salary
+    description: "Generate follow-up email"
+    args: [app]
+    timeout: 30s
+
+  - name: smart-followup
+    category: salary
+    description: "Smart follow-up based on application timeline"
+    args: []
+    timeout: 30s
+
+  - name: deadline-alert
+    category: salary
+    description: "Alert on upcoming application deadlines"
+    args: []
+    timeout: 10s
+
+  # ── Outreach ──────────────────────────────────────────────────────────────
+
+  - name: recruiter-email
+    category: outreach
+    description: "Generate recruiter outreach email"
+    args: [app]
+    timeout: 30s
+
+  - name: cold-sequence
+    category: outreach
+    description: "Generate cold email sequence"
+    args: [app]
+    timeout: 60s
+
+  - name: linkedin-message
+    category: outreach
+    description: "Generate LinkedIn connection message"
+    args: [app]
+    timeout: 30s
+
+  - name: ai-cover-letter
+    category: outreach
+    description: "Generate AI cover letter"
+    args: [app]
+    timeout: 60s
+
+  - name: cover-critique
+    category: outreach
+    description: "AI critique of cover letter"
+    args: [app]
+    timeout: 60s
+
+  - name: email-sequence
+    category: outreach
+    description: "Generate follow-up email sequence"
+    args: [app]
+    timeout: 60s
+
+  - name: tone
+    category: outreach
+    description: "Tone analysis of application materials"
+    args: [app]
+    timeout: 30s
+
+  - name: cl-score
+    category: outreach
+    description: "Score cover letter quality"
+    args: [app]
+    timeout: 30s
+
+  # ── LinkedIn ──────────────────────────────────────────────────────────────
+
+  - name: linkedin
+    category: linkedin
+    description: "Sync LinkedIn profile"
+    args: []
+    timeout: 30s
+
+  - name: linkedin-profile
+    category: linkedin
+    description: "Optimize LinkedIn profile"
+    args: []
+    timeout: 60s
+
+  - name: linkedin-post
+    category: linkedin
+    description: "Generate LinkedIn post"
+    args: [topic]
+    timeout: 60s
+
+  # ── Reports & Analytics ───────────────────────────────────────────────────
+
+  - name: stats
+    category: reports
+    description: "Pipeline funnel statistics"
+    args: []
+    timeout: 10s
+
+  - name: status
+    category: reports
+    description: "Show current application pipeline status"
+    args: []
+    timeout: 10s
+
+  - name: dashboard
+    category: reports
+    description: "Generate pipeline dashboard"
+    args: []
+    timeout: 30s
+
+  - name: timeline
+    category: reports
+    description: "Generate application timeline (Mermaid)"
+    args: []
+    timeout: 10s
+
+  - name: funnel
+    category: reports
+    description: "Funnel analytics across all applications"
+    args: []
+    timeout: 10s
+
+  - name: analytics
+    category: reports
+    description: "Full analytics report"
+    args: []
+    timeout: 30s
+
+  - name: ats-history
+    category: reports
+    description: "ATS score history across all applications"
+    args: []
+    timeout: 10s
+
+  - name: changelog
+    category: reports
+    description: "Generate changelog from git history"
+    args: []
+    timeout: 10s
+
+  - name: network-map
+    category: reports
+    description: "Generate network contact map"
+    args: []
+    timeout: 10s
+
+  - name: apply-board
+    category: reports
+    description: "Generate Kanban apply board data"
+    args: []
+    timeout: 30s
+
+  - name: digest
+    category: reports
+    description: "Pipeline digest report"
+    args: []
+    timeout: 30s
+
+  - name: discover
+    category: reports
+    description: "Discover new job opportunities"
+    args: []
+    timeout: 120s
+
+  - name: boards
+    category: reports
+    description: "Fetch jobs from configured boards (Greenhouse, Lever)"
+    args: []
+    timeout: 120s
+
+  - name: quarterly
+    category: reports
+    description: "Quarterly job search review"
+    args: []
+    timeout: 120s
+
+  - name: brand
+    category: reports
+    description: "Personal brand audit"
+    args: []
+    timeout: 60s
+
+  - name: glassdoor
+    category: reports
+    description: "Glassdoor research for company"
+    args: [app]
+    timeout: 60s
+
+  - name: culture
+    category: reports
+    description: "Company culture analysis"
+    args: [app]
+    timeout: 60s
+
+  - name: recruiter
+    category: reports
+    description: "Recruiter profile analysis"
+    args: [app]
+    timeout: 60s
+
+  - name: compare-providers
+    category: reports
+    description: "Compare AI provider outputs for a prompt"
+    args: [app]
+    timeout: 120s
+
+  # ── Notifications ─────────────────────────────────────────────────────────
+
+  - name: notify
+    category: notifications
+    description: "Send pipeline digest to Slack/Discord/Telegram"
+    args: []
+    timeout: 30s
+
+  # ── Integrations ──────────────────────────────────────────────────────────
+
+  - name: notion
+    category: integration
+    description: "Sync application to Notion"
+    args: [app]
+    timeout: 30s
+
+  - name: notion-pull
+    category: integration
+    description: "Pull updates from Notion to local YAML"
+    args: []
+    timeout: 60s
+
+  - name: notion-push
+    category: integration
+    description: "Push local YAML to Notion"
+    args: []
+    timeout: 60s
+
+  - name: notion-diff
+    category: integration
+    description: "Show diff between local and Notion state"
+    args: []
+    timeout: 30s
+
+  # ── Content ───────────────────────────────────────────────────────────────
+
+  - name: blog
+    category: content
+    description: "Generate blog post from job search experience"
+    args: [topic]
+    timeout: 120s

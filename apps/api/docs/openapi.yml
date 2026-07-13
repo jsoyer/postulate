@@ -1,0 +1,1914 @@
+openapi: "3.1.0"
+
+info:
+  title: cv-api
+  version: "1.0.0"
+  description: >
+    HTTP/WebSocket API server for the CV management system.
+    Wraps Make targets with secure REST endpoints, authentication,
+    rate limiting, and streaming output.
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+
+tags:
+  - name: health
+    description: Service health
+  - name: auth
+    description: Authentication
+  - name: applications
+    description: Job application management
+  - name: actions
+    description: Make target execution
+  - name: audit
+    description: Audit log
+  - name: metrics
+    description: Prometheus metrics
+  - name: settings
+    description: User settings
+  - name: themes
+    description: CV presentation themes
+  - name: streaming
+    description: Server-Sent Events and WebSocket streams
+  - name: backup
+    description: Backup and restore
+  - name: sessions
+    description: Session management
+  - name: api-keys
+    description: API key management
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Health check
+      description: >
+        Returns the current readiness state of the service including CV path
+        accessibility, allowed target count, running job queue depth, and
+        AI provider key availability.
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service health information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /metrics:
+    get:
+      tags: [metrics]
+      summary: Prometheus metrics
+      description: >
+        Returns all metrics in Prometheus text exposition format (text/plain).
+        Intended for scraping by a Prometheus server.
+      operationId: getMetrics
+      responses:
+        "200":
+          description: Prometheus text format metrics
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /api/auth/login:
+    post:
+      tags: [auth]
+      summary: Login
+      description: Validates credentials and sets a JWT session cookie.
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /api/auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout
+      description: Clears the session cookie.
+      operationId: logout
+      responses:
+        "204":
+          description: Logged out successfully
+
+  /api/audit-log:
+    get:
+      tags: [audit]
+      summary: Retrieve audit log
+      description: >
+        Returns the last 100 audit entries in reverse-chronological order.
+        Requires authentication. The buffer is in-memory and not persisted
+        across server restarts.
+      operationId: getAuditLog
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: List of audit log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEntry"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/applications:
+    get:
+      tags: [applications]
+      summary: List applications
+      operationId: listApplications
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter by exact status value (e.g. applied, interviewing, rejected)
+        - name: company
+          in: query
+          schema:
+            type: string
+          description: Filter by case-insensitive company name substring
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [created_at, deadline, company, status]
+          description: Field to sort by (default created_at)
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+          description: Sort direction (default desc)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Maximum number of results to return
+        - name: cursor
+          in: query
+          schema:
+            type: string
+          description: Pagination cursor (application name) from X-Next-Cursor header
+      responses:
+        "200":
+          description: Paginated application list
+          headers:
+            X-Total-Count:
+              description: Total number of matching applications (before pagination)
+              schema:
+                type: integer
+            X-Next-Cursor:
+              description: >
+                Cursor value to pass as ?cursor= for the next page.
+                Absent when the current page is the last one.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Application"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [applications]
+      summary: Create application
+      operationId: createApplication
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApplicationRequest"
+      responses:
+        "201":
+          description: Created application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    patch:
+      tags: [applications]
+      summary: Bulk update applications
+      description: >
+        Patches the same set of fields on multiple applications in a single
+        request. Per-application errors are collected and returned rather than
+        causing the whole operation to fail.
+      operationId: bulkUpdateApplications
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkUpdateRequest"
+      responses:
+        "200":
+          description: Bulk update result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkUpdateResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/applications/export:
+    get:
+      tags: [applications]
+      summary: Export all applications
+      description: >
+        Exports all applications as JSON (default) or CSV.
+        The CSV includes a header row with columns:
+        name, company, position, status, created_at.
+      operationId: exportApplications
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+          description: Export format
+      responses:
+        "200":
+          description: Exported applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Application"
+            text/csv:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/applications/{name}:
+    get:
+      tags: [applications]
+      summary: Get application
+      operationId: getApplication
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      responses:
+        "200":
+          description: Application detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [applications]
+      summary: Update application
+      operationId: updateApplication
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateApplicationRequest"
+      responses:
+        "200":
+          description: Updated application
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/applications/{name}/notes:
+    get:
+      tags: [applications]
+      summary: Get application notes
+      description: Returns the raw content of the application's notes.md file.
+      operationId: getNotes
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      responses:
+        "200":
+          description: Notes content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [applications]
+      summary: Update application notes
+      description: >
+        Writes content to notes.md. Creates a versioned backup of the previous
+        content before overwriting.
+      operationId: updateNotes
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WriteNotesRequest"
+      responses:
+        "200":
+          description: Notes updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OKResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/applications/{name}/notes/versions:
+    get:
+      tags: [applications]
+      summary: List note versions
+      description: Returns metadata for all historical versions of the application's notes.md.
+      operationId: listNoteVersions
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      responses:
+        "200":
+          description: List of note version metadata
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NoteVersion"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/applications/{name}/notes/versions/{filename}:
+    get:
+      tags: [applications]
+      summary: Get note version
+      description: Returns the content of a specific historical notes.md version.
+      operationId: getNoteVersion
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Version filename (e.g. notes-2024-03-15T10-30-00.md)
+      responses:
+        "200":
+          description: Note version content
+          content:
+            text/markdown:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/applications/{name}/files:
+    post:
+      tags: [applications]
+      summary: Upload file
+      operationId: uploadFile
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+
+  /api/applications/{name}/files/{filename}:
+    get:
+      tags: [applications]
+      summary: Download file
+      description: Serves a raw file from the application directory.
+      operationId: getFile
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Filename within the application directory
+      responses:
+        "200":
+          description: File content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/applications/{name}/skills-gap:
+    get:
+      tags: [applications]
+      summary: Skills gap analysis
+      description: >
+        Compares keywords from the application's job.txt against cv.yml
+        and returns missing and present skills.
+      operationId: getSkillsGap
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      responses:
+        "200":
+          description: Skills gap analysis results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SkillsGapResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/applications/{name}/health-audit:
+    get:
+      tags: [applications]
+      summary: CV health audit
+      description: >
+        Analyses the application's notes.md file and returns quality scores:
+        quantification_score (% of bullet points containing numbers/metrics),
+        action_verb_score (% of bullet points starting with strong action verbs),
+        completeness_score (100 if notes exist and have > 100 chars, else 0),
+        and overall_score (average of the three).
+      operationId: getHealthAudit
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      responses:
+        "200":
+          description: Health audit scores
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthAuditResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/applications/{name}/health-audit/history:
+    get:
+      tags: [applications]
+      summary: Health audit history
+      description: Returns the stored historical health audit scores for an application.
+      operationId: getHealthAuditHistory
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      responses:
+        "200":
+          description: Health audit score history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthAuditHistoryResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/applications/{name}/preview:
+    get:
+      tags: [applications]
+      summary: CV preview PDF
+      description: >
+        Generates a themed PDF preview for the application via cv-runner
+        and streams the PDF back. Requires the 'preview' Make target to
+        be configured.
+      operationId: getPreview
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+        - name: theme
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [tech-blue, startup-orange, executive-dark, cyber-red, minimal-clean, academic-classic]
+          description: CV theme to use for the preview
+      responses:
+        "200":
+          description: PDF preview
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "501":
+          description: Preview target not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIError"
+
+  /api/applications/{name}/match:
+    get:
+      tags: [applications]
+      summary: Get cached job match score
+      description: >
+        Returns the most recent AI job match analysis result for the application.
+        Returns 404 if no match has been run yet.
+      operationId: getJobMatch
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      responses:
+        "200":
+          description: Job match analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobMatchResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    post:
+      tags: [applications]
+      summary: Execute job match AI analysis
+      description: >
+        Runs the AI-powered job match scoring pipeline for the application.
+        Optionally accepts AI provider and minimum threshold in the request body.
+        Results are cached and retrievable via GET.
+      operationId: runJobMatch
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - $ref: "#/components/parameters/AppName"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobMatchRequest"
+      responses:
+        "200":
+          description: Job match analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobMatchResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "501":
+          description: Job match target not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIError"
+
+  /api/search:
+    get:
+      tags: [applications]
+      summary: Full-text search
+      description: >
+        Performs full-text search across all application files.
+        Returns matching applications with file-level snippets.
+      operationId: search
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 3
+          description: Search query (minimum 3 characters)
+      responses:
+        "200":
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/dashboard:
+    get:
+      tags: [applications]
+      summary: Dashboard overview
+      description: Returns aggregated dashboard data including application counts by status and recent applications.
+      operationId: getDashboard
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/stats:
+    get:
+      tags: [applications]
+      summary: Pipeline statistics
+      description: Returns funnel data and application timeline statistics.
+      operationId: getStats
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: Statistics data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsData"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /api/themes:
+    get:
+      tags: [themes]
+      summary: List CV themes
+      description: Returns all available CV presentation themes.
+      operationId: listThemes
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: List of themes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Theme"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/actions/{target}:
+    post:
+      tags: [actions]
+      summary: Execute Make target
+      operationId: executeAction
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: target
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActionRequest"
+      responses:
+        "200":
+          description: Target completed synchronously
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+        "202":
+          description: Target accepted and running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /api/actions/jobs/{jobId}:
+    get:
+      tags: [actions]
+      summary: Get job status
+      description: Returns the status of a running or completed Make target job.
+      operationId: getJobStatus
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Job identifier returned by executeAction
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/targets:
+    get:
+      tags: [actions]
+      summary: List Make targets
+      description: Returns all allowed Make targets from the configuration.
+      operationId: listTargets
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: List of allowed Make targets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Target"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/settings:
+    get:
+      tags: [settings]
+      summary: Get settings
+      operationId: getSettings
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: Current settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      tags: [settings]
+      summary: Update settings
+      operationId: updateSettings
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Settings"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/backup:
+    get:
+      tags: [backup]
+      summary: Download backup
+      description: >
+        Streams a tar.gz archive of the entire applications directory.
+        Requires admin role.
+      operationId: getBackup
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: Backup archive
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/restore:
+    post:
+      tags: [backup]
+      summary: Restore from backup
+      description: >
+        Accepts a multipart tar.gz upload and extracts it into the
+        applications directory, overwriting existing files.
+        Maximum upload size: 100 MB. Requires admin role.
+      operationId: restoreBackup
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [backup]
+              properties:
+                backup:
+                  type: string
+                  format: binary
+                  description: tar.gz backup file
+      responses:
+        "200":
+          description: Restore completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RestoreResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+
+  /api/sessions:
+    get:
+      tags: [sessions]
+      summary: List active sessions
+      description: Returns all active (non-expired) JWT sessions. Requires admin role.
+      operationId: listSessions
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: List of active sessions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/sessions/{id}:
+    delete:
+      tags: [sessions]
+      summary: Revoke session
+      description: Revokes a JWT session by its ID (jti). Requires admin role.
+      operationId: revokeSession
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Session ID (JWT jti claim)
+      responses:
+        "200":
+          description: Session revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OKResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/api-keys:
+    get:
+      tags: [api-keys]
+      summary: List API keys
+      description: >
+        Returns prefix and role information for all stored API keys.
+        Full key values are never returned. Requires admin role.
+      operationId: listAPIKeys
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      responses:
+        "200":
+          description: List of API keys (prefixes only)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/APIKeyListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [api-keys]
+      summary: Generate API key
+      description: >
+        Creates a new API key and returns the full value exactly once.
+        The key is added to the runtime store immediately.
+        Requires admin role.
+      operationId: generateAPIKey
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateAPIKeyRequest"
+      responses:
+        "201":
+          description: API key generated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenerateAPIKeyResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/api-keys/{prefix}:
+    delete:
+      tags: [api-keys]
+      summary: Revoke API key
+      description: >
+        Revokes all API keys matching the given prefix.
+        Requires admin role.
+      operationId: revokeAPIKey
+      security:
+        - cookieAuth: []
+        - apiKeyAuth: []
+      parameters:
+        - name: prefix
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Key prefix (first 8 characters)
+      responses:
+        "200":
+          description: API key revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OKResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/stream/{target}:
+    get:
+      tags: [streaming]
+      summary: SSE stream
+      description: >
+        Server-Sent Events stream for real-time Make target output.
+        Authenticates via token query parameter or session cookie.
+        Requires at least editor role.
+      operationId: sseStream
+      parameters:
+        - name: target
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Make target name to execute
+        - name: token
+          in: query
+          schema:
+            type: string
+          description: JWT session token (alternative to cookie auth)
+        - name: app
+          in: query
+          schema:
+            type: string
+          description: Application name to pass to the target
+      responses:
+        "200":
+          description: SSE stream of WSMessage events
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/WSMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /ws/actions/{target}:
+    get:
+      tags: [streaming]
+      summary: WebSocket stream
+      description: >
+        WebSocket connection for real-time Make target output.
+        Authenticates via token query parameter or session cookie during
+        handshake. Requires at least editor role.
+
+        Protocol:
+        - Client sends ActionRequest JSON as first message
+        - Server sends WSMessage with type "stdout", "stderr", "exit", or "error"
+        - Connection closes after the Make process exits
+      operationId: wsStream
+      parameters:
+        - name: target
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Make target name to execute
+        - name: token
+          in: query
+          schema:
+            type: string
+          description: JWT session token for authentication
+      responses:
+        "101":
+          description: WebSocket upgrade successful
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: cv_session
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  parameters:
+    AppName:
+      name: name
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Application directory name (e.g. 2024-03-acme-engineer)
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+    Forbidden:
+      description: Access denied
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+    PayloadTooLarge:
+      description: Request entity too large
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIError"
+
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - runner_up
+        - cv_path_ok
+        - targets_count
+        - job_queue_depth
+        - ai_providers
+      properties:
+        status:
+          type: string
+          example: ok
+          description: Always "ok" when the server is reachable.
+        runner_up:
+          type: boolean
+          description: True when the RUNNER_UP env var is set to "true".
+        cv_path_ok:
+          type: boolean
+          description: True when CV_PATH exists and is accessible.
+        targets_count:
+          type: integer
+          description: Number of allowed Make targets loaded from the config.
+        job_queue_depth:
+          type: integer
+          description: Number of jobs currently in the running state.
+        ai_providers:
+          type: object
+          description: Map of provider name to whether its API key/host is configured.
+          properties:
+            gemini:
+              type: boolean
+            anthropic:
+              type: boolean
+            openai:
+              type: boolean
+            mistral:
+              type: boolean
+            ollama:
+              type: boolean
+
+    AuditEntry:
+      type: object
+      required:
+        - time
+        - action
+        - result
+      properties:
+        time:
+          type: string
+          format: date-time
+          description: UTC timestamp when the event occurred.
+        action:
+          type: string
+          enum:
+            - login
+            - logout
+            - action_execute
+            - app_create
+            - app_update
+            - file_upload
+            - settings_update
+          description: The type of security-relevant event.
+        resource:
+          type: string
+          description: The affected resource name (application name, target, etc.).
+        user:
+          type: string
+          description: The authenticated username or "api_key".
+        ip:
+          type: string
+          description: Client IP address (port stripped, X-Forwarded-For respected).
+        result:
+          type: string
+          enum: [ok, denied, error]
+          description: Outcome of the event.
+        detail:
+          type: string
+          description: Additional context about the event.
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+        totp:
+          type: string
+          description: TOTP code (required when TOTP is configured)
+
+    LoginResponse:
+      type: object
+      required: [token, expires_at]
+      properties:
+        token:
+          type: string
+        expires_at:
+          type: integer
+          description: Unix timestamp when the token expires.
+
+    Application:
+      type: object
+      properties:
+        name:
+          type: string
+        company:
+          type: string
+        position:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        deadline:
+          type: string
+          format: date-time
+        outcome:
+          type: string
+        files:
+          type: object
+          additionalProperties:
+            type: string
+
+    CreateApplicationRequest:
+      type: object
+      required: [company, position]
+      properties:
+        company:
+          type: string
+        position:
+          type: string
+        url:
+          type: string
+
+    UpdateApplicationRequest:
+      type: object
+      properties:
+        status:
+          type: string
+        company:
+          type: string
+        position:
+          type: string
+        followup_date:
+          type: string
+        deadline:
+          type: string
+
+    NotesResponse:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          description: Raw markdown content of notes.md
+
+    WriteNotesRequest:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: string
+          description: New markdown content for notes.md
+
+    NoteVersion:
+      type: object
+      required: [filename, created_at, size]
+      properties:
+        filename:
+          type: string
+          description: Version filename (e.g. notes-2024-03-15T10-30-00.md)
+        created_at:
+          type: string
+          format: date-time
+          description: When this version was created
+        size:
+          type: integer
+          description: File size in bytes
+
+    ActionRequest:
+      type: object
+      properties:
+        application:
+          type: string
+        args:
+          type: object
+          additionalProperties:
+            type: string
+
+    ActionResult:
+      type: object
+      required: [job_id, target, status, exit_code, duration_ms]
+      properties:
+        job_id:
+          type: string
+        target:
+          type: string
+        status:
+          type: string
+          enum: [running, completed, failed, cancelled]
+        exit_code:
+          type: integer
+        stdout:
+          type: string
+        stderr:
+          type: string
+        duration_ms:
+          type: integer
+
+    UploadResponse:
+      type: object
+      required: [ok, filename]
+      properties:
+        ok:
+          type: boolean
+        filename:
+          type: string
+
+    OKResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+
+    Settings:
+      type: object
+      properties:
+        theme:
+          type: string
+        default_view:
+          type: string
+        default_ai:
+          type: string
+          description: Default AI provider to use for Make targets (e.g. gemini, claude, openai, mistral, ollama)
+        default_model:
+          type: string
+          description: Default model name for the selected AI provider
+
+    APIError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+
+    BulkUpdateRequest:
+      type: object
+      required: [names]
+      properties:
+        names:
+          type: array
+          items:
+            type: string
+          description: Application names to update
+          minItems: 1
+        update:
+          $ref: "#/components/schemas/UpdateApplicationRequest"
+
+    BulkUpdateResponse:
+      type: object
+      required: [updated, errors]
+      properties:
+        updated:
+          type: integer
+          description: Number of applications successfully updated
+        errors:
+          type: array
+          items:
+            type: string
+          description: Per-name error messages for any failures
+
+    SkillsGapResponse:
+      type: object
+      required: [missing, present]
+      properties:
+        missing:
+          type: array
+          items:
+            type: string
+          description: Keywords found in job.txt but not in cv.yml
+        present:
+          type: array
+          items:
+            type: string
+          description: Keywords found in both job.txt and cv.yml
+
+    HealthAuditScores:
+      type: object
+      required: [quantification_score, action_verb_score, completeness_score, overall_score]
+      properties:
+        quantification_score:
+          type: number
+          description: >
+            Percentage of bullet points that contain numbers or metrics
+            (e.g. "20%", "$1M", "3x").
+        action_verb_score:
+          type: number
+          description: >
+            Percentage of bullet points that start with a strong action verb.
+        completeness_score:
+          type: number
+          description: 100 when notes.md exists and has more than 100 characters, else 0.
+        overall_score:
+          type: number
+          description: Average of the three scores above.
+
+    HealthAuditResponse:
+      type: object
+      required: [application, scores, checked_at]
+      properties:
+        application:
+          type: string
+          description: Application name
+        scores:
+          $ref: "#/components/schemas/HealthAuditScores"
+        checked_at:
+          type: string
+          format: date-time
+          description: UTC timestamp when the audit was performed
+
+    HealthAuditHistoryResponse:
+      type: object
+      required: [application, history]
+      properties:
+        application:
+          type: string
+          description: Application name
+        history:
+          type: array
+          items:
+            type: object
+            properties:
+              checked_at:
+                type: string
+                format: date-time
+              quantification_score:
+                type: number
+              action_verb_score:
+                type: number
+              completeness_score:
+                type: number
+              overall_score:
+                type: number
+          description: Historical health audit score entries
+
+    SearchMatch:
+      type: object
+      required: [file, snippet]
+      properties:
+        file:
+          type: string
+          description: Filename where the match was found
+        snippet:
+          type: string
+          description: Text snippet containing the match
+
+    SearchResult:
+      type: object
+      required: [name, company, position, stage, matches]
+      properties:
+        name:
+          type: string
+          description: Application directory name
+        company:
+          type: string
+        position:
+          type: string
+        stage:
+          type: string
+          description: Current application stage/status
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchMatch"
+          description: File-level matches within this application
+
+    SearchResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchResult"
+
+    JobMatchRequest:
+      type: object
+      properties:
+        ai:
+          type: string
+          description: AI provider to use (e.g. gemini, claude, openai, mistral, ollama)
+          example: gemini
+        threshold:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Minimum match score threshold (0-100)
+          example: 60
+
+    JobMatchResponse:
+      type: object
+      description: AI job match analysis result. Structure depends on the pipeline output.
+      properties:
+        score:
+          type: number
+          description: Overall match score (0-100)
+        threshold:
+          type: integer
+          description: Configured minimum threshold
+        ai_provider:
+          type: string
+          description: AI provider used for analysis
+        matched_skills:
+          type: array
+          items:
+            type: string
+          description: Skills found in both CV and job description
+        missing_skills:
+          type: array
+          items:
+            type: string
+          description: Skills required by job but not found in CV
+        analysis:
+          type: string
+          description: AI-generated analysis text
+
+    DashboardResponse:
+      type: object
+      required: [total_applications, by_status, recent_applications]
+      properties:
+        total_applications:
+          type: integer
+        by_status:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Count of applications grouped by status
+        recent_applications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Application"
+          description: Most recently created applications
+        ai_provider_calls_total:
+          type: integer
+          description: Total AI provider calls across all executions (included when metrics are available)
+
+    TimelineEntry:
+      type: object
+      required: [date, count]
+      properties:
+        date:
+          type: string
+          description: Date in YYYY-MM-DD format
+        count:
+          type: integer
+          description: Number of applications created on this date
+
+    StatsData:
+      type: object
+      required: [funnel, timeline]
+      properties:
+        funnel:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Application counts at each pipeline stage
+        timeline:
+          type: array
+          items:
+            $ref: "#/components/schemas/TimelineEntry"
+
+    Target:
+      type: object
+      required: [name, category, description]
+      properties:
+        name:
+          type: string
+          description: Make target name
+        category:
+          type: string
+          description: Target category for grouping
+        description:
+          type: string
+          description: Human-readable description of what the target does
+        args:
+          type: array
+          items:
+            type: string
+          description: Required argument names
+        timeout:
+          type: string
+          description: Timeout override (e.g. "5m", "30s")
+
+    Theme:
+      type: object
+      required: [name, display_name, primary_color, font_size, description]
+      properties:
+        name:
+          type: string
+          description: Machine-readable theme identifier
+          example: tech-blue
+        display_name:
+          type: string
+          description: Human-readable theme name
+          example: Tech Blue
+        primary_color:
+          type: string
+          description: Primary colour as a CSS hex value
+          example: "#0066CC"
+        font_size:
+          type: string
+          description: Base font size used by this theme
+          example: 11pt
+        description:
+          type: string
+          description: Short description of the theme's aesthetic and intended use
+
+    Session:
+      type: object
+      required: [id, subject, role, issued_at, expires_at]
+      properties:
+        id:
+          type: string
+          description: Session identifier (JWT jti claim)
+        subject:
+          type: string
+          description: Username the session belongs to
+        role:
+          type: string
+          enum: [viewer, editor, admin]
+          description: RBAC role assigned to this session
+        issued_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        user_agent:
+          type: string
+          description: Client user agent string
+        ip:
+          type: string
+          description: Client IP address
+
+    SessionListResponse:
+      type: object
+      required: [sessions]
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Session"
+
+    APIKeyInfo:
+      type: object
+      required: [prefix, role, added_at]
+      properties:
+        prefix:
+          type: string
+          description: First 8 characters of the API key
+        role:
+          type: string
+          enum: [viewer, editor, admin]
+          description: RBAC role assigned to this key
+        added_at:
+          type: string
+          format: date-time
+          description: When the key was created
+
+    APIKeyListResponse:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/APIKeyInfo"
+
+    GenerateAPIKeyRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [viewer, editor]
+          default: editor
+          description: Role to assign to the new key (defaults to editor)
+
+    GenerateAPIKeyResponse:
+      type: object
+      required: [key, prefix, role]
+      properties:
+        key:
+          type: string
+          description: Full API key value (returned exactly once)
+        prefix:
+          type: string
+          description: First 8 characters of the key
+        role:
+          type: string
+          enum: [viewer, editor]
+          description: Role assigned to this key
+
+    RestoreResponse:
+      type: object
+      required: [restored, message]
+      properties:
+        restored:
+          type: integer
+          description: Number of files restored
+        message:
+          type: string
+          description: Human-readable summary
+
+    WSMessage:
+      type: object
+      required: [type, data]
+      properties:
+        type:
+          type: string
+          enum: [stdout, stderr, exit, error]
+          description: Message type
+        data:
+          type: string
+          description: Message payload (output text, exit code, or error message)

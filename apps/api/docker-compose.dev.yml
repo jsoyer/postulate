@@ -1,0 +1,81 @@
+# Development stack — hot-reload, relaxed auth, no Caddy, ports exposed.
+#
+# Compatible with Docker Compose v2+ and Podman Compose (podman 4.x+).
+#
+# Usage:
+#   CV_PATH=/path/to/CV make dev
+#   CV_PATH=/path/to/CV podman compose -f docker-compose.dev.yml up --build
+
+services:
+
+  cv-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+    container_name: cv-runner-dev
+    restart: unless-stopped
+    environment:
+      CV_PATH: /cv
+      RUNNER_PORT: "3002"
+      RUNNER_SECRET: "dev-runner-secret-minimum-32-characters-long"
+      TARGETS_FILE: /etc/cv-runner/targets.yml
+      MAX_CONCURRENT: "5"
+      GEMINI_API_KEY:        "${GEMINI_API_KEY:-}"
+      ANTHROPIC_API_KEY:     "${ANTHROPIC_API_KEY:-}"
+      OPENAI_API_KEY:        "${OPENAI_API_KEY:-}"
+      MISTRAL_API_KEY:       "${MISTRAL_API_KEY:-}"
+      OLLAMA_HOST:           "${OLLAMA_HOST:-}"
+      OLLAMA_MODEL:          "${OLLAMA_MODEL:-llama3}"
+      SLACK_WEBHOOK_URL:     "${SLACK_WEBHOOK_URL:-}"
+      DISCORD_WEBHOOK_URL:   "${DISCORD_WEBHOOK_URL:-}"
+      TELEGRAM_BOT_TOKEN:    "${TELEGRAM_BOT_TOKEN:-}"
+      TELEGRAM_CHAT_ID:      "${TELEGRAM_CHAT_ID:-}"
+      LINKEDIN_ACCESS_TOKEN: "${LINKEDIN_ACCESS_TOKEN:-}"
+      NOTION_TOKEN:          "${NOTION_TOKEN:-}"
+      NOTION_DATABASE_ID:    "${NOTION_DATABASE_ID:-}"
+    volumes:
+      - "${CV_PATH:?CV_PATH must be set}:/cv:rw"
+      - ./config/targets.example.yml:/etc/cv-runner/targets.yml:ro
+    ports:
+      - "3002:3002"
+    networks:
+      - dev
+
+  cv-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cv-api-dev
+    restart: unless-stopped
+    # go run for hot-reload — mount source code read-only
+    command: ["go", "run", "./cmd/cv-api"]
+    volumes:
+      - .:/app:ro
+      - "${CV_PATH:?CV_PATH must be set}:/cv:rw"
+      - ./config/targets.example.yml:/etc/cv-api/targets.yml:ro
+    working_dir: /app
+    environment:
+      CV_PATH: /cv
+      PORT: "3001"
+      TARGETS_FILE: /etc/cv-api/targets.yml
+      RUNNER_URL: "http://cv-runner-dev:3002"
+      AUTH_SECRET:    "dev-secret-that-is-at-least-32-characters-long"
+      AUTH_USERNAME:  "admin"
+      AUTH_PASSWORD:  "dev"
+      RUNNER_SECRET:  "dev-runner-secret-minimum-32-characters-long"
+      API_KEYS:       "dev-editor-key"
+      VIEWER_API_KEYS: "dev-viewer-key"
+      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:5173,http://localhost:4321"
+      COOKIE_DOMAIN:  "localhost"
+      COOKIE_SECURE:  "false"
+      MAX_CONCURRENT: "5"
+    ports:
+      - "3001:3001"
+    depends_on:
+      - cv-runner
+    networks:
+      - dev
+
+networks:
+  dev:
+    driver: bridge

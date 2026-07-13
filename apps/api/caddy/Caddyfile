@@ -1,0 +1,25 @@
+# Production Caddyfile — automatic HTTPS via Let's Encrypt.
+#
+# Set the DOMAIN environment variable before starting Caddy:
+#   DOMAIN=cv.example.com docker compose up -d
+#
+# Or replace {$DOMAIN} directly with your hostname.
+
+{$DOMAIN} {
+    reverse_proxy cv-api:3001
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options   "nosniff"
+        X-Frame-Options          "DENY"
+        Referrer-Policy          "strict-origin-when-cross-origin"
+        Permissions-Policy       "geolocation=(), microphone=(), camera=()"
+        -Server
+    }
+
+    log {
+        output stdout
+        format json
+        level  INFO
+    }
+}
