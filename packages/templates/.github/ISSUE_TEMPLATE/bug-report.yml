@@ -1,0 +1,76 @@
+name: 🐛 Bug sur un template
+description: Signaler un problème de compilation ou de rendu sur un template existant
+labels: ["bug"]
+body:
+  - type: input
+    id: template
+    attributes:
+      label: Nom du template concerné
+      placeholder: ex. awesome-cv, moderncv, deedy
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version du template
+      placeholder: ex. 1.0.0
+    validations:
+      required: false
+
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Moteur LaTeX utilisé
+      options:
+        - xelatex
+        - pdflatex
+        - lualatex
+    validations:
+      required: true
+
+  - type: input
+    id: texlive
+    attributes:
+      label: Version de TeX Live
+      placeholder: ex. TeX Live 2024
+    validations:
+      required: false
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description du problème
+      description: Qu'est-ce qui ne fonctionne pas ? Compilation, rendu visuel, mise en page…
+    validations:
+      required: true
+
+  - type: textarea
+    id: error
+    attributes:
+      label: Message d'erreur (log LaTeX)
+      description: Coller les dernières lignes du `.log` si la compilation échoue.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Étapes pour reproduire
+      placeholder: |
+        1. make market-install NAME=...
+        2. make render TEMPLATE=...
+        3. make build
+        4. Erreur : ...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Vérifications préalables
+      options:
+        - label: J'ai vérifié que TeX Live est à jour (`tlmgr update --all`)
+        - label: J'ai relu le README du template
+        - label: Le problème n'est pas déjà signalé dans les issues ouvertes

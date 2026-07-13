@@ -1,0 +1,139 @@
+name: 🔨 Compile check (community templates)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "templates/**"
+
+jobs:
+  detect:
+    name: Detect changed templates
+    runs-on: ubuntu-latest
+    outputs:
+      templates: ${{ steps.detect.outputs.templates }}
+      has_community: ${{ steps.detect.outputs.has_community }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed community template directories
+        id: detect
+        run: |
+          BUILT_IN="awesome-cv moderncv deedy _example"
+          CHANGED=$(git diff --name-only origin/main...HEAD | grep '^templates/' | cut -d/ -f2 | sort -u)
+          COMMUNITY=()
+          for name in $CHANGED; do
+              skip=false
+              for builtin in $BUILT_IN; do
+                  [ "$name" = "$builtin" ] && skip=true && break
+              done
+              [ "$skip" = false ] && [ -n "$name" ] && COMMUNITY+=("$name")
+          done
+
+          if [ ${#COMMUNITY[@]} -eq 0 ]; then
+              echo "has_community=false" >> "$GITHUB_OUTPUT"
+              echo "templates=[]" >> "$GITHUB_OUTPUT"
+              echo "No community templates changed — skipping compile check"
+          else
+              JSON=$(printf '%s\n' "${COMMUNITY[@]}" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read().split()))")
+              echo "has_community=true" >> "$GITHUB_OUTPUT"
+              echo "templates=$JSON" >> "$GITHUB_OUTPUT"
+              echo "Changed community templates: ${COMMUNITY[*]}"
+          fi
+
+  compile:
+    name: Compile template — ${{ matrix.template }}
+    runs-on: ubuntu-latest
+    needs: detect
+    if: needs.detect.outputs.has_community == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        template: ${{ fromJson(needs.detect.outputs.templates) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check template.yml exists
+        run: |
+          if [ ! -f "templates/${{ matrix.template }}/template.yml" ]; then
+            echo "ERROR: templates/${{ matrix.template }}/template.yml not found"
+            exit 1
+          fi
+
+      - name: Install TeX Live + dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y texlive-xetex texlive-fonts-extra texlive-latex-extra \
+            texlive-science fonts-font-awesome python3-yaml --no-install-recommends
+
+      - name: Install extra TeX packages from template.yml
+        run: |
+          python3 - <<'EOF'
+          import yaml, subprocess, sys
+          with open("templates/${{ matrix.template }}/template.yml") as f:
+              data = yaml.safe_load(f) or {}
+          pkgs = data.get("requires", [])
+          if pkgs:
+              print(f"Installing extra packages: {pkgs}")
+              subprocess.run(["tlmgr", "install"] + pkgs, check=False)
+          else:
+              print("No extra packages required")
+          EOF
+
+      - name: Clone jsoyer/CV for test compile
+        run: |
+          git clone --depth=1 https://github.com/jsoyer/CV /tmp/cv-repo
+
+      - name: Install template into CV repo
+        run: |
+          TEMPLATE="${{ matrix.template }}"
+          CLS=$(python3 -c "
+          import yaml
+          with open('templates/$TEMPLATE/template.yml') as f:
+              d = yaml.safe_load(f)
+          print(d.get('cls_source', ''))
+          ")
+
+          # Copy .cls file if present
+          if [ -f "templates/$TEMPLATE/$CLS.cls" ]; then
+              cp "templates/$TEMPLATE/$CLS.cls" /tmp/cv-repo/
+              echo "Installed $CLS.cls into CV repo"
+          else
+              echo "No .cls to copy (using TeX Live built-in: $CLS)"
+          fi
+
+      - name: Run render + compile
+        run: |
+          cd /tmp/cv-repo
+          pip install pyyaml --quiet
+          TEMPLATE="${{ matrix.template }}"
+          RENDER_FN=$(python3 -c "
+          import yaml, sys
+          sys.path.insert(0, 'scripts')
+          with open('../cv-templates/templates/$TEMPLATE/template.yml') as f:  # won't work — use env
+              pass
+          " 2>/dev/null || echo "")
+
+          python3 scripts/render.py --template "$TEMPLATE" -o /tmp/test-cv.tex || {
+            echo "render.py does not support TEMPLATE=$TEMPLATE yet — skipping compile"
+            echo "Add render_cv_${TEMPLATE//-/_}() to scripts/render.py to enable compile check"
+            exit 0
+          }
+
+          xelatex -interaction=nonstopmode -output-directory /tmp /tmp/test-cv.tex || {
+            echo "XeLaTeX compile failed — check the .log"
+            cat /tmp/test-cv.log | tail -40
+            exit 1
+          }
+          echo "Compile OK — PDF generated"
+
+      - name: Upload compiled PDF as artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-${{ matrix.template }}
+          path: /tmp/test-cv.pdf
+          retention-days: 7

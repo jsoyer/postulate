@@ -1,0 +1,45 @@
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Generated files
+*.pdf
+*.tex
+
+# Track docs assets and PDFs
+!docs/
+!docs/assets/
+!docs/assets/**
+!docs/*.pdf
+
+# Environment variables (API keys)
+.env
+
+# Application-specific content (private)
+applications/
+
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+venv/
+.venv/
+
+# Editor temp files
+.*sw[op]
+*~
+
+# runtime RSS discovery cache (not for VCS)
+scripts/.rss-cache.json

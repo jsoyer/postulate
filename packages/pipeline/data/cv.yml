@@ -1,0 +1,117 @@
+personal:
+  first_name: Jane
+  last_name: Doe
+  position: Senior Software Engineer
+  address: San Francisco, CA
+  mobile: "(+1) 555-012-3456"
+  email: jane.doe@example.com
+  linkedin: janedoe
+
+profile: >-
+  Full-stack engineer with 8+ years of experience building scalable web
+  applications and distributed systems. Passionate about clean code,
+  developer tooling, and mentoring junior engineers. Led migration of
+  monolithic architecture to microservices, reducing deploy times by 70%.
+
+skills:
+  - category: Languages
+    items: Python, TypeScript, Go, Rust, SQL
+  - category: Frameworks
+    items: React, Next.js, FastAPI, Django, Express
+  - category: Infrastructure
+    items: AWS, Docker, Kubernetes, Terraform, GitHub Actions
+  - category: Data
+    items: PostgreSQL, Redis, Elasticsearch, Kafka, DynamoDB
+
+key_wins:
+  - title: CI/CD Optimization
+    text: >-
+      Reduced pipeline duration from 45min to 8min, saving 200+
+      engineer-hours/month
+  - title: Microservices Migration
+    text: >-
+      Led migration to microservices architecture serving 2M+ daily active
+      users
+  - title: Developer Platform
+    text: >-
+      Built internal developer platform adopted by 150+ engineers across
+      12 teams
+  - title: Mentorship
+    text: >-
+      Mentored 8 junior engineers, 5 promoted to mid-level within 18 months
+
+experience:
+  - title: Senior Software Engineer
+    company: TechCorp Inc.
+    dates: 2022 -- Present
+    location: San Francisco, CA
+    items:
+      - text: >-
+          Architected and deployed **event-driven microservices** processing
+          10M+ events/day on AWS ECS with Kafka, achieving 99.95% uptime
+      - text: >-
+          Led cross-functional team of 6 engineers to rebuild the billing
+          system, reducing revenue leakage by **$2.4M annually**
+      - text: >-
+          Designed CI/CD pipeline with GitHub Actions and ArgoCD, cutting
+          deployment frequency from weekly to **15+ deploys/day**
+
+  - title: Software Engineer
+    company: StartupXYZ
+    dates: 2019 -- 2022
+    location: New York, NY
+    items:
+      - text: >-
+          Built real-time analytics dashboard with **React** and **WebSocket**,
+          serving 50K+ concurrent users during peak traffic
+      - text: >-
+          Implemented distributed caching layer with Redis, reducing API
+          response times by **60%** (p99 from 800ms to 320ms)
+      - text: >-
+          Contributed to open-source internal framework, now used by 3
+          external companies
+
+early_career:
+  - title: Junior Software Engineer
+    company: BigDataCo
+    dates: 2017 -- 2019
+    location: Austin, TX
+    items:
+      - text: >-
+          Developed ETL pipelines processing **5TB+ daily** using Python
+          and Apache Spark on AWS EMR
+      - text: >-
+          Created monitoring dashboards with Grafana and Prometheus,
+          reducing incident response time by **40%**
+
+education:
+  - degree: B.S. Computer Science
+    school: University of California, Berkeley
+    dates: 2013 -- 2017
+    location: Berkeley, CA
+    note: "GPA: 3.8/4.0, Dean's List"
+
+certifications:
+  - name: AWS Solutions Architect -- Professional
+    institution: Amazon Web Services
+    date: "2023"
+  - name: Certified Kubernetes Administrator (CKA)
+    institution: Cloud Native Computing Foundation
+    date: "2022"
+
+awards: >-
+  Recipient of TechCorp Engineering Excellence Award (2023) for leading the
+  billing system rebuild that eliminated $2.4M in annual revenue leakage.
+
+publications: >-
+  Co-author of "Scaling Event-Driven Architectures" published in the
+  TechCorp Engineering Blog (2023), with 15K+ reads.
+
+languages:
+  - "English (Native)"
+  - "Spanish (Intermediate, B2)"
+
+interests:
+  - Open-source contributing
+  - Rock climbing
+  - Mentoring bootcamp students

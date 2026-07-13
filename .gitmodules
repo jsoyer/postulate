@@ -1,0 +1,3 @@
+[submodule "packages/pipeline/awesome-cv"]
+	path = packages/pipeline/awesome-cv
+	url = https://github.com/posquit0/Awesome-CV.git

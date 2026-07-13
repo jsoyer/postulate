@@ -1,0 +1,69 @@
+name: 📦 Template request
+description: Demander l'ajout d'un nouveau template dans la marketplace
+labels: ["template-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Vous souhaitez voir un template spécifique dans la marketplace ?
+        Décrivez-le ci-dessous — ou mieux, soumettez une PR !
+
+  - type: input
+    id: name
+    attributes:
+      label: Nom du template souhaité
+      placeholder: ex. friggeri, altacv, twentyseconds
+    validations:
+      required: true
+
+  - type: input
+    id: source
+    attributes:
+      label: Lien vers la source
+      description: Repo GitHub, CTAN, Overleaf, etc.
+      placeholder: https://github.com/auteur/repo
+    validations:
+      required: false
+
+  - type: dropdown
+    id: pages
+    attributes:
+      label: Format attendu
+      options:
+        - 1 page
+        - 2 pages
+        - Les deux
+    validations:
+      required: true
+
+  - type: dropdown
+    id: style
+    attributes:
+      label: Style
+      multiple: true
+      options:
+        - Professionnel classique
+        - Tech / développeur
+        - Académique
+        - Créatif
+        - Minimaliste
+        - Deux colonnes
+        - Sidebar
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Pourquoi ce template ?
+      description: Cas d'usage, avantages par rapport aux templates existants.
+      placeholder: Ce template est adapté aux CVs académiques car...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: Je suis prêt(e) à soumettre ce template moi-même via une PR

@@ -1,0 +1,49 @@
+name: 📅 Update registry date
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "registry.json"
+      - "templates/**/template.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  update-date:
+    name: Stamp registry.json with today's date
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update 'updated' field in registry.json
+        run: |
+          TODAY=$(date -u '+%Y-%m-%d')
+          python3 - <<EOF
+          import json
+
+          with open("registry.json") as f:
+              data = json.load(f)
+
+          data["updated"] = "$TODAY"
+
+          with open("registry.json", "w") as f:
+              json.dump(data, f, indent=2, ensure_ascii=False)
+              f.write("\n")
+
+          print(f"registry.json updated: {data['updated']}")
+          EOF
+
+      - name: Commit updated date (if changed)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git diff --quiet registry.json || (
+            git add registry.json &&
+            git commit -m "chore: update registry date to $(date -u '+%Y-%m-%d') [skip ci]"
+            git push
+          )

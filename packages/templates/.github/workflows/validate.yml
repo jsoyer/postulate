@@ -1,0 +1,170 @@
+name: ✅ Validate registry & templates
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate registry.json + template.yml files
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PyYAML
+        run: pip install pyyaml --quiet
+
+      - name: Validate registry.json structure
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+
+          REQUIRED_FIELDS = ["name", "description", "author", "version", "built_in", "tags"]
+
+          with open("registry.json") as f:
+              registry = json.load(f)
+
+          assert "version" in registry, "registry.json missing top-level 'version'"
+          assert "templates" in registry, "registry.json missing 'templates' list"
+          assert isinstance(registry["templates"], list), "'templates' must be a list"
+
+          errors = []
+          names = set()
+          for t in registry["templates"]:
+              name = t.get("name", "<unnamed>")
+              for field in REQUIRED_FIELDS:
+                  if field not in t:
+                      errors.append(f"  [{name}] missing field: '{field}'")
+              if not isinstance(t.get("tags", None), list):
+                  errors.append(f"  [{name}] 'tags' must be a list")
+              if name in names:
+                  errors.append(f"  duplicate name: '{name}'")
+              names.add(name)
+
+          if errors:
+              print("registry.json validation FAILED:")
+              for e in errors:
+                  print(e)
+              sys.exit(1)
+
+          print(f"registry.json OK — {len(registry['templates'])} templates listed")
+          EOF
+
+      - name: Validate all template.yml files
+        run: |
+          python3 - <<'EOF'
+          import yaml, sys, os
+          from pathlib import Path
+
+          REQUIRED = ["name", "description", "author", "version", "tags", "engine", "pages", "cls_source", "render_function", "license"]
+          VALID_ENGINES = {"xelatex", "pdflatex", "lualatex"}
+          VALID_PAGES = {1, 2}
+
+          errors = []
+          found = list(Path("templates").glob("*/template.yml"))
+
+          # Skip the _example directory
+          found = [p for p in found if p.parent.name != "_example"]
+
+          if not found:
+              print("No template.yml files found (only built-ins) — OK")
+              sys.exit(0)
+
+          for path in sorted(found):
+              with open(path) as f:
+                  data = yaml.safe_load(f) or {}
+              tname = path.parent.name
+
+              for field in REQUIRED:
+                  if field not in data:
+                      errors.append(f"  [{tname}] missing field: '{field}'")
+
+              if data.get("engine") not in VALID_ENGINES:
+                  errors.append(f"  [{tname}] 'engine' must be one of {VALID_ENGINES}, got: {data.get('engine')!r}")
+
+              if data.get("pages") not in VALID_PAGES:
+                  errors.append(f"  [{tname}] 'pages' must be 1 or 2, got: {data.get('pages')!r}")
+
+              if not isinstance(data.get("tags"), list) or not data["tags"]:
+                  errors.append(f"  [{tname}] 'tags' must be a non-empty list")
+
+              # Check directory name matches template name
+              if data.get("name") and data["name"] != tname:
+                  errors.append(f"  [{tname}] 'name' in template.yml ('{data['name']}') must match directory name ('{tname}')")
+
+          if errors:
+              print("template.yml validation FAILED:")
+              for e in errors:
+                  print(e)
+              sys.exit(1)
+
+          print(f"All {len(found)} template.yml file(s) valid")
+          EOF
+
+      - name: Check registry entries match template directories
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          from pathlib import Path
+
+          with open("registry.json") as f:
+              registry = json.load(f)
+
+          BUILT_IN = {"awesome-cv", "moderncv", "deedy"}
+          dirs = {p.name for p in Path("templates").iterdir() if p.is_dir() and not p.name.startswith("_")}
+          listed = {t["name"] for t in registry["templates"]}
+
+          errors = []
+
+          # Every non-built-in directory must have a registry entry
+          for d in dirs - BUILT_IN:
+              if d not in listed:
+                  errors.append(f"  directory 'templates/{d}/' exists but not listed in registry.json")
+
+          # Every non-built-in registry entry must have a directory
+          for name in listed - BUILT_IN:
+              if name not in dirs:
+                  errors.append(f"  registry entry '{name}' has no matching 'templates/{name}/' directory")
+
+          if errors:
+              print("Registry / directory mismatch:")
+              for e in errors:
+                  print(e)
+              sys.exit(1)
+
+          print("Registry entries and template directories are consistent")
+          EOF
+
+      - name: Check each community template has required files
+        run: |
+          python3 - <<'EOF'
+          import sys
+          from pathlib import Path
+
+          BUILT_IN = {"awesome-cv", "moderncv", "deedy", "_example"}
+          REQUIRED_FILES = ["README.md", "template.yml"]
+
+          errors = []
+          for d in sorted(Path("templates").iterdir()):
+              if not d.is_dir() or d.name in BUILT_IN:
+                  continue
+              for f in REQUIRED_FILES:
+                  if not (d / f).exists():
+                      errors.append(f"  templates/{d.name}/ missing: {f}")
+
+          if errors:
+              print("Missing required files:")
+              for e in errors:
+                  print(e)
+              sys.exit(1)
+
+          community = [d for d in Path("templates").iterdir() if d.is_dir() and d.name not in BUILT_IN]
+          print(f"All {len(community)} community template(s) have required files")
+          EOF

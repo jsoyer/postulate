@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "updated": "2026-03-09",
+  "templates": [
+    {
+      "name": "awesome-cv",
+      "description": "Classic Awesome-CV — sidebar, colorful accents, 2-page professional",
+      "author": "posquit0 / jsoyer",
+      "version": "1.0.0",
+      "built_in": true,
+      "tags": ["professional", "sidebar", "colorful", "2-page"],
+      "preview": null,
+      "repo": null,
+      "install": null
+    },
+    {
+      "name": "moderncv",
+      "description": "ModernCV — TeX Live built-in, styles: classic/banking/casual/oldstyle/fancy",
+      "author": "Xavier Danaux",
+      "version": "2.3.1",
+      "built_in": true,
+      "tags": ["professional", "classic", "minimal", "multiple-styles"],
+      "preview": null,
+      "repo": null,
+      "install": null
+    },
+    {
+      "name": "deedy",
+      "description": "Deedy-Resume style — 1 page, 2-column, tech-focused",
+      "author": "Debarghya Das / jsoyer",
+      "version": "1.0.0",
+      "built_in": true,
+      "tags": ["tech", "one-page", "two-column", "compact"],
+      "preview": null,
+      "repo": null,
+      "install": null
+    }
+  ]
+}

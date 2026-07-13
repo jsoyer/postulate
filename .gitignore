@@ -1,0 +1,54 @@
+# Node
+node_modules/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Env / secrets
+.env*
+!.env.example
+!.env.*.example
+
+# Rust / build outputs
+target/
+dist/
+
+# Confidential — real job applications & cover letters (never import real content)
+applications/
+
+# Secret-bearing file types (proactive — for the Go API / TS / TUI imports in
+# Sprints 2-4; ignore before the first real one ever gets committed)
+*.pem
+*.key
+id_rsa*
+*.p12
+*.pfx
+*.keystore
+.npmrc
+kubeconfig
+*-service-account*.json
+.kube/
+
+# OS
+.DS_Store
+
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# Generated PDFs (but keep curated public samples under docs/)
+*.pdf
+!docs/
+!docs/*.pdf
+!docs/**/*.pdf
