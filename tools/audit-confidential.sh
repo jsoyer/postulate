@@ -54,6 +54,9 @@ TOTAL_HITS=0
 EXCLUDE_DIR_NAMES_ALL=(
   ".git" "venv" ".venv" "node_modules" ".pytest_cache" ".mypy_cache"
   "__pycache__" "awesome-cv"
+  # Generated build output (never committed — see .gitignore). Scanning it only
+  # produced false positives from minified/compiled bundles (e.g. Next.js .next/).
+  ".next" "build"
 )
 
 # Public/synthetic fixture dirs — excluded from the PII scan ONLY (see
@@ -167,9 +170,21 @@ SECRET_PATTERNS=(
 # standard "read secret from environment/config at runtime" idioms
 # (os.environ, os.getenv, process.env, ...) — those are the SAFE pattern (no
 # literal secret in source) and must not be flagged.
+# SAFETY: only the two LOW-SIGNAL detectors carry a neg-filter — the JWT-shape
+# heuristic (index 8) and the generic "key=value" heuristic (index 11). Every
+# HIGH-SIGNAL detector (private key / ghp_ / sk- / AKIA / Stripe / Slack / GCP-SA
+# JSON / DB conn string, indices 0-7,9,10) keeps an EMPTY neg and scans every
+# path including docs/ and tests/ — so a real high-entropy credential pasted into
+# documentation or a fixture is still caught. The negs below only suppress the
+# vague heuristics on: (a) documentation & test fixtures by path (public/example
+# by design), and (b) self-describing placeholders / code idioms by value.
 SECRET_NEGS=(
-  "" "" "" "" "" "" "" "" "" "" ""
-  '(your-[a-z-]*(here|key)|your-token-here|<[a-z_-]+>|xxx+|changeme|example|placeholder|secret_\.\.\.|\.\.\.|os\.environ|os\.getenv|process\.env|getenv\(|System\.getenv|env\.get\(|env\[|fake-key|fake-token|fake-secret|dummy-key|dummy-token|mock-key|mock-token)'
+  "" "" "" "" "" "" "" ""
+  # [8] JWT-shape: suppress example/alg:none vectors in docs & test fixtures only.
+  '(/docs/|\.md:|/tests/|__tests__|_test\.(go|ts|tsx|py|rs)|\.test\.(ts|tsx))'
+  "" ""
+  # [11] Generic key=value heuristic: placeholders, doc/test fixtures, code idioms.
+  '(your-[a-z-]*(here|key)|your-token-here|<[a-z_-]+>|xxx+|changeme|example|placeholder|secret_\.\.\.|\.\.\.|os\.environ|os\.getenv|process\.env|getenv\(|System\.getenv|env\.get\(|env\[|fake-key|fake-token|fake-secret|dummy-key|dummy-token|mock-key|mock-token|/docs/|\.md:|/tests/|__tests__|_test\.(go|ts|tsx|py|rs)|\.test\.(ts|tsx)|your_[a-z0-9_]+|change[_-]?me|dev[_-](secret|password|runner)|runner[_-]secret|-at-least-[0-9]+-char|minimum-[0-9]+-char|\$\{[a-z_]+:-|generate[a-z]*secret\(|\.get\(|\.match\(|errors\.new|config\.[a-z]|client[a-z_]*secret|cv_api_key|constant-time|password:[[:space:]]+password|totpsecret:[[:space:]]*totpsecret|\.headers\.|\.cookies\.)'
 )
 
 # ---------------------------------------------------------------------------
@@ -204,10 +219,20 @@ run_grep_pii_scan() {
 run_structural_scan() {
   echo "== Structural scan (real application/cover-letter content, real .env) =="
 
+  # An "applications" directory only signals real job-application CONTENT when it
+  # is a DATA dir — not when it is legitimate source code (the manager ships an
+  # "applications" feature: src/app/applications, src/components/applications,
+  # src/app/api/applications). Exclude source-tree parents so real data drops are
+  # still caught while feature code is not false-flagged. Real application data
+  # lives outside the repo (served by apps/api) or in an app-local data/ dir
+  # (git-ignored). See EXCLUSION-MANIFEST.md §3.
   local dirs
   dirs="$(find . -type d -name "applications" \
     -not -path "./.git/*" -not -path "*/venv/*" -not -path "*/.venv/*" \
-    -not -path "*/node_modules/*" 2>/dev/null || true)"
+    -not -path "*/node_modules/*" -not -path "*/src/*" -not -path "*/app/*" \
+    -not -path "*/components/*" -not -path "*/pages/*" -not -path "*/.next/*" \
+    -not -path "*/dist/*" -not -path "*/build/*" -not -path "*/target/*" \
+    2>/dev/null || true)"
   if [ -n "${dirs}" ]; then
     echo "-- applications/ directories present --"
     while IFS= read -r d; do

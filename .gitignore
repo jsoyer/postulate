@@ -19,9 +19,19 @@ htmlcov/
 # Rust / build outputs
 target/
 dist/
+build/
+# Next.js build output (web clients — apps/manager etc.)
+.next/
 
-# Confidential — real job applications & cover letters (never import real content)
-applications/
+# Confidential — real job applications & cover letters (never import real content).
+# Root-anchored (/applications/) so this catches a real data drop at the repo root
+# WITHOUT matching legitimate source dirs named "applications" (e.g. the manager's
+# apps/manager/src/app/applications feature code). Real application content lives
+# outside the repo (served by apps/api) or in an app-local data dir (below).
+/applications/
+# Web-client runtime data stores holding real secrets/PII (e.g. manager passkey
+# WebAuthn credentials + Notion/LinkedIn integration tokens under data/).
+apps/manager/data/
 
 # Secret-bearing file types (proactive — for the Go API / TS / TUI imports in
 # Sprints 2-4; ignore before the first real one ever gets committed)
@@ -31,7 +41,12 @@ id_rsa*
 *.p12
 *.pfx
 *.keystore
+# .npmrc can carry a registry _authToken — keep it ignored by default. The two
+# committed client .npmrc files are config-only (legacy-peer-deps=true, token-free,
+# needed for installs) and are force-allowed below. Any new .npmrc stays ignored.
 .npmrc
+!apps/manager/.npmrc
+!apps/mobile/.npmrc
 kubeconfig
 *-service-account*.json
 .kube/
