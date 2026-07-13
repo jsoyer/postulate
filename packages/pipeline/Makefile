@@ -41,6 +41,25 @@ LANG :=
 # Usage: make tailor NAME=... AI=claude
 AI ?= gemini
 
+# ---------------------------------------------------------------------------
+# Parameterized, CWD-independent engine surface (Shared Contract).
+# See docs/CONSUMING.md. External consumers override these to point the engine
+# at their own tree, out of the engine's working directory:
+#   make -C <engine> <target> DATA_DIR=… APP_DIR=… AWESOME_CV_DIR=… OUT_DIR=…
+# Defaults reproduce the standalone (Jane Doe sample) build behavior exactly.
+# ---------------------------------------------------------------------------
+DATA_DIR       ?= data
+APP_DIR        ?= applications
+AWESOME_CV_DIR ?= awesome-cv
+OUT_DIR        ?= .
+
+# Debug logging: DEBUG=1 → verbose LOG_LEVEL=DEBUG across all Python scripts.
+# Generic lift from the CV consumer's per-target hack; default off, retro-compatible.
+ifneq ($(DEBUG),)
+LOG_LEVEL ?= DEBUG
+endif
+export LOG_LEVEL
+
 
 UNAME := $(shell uname -s)
 ifeq ($(UNAME), Darwin)
@@ -62,13 +81,13 @@ XELATEX ?= $(shell \
     || ls /usr/share/texlive/*/bin/x86_64-linux/xelatex     2>/dev/null | sort -V | tail -1 \
     || ls /usr/share/texlive/*/bin/aarch64-linux/xelatex    2>/dev/null | sort -V | tail -1 \
     || echo xelatex)
-TEXINPUTS := $(CURDIR)/awesome-cv/:$(TEXINPUTS)
+TEXINPUTS := $(abspath $(AWESOME_CV_DIR))/:$(TEXINPUTS)
 
 # Use venv Python if available, else fall back to system python3
 PYTHON := $(shell [ -x venv/bin/python3 ] && echo venv/bin/python3 || echo python3)
 
 # Auto-init submodule if awesome-cv.cls is missing
-ifeq (,$(wildcard $(CURDIR)/awesome-cv/awesome-cv.cls))
+ifeq (,$(wildcard $(abspath $(AWESOME_CV_DIR))/awesome-cv.cls))
     $(shell git submodule update --init --recursive)
 endif
 
@@ -100,9 +119,9 @@ current:
 all:
 	@$(MAKE) --no-print-directory render
 	@echo "🔨 Compiling PDFs..."
-	@$(XELATEX) -output-directory=. CV.tex > /dev/null 2>&1 && echo "   ✅ CV.pdf" || echo "   ❌ CV.tex — compilation failed"
-	@if [ -f CoverLetter.tex ]; then \
-		$(XELATEX) -output-directory=. CoverLetter.tex > /dev/null 2>&1 && echo "   ✅ CoverLetter.pdf" || echo "   ❌ CoverLetter.tex — compilation failed"; \
+	@$(XELATEX) -output-directory=$(OUT_DIR) $(OUT_DIR)/CV.tex > /dev/null 2>&1 && echo "   ✅ CV.pdf" || echo "   ❌ CV.tex — compilation failed"
+	@if [ -f $(OUT_DIR)/CoverLetter.tex ]; then \
+		$(XELATEX) -output-directory=$(OUT_DIR) $(OUT_DIR)/CoverLetter.tex > /dev/null 2>&1 && echo "   ✅ CoverLetter.pdf" || echo "   ❌ CoverLetter.tex — compilation failed"; \
 	fi
 	@echo "✅ Build complete"
 
@@ -111,61 +130,61 @@ all:
 open:
 	@if [ -n "$(NAME)" ]; then \
 		$(MAKE) --no-print-directory app NAME=$(NAME); \
-		for f in "applications/$(NAME)/"*.pdf; do \
+		for f in "$(APP_DIR)/$(NAME)/"*.pdf; do \
 			[ -f "$$f" ] && $(OPEN_CMD) "$$f"; \
 		done; \
 	else \
 		$(MAKE) --no-print-directory all; \
-		$(OPEN_CMD) CV.pdf 2>/dev/null || true; $(OPEN_CMD) CoverLetter.pdf 2>/dev/null || true; \
+		$(OPEN_CMD) $(OUT_DIR)/CV.pdf 2>/dev/null || true; $(OPEN_CMD) $(OUT_DIR)/CoverLetter.pdf 2>/dev/null || true; \
 	fi
 
 # Build a specific application: make app NAME=2026-02-databricks
 # Add DRAFT=true for watermark: make app NAME=... DRAFT=true
 app:
 	@test -n "$(NAME)" || (echo "Usage: make app NAME=2026-02-databricks" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@# Render CV: from tailored YAML if available, otherwise from root data/cv.yml
-	@CV_TEX=$$(ls "applications/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
-	if [ -f "applications/$(NAME)/cv-tailored.yml" ]; then \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@# Render CV: from tailored YAML if available, otherwise from root $(DATA_DIR)/cv.yml
+	@CV_TEX=$$(ls "$(APP_DIR)/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
+	if [ -f "$(APP_DIR)/$(NAME)/cv-tailored.yml" ]; then \
 		echo "📄 Rendering tailored CV from YAML..."; \
 		if [ -n "$$CV_TEX" ]; then \
-			$(PYTHON) scripts/render.py -d "applications/$(NAME)/cv-tailored.yml" -o "$$CV_TEX"; \
+			$(PYTHON) scripts/render.py -d "$(APP_DIR)/$(NAME)/cv-tailored.yml" -o "$$CV_TEX"; \
 		fi; \
 	elif [ -n "$$CV_TEX" ]; then \
-		echo "📄 Rendering CV from root data/cv.yml..."; \
-		$(PYTHON) scripts/render.py -d "data/cv.yml" -o "$$CV_TEX"; \
+		echo "📄 Rendering CV from root $(DATA_DIR)/cv.yml..."; \
+		$(PYTHON) scripts/render.py -d "$(DATA_DIR)/cv.yml" -o "$$CV_TEX"; \
 	fi
-	@if [ -f "applications/$(NAME)/coverletter.yml" ]; then \
+	@if [ -f "$(APP_DIR)/$(NAME)/coverletter.yml" ]; then \
 		echo "📨 Rendering application-specific cover letter..."; \
-		CV_DATA=$$([ -f "applications/$(NAME)/cv-tailored.yml" ] && echo "applications/$(NAME)/cv-tailored.yml" || echo "data/cv.yml"); \
-		CL_TEX=$$(ls "applications/$(NAME)/CoverLetter "*.tex 2>/dev/null | head -1); \
-		CL_OUT=$$([ -n "$$CL_TEX" ] && echo "$$CL_TEX" || echo "applications/$(NAME)/CoverLetter.tex"); \
+		CV_DATA=$$([ -f "$(APP_DIR)/$(NAME)/cv-tailored.yml" ] && echo "$(APP_DIR)/$(NAME)/cv-tailored.yml" || echo "$(DATA_DIR)/cv.yml"); \
+		CL_TEX=$$(ls "$(APP_DIR)/$(NAME)/CoverLetter "*.tex 2>/dev/null | head -1); \
+		CL_OUT=$$([ -n "$$CL_TEX" ] && echo "$$CL_TEX" || echo "$(APP_DIR)/$(NAME)/CoverLetter.tex"); \
 		if [ "$(DRAFT)" = "true" ]; then \
-			$(PYTHON) scripts/render.py -d "applications/$(NAME)/coverletter.yml" -o "$$CL_OUT" --cv-data "$$CV_DATA" --draft; \
+			$(PYTHON) scripts/render.py -d "$(APP_DIR)/$(NAME)/coverletter.yml" -o "$$CL_OUT" --cv-data "$$CV_DATA" --draft; \
 		else \
-			$(PYTHON) scripts/render.py -d "applications/$(NAME)/coverletter.yml" -o "$$CL_OUT" --cv-data "$$CV_DATA"; \
+			$(PYTHON) scripts/render.py -d "$(APP_DIR)/$(NAME)/coverletter.yml" -o "$$CL_OUT" --cv-data "$$CV_DATA"; \
 		fi; \
-		if [ -n "$$CL_TEX" ] && [ "$$CL_TEX" != "applications/$(NAME)/CoverLetter.tex" ]; then \
-			cp "$$CL_TEX" "applications/$(NAME)/CoverLetter.tex"; \
+		if [ -n "$$CL_TEX" ] && [ "$$CL_TEX" != "$(APP_DIR)/$(NAME)/CoverLetter.tex" ]; then \
+			cp "$$CL_TEX" "$(APP_DIR)/$(NAME)/CoverLetter.tex"; \
 		fi; \
 	fi
 	@if [ "$(DRAFT)" = "true" ]; then \
 		echo "📝 Adding DRAFT watermark..."; \
-		for f in "applications/$(NAME)/"*.tex; do \
+		for f in "$(APP_DIR)/$(NAME)/"*.tex; do \
 			[ -f "$$f" ] || continue; \
 			if ! grep -q 'draftwatermark' "$$f"; then \
 				$(SED_I) 's/\\begin{document}/\\usepackage{draftwatermark}\n\\SetWatermarkText{DRAFT}\n\\SetWatermarkScale{1.5}\n\\SetWatermarkColor[gray]{0.92}\n\\begin{document}/' "$$f"; \
 			fi; \
 		done; \
 	fi
-	@for f in "applications/$(NAME)/"*.tex; do \
-		$(XELATEX) -output-directory="applications/$(NAME)" "$$f"; \
+	@for f in "$(APP_DIR)/$(NAME)/"*.tex; do \
+		$(XELATEX) -output-directory="$(APP_DIR)/$(NAME)" "$$f"; \
 	done
-	@echo "✅ Built: applications/$(NAME)/"
+	@echo "✅ Built: $(APP_DIR)/$(NAME)/"
 	@echo ""
 	@echo "📏 Page check:"
 	@PASS=true; \
-	find "applications/$(NAME)" -name "*.pdf" | while IFS= read -r f; do \
+	find "$(APP_DIR)/$(NAME)" -name "*.pdf" | while IFS= read -r f; do \
 		PAGES=$$(pdfinfo "$$f" 2>/dev/null | awk '/^Pages:/{print $$2}'); \
 		BASE=$$(basename "$$f"); \
 		echo "$$BASE" | grep -qi "coverletter" && LIMIT=1 || LIMIT=2; \
@@ -188,12 +207,12 @@ new:
 		POSITION=$$(printf '%s' '$(POSITION)' | tr -d '";|&$$`\\'); \
 		SLUG=$$(printf '%s' "$$COMPANY" | tr '[:upper:]' '[:lower:]' | tr ' ' '-'); \
 		DATE=$$(date +%Y-%m); \
-		DIR="applications/$$DATE-$$SLUG"; \
+		DIR="$(APP_DIR)/$$DATE-$$SLUG"; \
 		test ! -d "$$DIR" || { echo "Directory $$DIR already exists"; exit 1; }; \
 		mkdir -p "$$DIR"; \
-		cp CV.tex "$$DIR/CV - $$COMPANY - $$POSITION.tex"; \
-		cp CoverLetter.tex "$$DIR/CoverLetter - $$COMPANY - $$POSITION.tex"; \
-		if [ -f data/coverletter.yml ]; then cp data/coverletter.yml "$$DIR/coverletter.yml"; fi; \
+		cp $(OUT_DIR)/CV.tex "$$DIR/CV - $$COMPANY - $$POSITION.tex"; \
+		cp $(OUT_DIR)/CoverLetter.tex "$$DIR/CoverLetter - $$COMPANY - $$POSITION.tex"; \
+		if [ -f $(DATA_DIR)/coverletter.yml ]; then cp $(DATA_DIR)/coverletter.yml "$$DIR/coverletter.yml"; fi; \
 		printf '# Application metadata\ncompany: %s\nposition: %s\ncreated: %s\n# deadline: YYYY-MM-DD\n# outcome: applied | interview | offer | rejected | ghosted\n# response_days:\n' \
 			"$$COMPANY" "$$POSITION" "$$DATE" > "$$DIR/meta.yml"; \
 		ESCAPED_CO=$$(printf '%s' "$$COMPANY" | sed 's/[&/\]/\\&/g'); \
@@ -237,7 +256,7 @@ apply:
 		SLUG=$$(echo "$$COMPANY" | tr '[:upper:]' '[:lower:]' | tr ' ' '-'); \
 		DATE=$$(date +%Y-%m); \
 		FDATE=$$(date +"%B %d, %Y"); \
-		DIR="applications/$$DATE-$$SLUG"; \
+		DIR="$(APP_DIR)/$$DATE-$$SLUG"; \
 		BRANCH="apply/$$DATE-$$SLUG"; \
 		test ! -d "$$DIR" || { echo "❌ Directory $$DIR already exists — use: git checkout $$BRANCH"; exit 1; }; \
 		git ls-remote --exit-code --heads origin "$$BRANCH" > /dev/null 2>&1 && \
@@ -245,9 +264,9 @@ apply:
 		echo "🔀 Creating branch $$BRANCH..."; \
 		git checkout -b "$$BRANCH"; \
 		mkdir -p "$$DIR"; \
-		cp CV.tex "$$DIR/CV - $$COMPANY - $$POSITION.tex"; \
-		cp CoverLetter.tex "$$DIR/CoverLetter - $$COMPANY - $$POSITION.tex"; \
-		if [ -f data/coverletter.yml ]; then cp data/coverletter.yml "$$DIR/coverletter.yml"; fi; \
+		cp $(OUT_DIR)/CV.tex "$$DIR/CV - $$COMPANY - $$POSITION.tex"; \
+		cp $(OUT_DIR)/CoverLetter.tex "$$DIR/CoverLetter - $$COMPANY - $$POSITION.tex"; \
+		if [ -f $(DATA_DIR)/coverletter.yml ]; then cp $(DATA_DIR)/coverletter.yml "$$DIR/coverletter.yml"; fi; \
 		printf '# Application metadata\ncompany: %s\nposition: %s\ncreated: %s\n# deadline: YYYY-MM-DD\n# outcome: applied | interview | offer | rejected | ghosted\n# response_days:\n' \
 			"$$COMPANY" "$$POSITION" "$$DATE" > "$$DIR/meta.yml"; \
 		COMP="$$COMPANY" POS="$$POSITION" FDATE="$$FDATE" perl -pi -e \
@@ -296,7 +315,7 @@ TARGET ?= cl
 MODEL ?=
 tailor:
 	@test -n "$(NAME)" || (echo "Usage: make tailor NAME=2026-02-snowflake" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
 	@case "$(TARGET)" in cv|cl|both) ;; *) echo "❌ TARGET must be cv, cl, or both" && exit 1 ;; esac
 	@case "$(AI)" in \
 		gemini)  test -n "$(GEMINI_API_KEY)"    || (echo "❌ Set GEMINI_API_KEY (https://aistudio.google.com/apikey)"    && exit 1) ;; \
@@ -306,9 +325,9 @@ tailor:
 		ollama)  ;; \
 		*)       echo "❌ Unknown AI provider: $(AI). Valid: gemini claude openai mistral ollama" && exit 1 ;; \
 	esac
-	@if [ -f "applications/$(NAME)/job.txt" ]; then \
+	@if [ -f "$(APP_DIR)/$(NAME)/job.txt" ]; then \
 		echo "📊 Pre-tailoring ATS score:"; \
-		$(PYTHON) scripts/ats-score.py "applications/$(NAME)" --json > /tmp/ats-before.json 2>/dev/null; \
+		$(PYTHON) scripts/ats-score.py "$(APP_DIR)/$(NAME)" --json > /tmp/ats-before.json 2>/dev/null; \
 		$(PYTHON) -c "import json; d=json.load(open('/tmp/ats-before.json')); print(f\"   Score: {d['score']:.0f}%\"); print(f\"   Missing: {', '.join(m['keyword'] for m in d['missing'][:15])}\")" 2>/dev/null || true; \
 		echo ""; \
 		echo "═══════════════════════════════════════════════════════════════"; \
@@ -319,29 +338,29 @@ tailor:
 		cl)  TAILOR_FLAGS="$$TAILOR_FLAGS --cl-only" ;; \
 	esac; \
 	if [ -n "$(MODEL)" ]; then TAILOR_FLAGS="$$TAILOR_FLAGS --model $(MODEL)"; fi; \
-	$(PYTHON) scripts/ai-tailor.py "applications/$(NAME)" --provider "$(AI)" $$TAILOR_FLAGS
+	$(PYTHON) scripts/ai-tailor.py "$(APP_DIR)/$(NAME)" --provider "$(AI)" $$TAILOR_FLAGS
 	@# Render tailored YAML → LaTeX
-	@if [ "$(TARGET)" != "cl" ] && [ -f "applications/$(NAME)/cv-tailored.yml" ]; then \
+	@if [ "$(TARGET)" != "cl" ] && [ -f "$(APP_DIR)/$(NAME)/cv-tailored.yml" ]; then \
 		echo ""; \
 		echo "🔧 Rendering tailored CV..."; \
-		CV_TEX=$$(ls "applications/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
+		CV_TEX=$$(ls "$(APP_DIR)/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
 		if [ -n "$$CV_TEX" ]; then \
-			$(PYTHON) scripts/render.py -d "applications/$(NAME)/cv-tailored.yml" -o "$$CV_TEX"; \
+			$(PYTHON) scripts/render.py -d "$(APP_DIR)/$(NAME)/cv-tailored.yml" -o "$$CV_TEX"; \
 		fi; \
 	fi
-	@if [ "$(TARGET)" != "cv" ] && [ -f "applications/$(NAME)/coverletter.yml" ]; then \
+	@if [ "$(TARGET)" != "cv" ] && [ -f "$(APP_DIR)/$(NAME)/coverletter.yml" ]; then \
 		echo "🔧 Rendering cover letter..."; \
-		CL_TEX=$$(ls "applications/$(NAME)/CoverLetter "*.tex 2>/dev/null | head -1); \
+		CL_TEX=$$(ls "$(APP_DIR)/$(NAME)/CoverLetter "*.tex 2>/dev/null | head -1); \
 		if [ -n "$$CL_TEX" ]; then \
-			CV_DATA=$$([ "$(TARGET)" = "both" ] && [ -f "applications/$(NAME)/cv-tailored.yml" ] && echo "applications/$(NAME)/cv-tailored.yml" || echo "data/cv.yml"); \
-			$(PYTHON) scripts/render.py -d "applications/$(NAME)/coverletter.yml" -o "$$CL_TEX" --cv-data "$$CV_DATA"; \
+			CV_DATA=$$([ "$(TARGET)" = "both" ] && [ -f "$(APP_DIR)/$(NAME)/cv-tailored.yml" ] && echo "$(APP_DIR)/$(NAME)/cv-tailored.yml" || echo "$(DATA_DIR)/cv.yml"); \
+			$(PYTHON) scripts/render.py -d "$(APP_DIR)/$(NAME)/coverletter.yml" -o "$$CL_TEX" --cv-data "$$CV_DATA"; \
 		fi; \
 	fi
-	@if [ -f "applications/$(NAME)/job.txt" ] && [ -f /tmp/ats-before.json ]; then \
+	@if [ -f "$(APP_DIR)/$(NAME)/job.txt" ] && [ -f /tmp/ats-before.json ]; then \
 		echo ""; \
 		echo "═══════════════════════════════════════════════════════════════"; \
 		echo "📊 Post-tailoring ATS score:"; \
-		$(PYTHON) scripts/ats-score.py "applications/$(NAME)" --json > /tmp/ats-after.json 2>/dev/null; \
+		$(PYTHON) scripts/ats-score.py "$(APP_DIR)/$(NAME)" --json > /tmp/ats-after.json 2>/dev/null; \
 		$(PYTHON) -c "\
 import json; \
 b=json.load(open('/tmp/ats-before.json'))['score']; \
@@ -351,7 +370,7 @@ print(f'   Score: {a:.0f}% ({sign}{d:.0f}%)')" 2>/dev/null || true; \
 		rm -f /tmp/ats-before.json /tmp/ats-after.json; \
 	fi
 	@echo ""
-	@git add "applications/$(NAME)/" && \
+	@git add "$(APP_DIR)/$(NAME)/" && \
 		git diff --cached --quiet || \
 		(git commit -m "tailor: $(NAME)" && git push)
 
@@ -360,12 +379,12 @@ print(f'   Score: {a:.0f}% ({sign}{d:.0f}%)')" 2>/dev/null || true; \
 # Usage: make pipeline [NAME=2026-02-company] [AI=gemini] [TARGET=cl]
 pipeline:
 	@test -n "$(NAME)" || (echo "Usage: make pipeline [NAME=2026-02-company] [AI=gemini]" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
 	@echo "╔═══════════════════════════════════════════════════════════════╗"
 	@printf "║  Pipeline: %-51s║\n" "$(NAME)"
 	@echo "╚═══════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@if [ ! -f "applications/$(NAME)/job.txt" ]; then \
+	@if [ ! -f "$(APP_DIR)/$(NAME)/job.txt" ]; then \
 		echo "⚠️  No job.txt — ATS scoring will be skipped"; \
 		echo "   Tip: make fetch NAME=$(NAME)  to download the job description first"; \
 		echo ""; \
@@ -376,21 +395,21 @@ pipeline:
 	@echo "━━━ 2/2  Review ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@$(MAKE) --no-print-directory review NAME=$(NAME)
 	@echo ""
-	@echo "✅ Pipeline complete — applications/$(NAME)"
+	@echo "✅ Pipeline complete — $(APP_DIR)/$(NAME)"
 	@echo "   Next: make open NAME=$(NAME)"
 
 # Render CV.tex + CoverLetter.tex from YAML source of truth
 # Usage: make render  /  make render LANG=fr  /  make render PDFA=true  /  make render DRAFT=true
 render:
-	@ARGS="-d data/cv.yml -o CV.tex"; \
+	@ARGS="-d $(DATA_DIR)/cv.yml -o $(OUT_DIR)/CV.tex"; \
 	if [ -n "$(LANG)" ]; then ARGS="$$ARGS -l $(LANG)"; fi; \
 	if [ "$(PDFA)" = "true" ]; then ARGS="$$ARGS --pdfa"; fi; \
 	if [ "$(DRAFT)" = "true" ]; then ARGS="$$ARGS --draft"; fi; \
 	$(PYTHON) scripts/render.py $$ARGS
-	@CL_FILE="data/coverletter.yml"; \
-	if [ -n "$(LANG)" ]; then CL_FILE="data/coverletter-$(LANG).yml"; fi; \
+	@CL_FILE="$(DATA_DIR)/coverletter.yml"; \
+	if [ -n "$(LANG)" ]; then CL_FILE="$(DATA_DIR)/coverletter-$(LANG).yml"; fi; \
 	if [ -f "$$CL_FILE" ]; then \
-		ARGS="-d data/coverletter.yml -o CoverLetter.tex"; \
+		ARGS="-d $(DATA_DIR)/coverletter.yml -o $(OUT_DIR)/CoverLetter.tex"; \
 		if [ -n "$(LANG)" ]; then ARGS="$$ARGS -l $(LANG)"; fi; \
 		if [ "$(PDFA)" = "true" ]; then ARGS="$$ARGS --pdfa"; fi; \
 		if [ "$(DRAFT)" = "true" ]; then ARGS="$$ARGS --draft"; fi; \
@@ -403,20 +422,20 @@ render:
 pdfa:
 	@$(MAKE) --no-print-directory render PDFA=true $(if $(LANG),LANG=$(LANG))
 	@echo "🔨 Compiling PDF/A-2b..."
-	@$(XELATEX) -interaction=nonstopmode -output-directory=. CV.tex > /dev/null 2>&1 && echo "   ✅ CV-pdfa.pdf" || echo "   ❌ CV.tex — compilation failed"
-	@if [ -f CoverLetter.tex ]; then \
-		$(XELATEX) -interaction=nonstopmode -output-directory=. CoverLetter.tex > /dev/null 2>&1 && echo "   ✅ CoverLetter-pdfa.pdf" || echo "   ❌ CoverLetter.tex — compilation failed"; \
+	@$(XELATEX) -interaction=nonstopmode -output-directory=$(OUT_DIR) $(OUT_DIR)/CV.tex > /dev/null 2>&1 && echo "   ✅ CV-pdfa.pdf" || echo "   ❌ CV.tex — compilation failed"
+	@if [ -f $(OUT_DIR)/CoverLetter.tex ]; then \
+		$(XELATEX) -interaction=nonstopmode -output-directory=$(OUT_DIR) $(OUT_DIR)/CoverLetter.tex > /dev/null 2>&1 && echo "   ✅ CoverLetter-pdfa.pdf" || echo "   ❌ CoverLetter.tex — compilation failed"; \
 	fi
-	@if [ -f CV.pdf ]; then mv CV.pdf CV-pdfa.pdf; fi
-	@if [ -f CoverLetter.pdf ]; then mv CoverLetter.pdf CoverLetter-pdfa.pdf; fi
+	@if [ -f $(OUT_DIR)/CV.pdf ]; then mv $(OUT_DIR)/CV.pdf $(OUT_DIR)/CV-pdfa.pdf; fi
+	@if [ -f $(OUT_DIR)/CoverLetter.pdf ]; then mv $(OUT_DIR)/CoverLetter.pdf $(OUT_DIR)/CoverLetter-pdfa.pdf; fi
 	@echo "✅ PDF/A build complete"
 
 # Validate PDF/A compliance
 # Usage: make check-pdfa  /  make check-pdfa NAME=2026-02-databricks
 check-pdfa:
 	@if [ -n "$(NAME)" ]; then \
-		echo "🔍 Checking PDF/A compliance: applications/$(NAME)/"; \
-		$(PYTHON) scripts/check-pdfa.py "applications/$(NAME)/"*.pdf; \
+		echo "🔍 Checking PDF/A compliance: $(APP_DIR)/$(NAME)/"; \
+		$(PYTHON) scripts/check-pdfa.py "$(APP_DIR)/$(NAME)/"*.pdf; \
 	else \
 		echo "🔍 Checking PDF/A compliance: root PDFs"; \
 		$(PYTHON) scripts/check-pdfa.py CV-pdfa.pdf CoverLetter-pdfa.pdf 2>/dev/null || \
@@ -428,8 +447,8 @@ check-pdfa:
 # Requires: job.txt in the application directory
 score:
 	@test -n "$(NAME)" || (echo "Usage: make score NAME=2026-02-databricks" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/ats-score.py "applications/$(NAME)" || true
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/ats-score.py "$(APP_DIR)/$(NAME)" || true
 
 # Quick application overview: stage, days since creation, ATS score, provider
 status:              ## Quick overview of all applications
@@ -443,8 +462,8 @@ status-active:       ## Active applications only (no rejected/ghosted)
 # Usage: make lint  or  make lint NAME=2026-02-databricks
 lint:
 	@if [ -n "$(NAME)" ]; then \
-		echo "🔍 Linting applications/$(NAME)/"; \
-		for f in "applications/$(NAME)/"*.tex; do \
+		echo "🔍 Linting $(APP_DIR)/$(NAME)/"; \
+		for f in "$(APP_DIR)/$(NAME)/"*.tex; do \
 			[ -f "$$f" ] || continue; \
 			echo "  $$f:"; \
 			chktex -q -n1 -n2 -n8 -n24 -n36 -n44 "$$f" 2>&1 || true; \
@@ -455,7 +474,7 @@ lint:
 			echo "  $$f:"; \
 			chktex -q -n1 -n2 -n8 -n24 -n36 -n44 "$$f" 2>&1 || true; \
 		done; \
-		for f in applications/*/*.tex; do \
+		for f in $(APP_DIR)/*/*.tex; do \
 			[ -f "$$f" ] || continue; \
 			echo "  $$f:"; \
 			chktex -q -n1 -n2 -n8 -n24 -n36 -n44 "$$f" 2>&1 || true; \
@@ -467,17 +486,17 @@ lint:
 # Usage: make diff NAME=2026-02-databricks
 diff:
 	@test -n "$(NAME)" || (echo "Usage: make diff NAME=2026-02-databricks" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@CV_FILE=$$(ls "applications/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@CV_FILE=$$(ls "$(APP_DIR)/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
 	if [ -z "$$CV_FILE" ]; then \
-		echo "❌ No CV .tex file found in applications/$(NAME)/"; \
+		echo "❌ No CV .tex file found in $(APP_DIR)/$(NAME)/"; \
 		exit 1; \
 	fi; \
 	echo "📊 Diff: CV.tex ↔ $$CV_FILE"; \
 	echo ""; \
 	diff --color=always -u CV.tex "$$CV_FILE" || true; \
 	echo ""; \
-	CL_FILE=$$(ls "applications/$(NAME)/CoverLetter "*.tex 2>/dev/null | head -1); \
+	CL_FILE=$$(ls "$(APP_DIR)/$(NAME)/CoverLetter "*.tex 2>/dev/null | head -1); \
 	if [ -n "$$CL_FILE" ]; then \
 		echo "📊 Diff: CoverLetter.tex ↔ $$CL_FILE"; \
 		echo ""; \
@@ -495,15 +514,15 @@ cv-keywords:
 # Usage: make blind-spots NAME=2026-02-databricks [AI=gemini]
 blind-spots:
 	@test -n "$(NAME)" || (echo "Usage: make blind-spots NAME=2026-02-company" && exit 1)
-	@$(PYTHON) scripts/blind-spots.py "applications/$(NAME)" \
+	@$(PYTHON) scripts/blind-spots.py "$(APP_DIR)/$(NAME)" \
 		$(if $(AI),--ai "$(AI)")
 
 # Generate interview-day brief (company snapshot, talking points, STAR stories, questions) (AI)
 # Usage: make interview-brief NAME=2026-02-databricks [STAGE=phone-screen|technical|panel|final] [AI=gemini]
 interview-brief:
 	@test -n "$(NAME)" || (echo "Usage: make interview-brief NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/interview-brief.py "applications/$(NAME)" \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/interview-brief.py "$(APP_DIR)/$(NAME)" \
 		$(if $(STAGE),--stage "$(STAGE)") \
 		$(if $(AI),--ai "$(AI)")
 
@@ -511,8 +530,8 @@ interview-brief:
 # Usage: make prep-star NAME=2026-02-databricks [COUNT=5] [AI=gemini]
 prep-star:
 	@test -n "$(NAME)" || (echo "Usage: make prep-star NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/prep-star.py "applications/$(NAME)" \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/prep-star.py "$(APP_DIR)/$(NAME)" \
 		$(if $(COUNT),--count "$(COUNT)") \
 		$(if $(AI),--ai "$(AI)")
 
@@ -520,8 +539,8 @@ prep-star:
 # Usage: make interview-debrief NAME=2026-02-databricks [STAGE=technical] [NOTES="..."] [AI=gemini]
 interview-debrief:
 	@test -n "$(NAME)" || (echo "Usage: make interview-debrief NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/interview-debrief.py "applications/$(NAME)" \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/interview-debrief.py "$(APP_DIR)/$(NAME)" \
 		$(if $(STAGE),--stage "$(STAGE)") \
 		$(if $(NOTES),--notes "$(NOTES)") \
 		$(if $(AI),--ai "$(AI)")
@@ -530,7 +549,7 @@ interview-debrief:
 # Usage: make linkedin-post [NAME=...] [TYPE=open-to-work|transition|achievement|insight] [TOPIC="..."] [AI=gemini]
 linkedin-post:
 	@$(PYTHON) scripts/linkedin-post.py \
-		$(if $(NAME),"applications/$(NAME)") \
+		$(if $(NAME),"$(APP_DIR)/$(NAME)") \
 		$(if $(TYPE),--type "$(TYPE)") \
 		$(if $(TOPIC),--topic "$(TOPIC)") \
 		$(if $(AI),--ai "$(AI)")
@@ -547,7 +566,7 @@ export-csv:
 # Usage: make elevator-pitch [NAME=2026-02-databricks] [CONTEXT=recruiter|networking|interview|cold-call] [AI=gemini]
 elevator-pitch:
 	@$(PYTHON) scripts/elevator-pitch.py \
-		$(if $(NAME),"applications/$(NAME)") \
+		$(if $(NAME),"$(APP_DIR)/$(NAME)") \
 		$(if $(CONTEXT),--context "$(CONTEXT)") \
 		$(if $(AI),--ai "$(AI)")
 
@@ -555,21 +574,21 @@ elevator-pitch:
 # Usage: make onboarding-plan NAME=2026-02-databricks [AI=gemini]
 onboarding-plan:
 	@test -n "$(NAME)" || (echo "Usage: make onboarding-plan NAME=2026-02-company" && exit 1)
-	@$(PYTHON) scripts/onboarding-plan.py "applications/$(NAME)" \
+	@$(PYTHON) scripts/onboarding-plan.py "$(APP_DIR)/$(NAME)" \
 		$(if $(AI),--ai "$(AI)")
 
 # AI cover letter critique vs job description (score + rewrite suggestions)
 # Usage: make cover-critique NAME=2026-02-databricks [AI=gemini]
 cover-critique:
 	@test -n "$(NAME)" || (echo "Usage: make cover-critique NAME=2026-02-company" && exit 1)
-	@$(PYTHON) scripts/cover-critique.py "applications/$(NAME)" \
+	@$(PYTHON) scripts/cover-critique.py "$(APP_DIR)/$(NAME)" \
 		$(if $(AI),--ai "$(AI)")
 
 # Interactive AI interview simulator (Q&A + evaluation)
 # Usage: make interview-sim NAME=2026-02-databricks [ROUNDS=5] [TYPE=behavioral|technical|mixed|pressure] [AI=gemini]
 interview-sim:
 	@test -n "$(NAME)" || (echo "Usage: make interview-sim NAME=2026-02-company" && exit 1)
-	@$(PYTHON) scripts/interview-sim.py "applications/$(NAME)" \
+	@$(PYTHON) scripts/interview-sim.py "$(APP_DIR)/$(NAME)" \
 		$(if $(ROUNDS),--rounds "$(ROUNDS)") \
 		$(if $(TYPE),--type "$(TYPE)") \
 		$(if $(AI),--ai "$(AI)")
@@ -578,8 +597,8 @@ interview-sim:
 # Usage: make archive-app NAME=2026-02-databricks [OUTCOME=rejected|offer|ghosted] [NO_COMMIT=true]
 archive-app:
 	@test -n "$(NAME)" || (echo "Usage: make archive-app NAME=2026-02-company [OUTCOME=...]" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/archive-app.py "applications/$(NAME)" \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/archive-app.py "$(APP_DIR)/$(NAME)" \
 		$(if $(OUTCOME),--outcome "$(OUTCOME)") \
 		$(if $(filter true,$(NO_COMMIT)),--no-commit) \
 		$(if $(filter true,$(NO_TAG)),--no-tag)
@@ -588,10 +607,10 @@ archive-app:
 # Usage: make archive NAME=2026-02-databricks
 archive:
 	@test -n "$(NAME)" || (echo "Usage: make archive NAME=2026-02-databricks" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
 	@mkdir -p archive
-	@mv "applications/$(NAME)" "archive/$(NAME)"
-	@echo "📦 Archived: applications/$(NAME) → archive/$(NAME)"
+	@mv "$(APP_DIR)/$(NAME)" "archive/$(NAME)"
+	@echo "📦 Archived: $(APP_DIR)/$(NAME) → archive/$(NAME)"
 	@BRANCH="apply/$(NAME)"; \
 	if git show-ref --quiet "refs/heads/$$BRANCH" 2>/dev/null; then \
 		echo "🔀 Deleting local branch $$BRANCH"; \
@@ -607,16 +626,16 @@ archive:
 # Usage: make export FORMAT=json  (or: markdown, text)
 export:
 	@test -n "$(FORMAT)" || (echo "Usage: make export FORMAT=json  (json, markdown, text)" && exit 1)
-	@$(PYTHON) scripts/export.py "$(FORMAT)" -d data/cv.yml
+	@$(PYTHON) scripts/export.py "$(FORMAT)" -d $(DATA_DIR)/cv.yml
 
 # Convert CV to DOCX using Pandoc
 # Usage: make docx  or  make docx NAME=2026-02-databricks
 docx:
 	@if [ -n "$(NAME)" ]; then \
-		CV_FILE=$$(ls "applications/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
-		OUTPUT="applications/$(NAME)/CV - $(NAME).docx"; \
+		CV_FILE=$$(ls "$(APP_DIR)/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
+		OUTPUT="$(APP_DIR)/$(NAME)/CV - $(NAME).docx"; \
 		if [ -z "$$CV_FILE" ]; then \
-			echo "❌ No CV .tex file found in applications/$(NAME)/"; \
+			echo "❌ No CV .tex file found in $(APP_DIR)/$(NAME)/"; \
 			exit 1; \
 		fi; \
 		echo "📄 Converting $$CV_FILE to DOCX..."; \
@@ -633,10 +652,10 @@ docx:
 compare:
 	@test -n "$(NAME1)" || (echo "Usage: make compare NAME1=2026-02-databricks NAME2=2026-02-snowflake" && exit 1)
 	@test -n "$(NAME2)" || (echo "Usage: make compare NAME1=2026-02-databricks NAME2=2026-02-snowflake" && exit 1)
-	@test -d "applications/$(NAME1)" || (echo "Directory applications/$(NAME1) not found" && exit 1)
-	@test -d "applications/$(NAME2)" || (echo "Directory applications/$(NAME2) not found" && exit 1)
-	@CV1=$$(ls "applications/$(NAME1)/CV "*.tex 2>/dev/null | head -1); \
-	CV2=$$(ls "applications/$(NAME2)/CV "*.tex 2>/dev/null | head -1); \
+	@test -d "$(APP_DIR)/$(NAME1)" || (echo "Directory $(APP_DIR)/$(NAME1) not found" && exit 1)
+	@test -d "$(APP_DIR)/$(NAME2)" || (echo "Directory $(APP_DIR)/$(NAME2) not found" && exit 1)
+	@CV1=$$(ls "$(APP_DIR)/$(NAME1)/CV "*.tex 2>/dev/null | head -1); \
+	CV2=$$(ls "$(APP_DIR)/$(NAME2)/CV "*.tex 2>/dev/null | head -1); \
 	if [ -z "$$CV1" ] || [ -z "$$CV2" ]; then \
 		echo "❌ CV .tex file not found in one of the directories"; \
 		exit 1; \
@@ -647,8 +666,8 @@ compare:
 	echo ""; \
 	diff --color=always -u "$$CV1" "$$CV2" || true; \
 	echo ""; \
-	CL1=$$(ls "applications/$(NAME1)/CoverLetter "*.tex 2>/dev/null | head -1); \
-	CL2=$$(ls "applications/$(NAME2)/CoverLetter "*.tex 2>/dev/null | head -1); \
+	CL1=$$(ls "$(APP_DIR)/$(NAME1)/CoverLetter "*.tex 2>/dev/null | head -1); \
+	CL2=$$(ls "$(APP_DIR)/$(NAME2)/CoverLetter "*.tex 2>/dev/null | head -1); \
 	if [ -n "$$CL1" ] && [ -n "$$CL2" ]; then \
 		echo "📊 Compare Cover Letters: $(NAME1) ↔ $(NAME2)"; \
 		echo ""; \
@@ -659,9 +678,9 @@ compare:
 # Usage: make linkedin  or  make linkedin PUSH=true
 linkedin:
 	@if [ "$(PUSH)" = "true" ]; then \
-		$(PYTHON) scripts/linkedin-sync.py -d data/cv.yml --push; \
+		$(PYTHON) scripts/linkedin-sync.py -d $(DATA_DIR)/cv.yml --push; \
 	else \
-		$(PYTHON) scripts/linkedin-sync.py -d data/cv.yml; \
+		$(PYTHON) scripts/linkedin-sync.py -d $(DATA_DIR)/cv.yml; \
 	fi
 
 # Install git hooks (pre-commit: lint + placeholder check)
@@ -676,8 +695,8 @@ check:
 	@echo "📋 YAML schema validation..."
 	@$(PYTHON) -c "\
 import json, yaml, sys; \
-schema=json.load(open('data/cv-schema.json')); \
-data=yaml.safe_load(open('data/cv.yml')); \
+schema=json.load(open('$(DATA_DIR)/cv-schema.json')); \
+data=yaml.safe_load(open('$(DATA_DIR)/cv.yml')); \
 missing=[k for k in schema.get('required',[]) if k not in data]; \
 print('✅ YAML valid' if not missing else f'❌ Missing keys: {missing}'); \
 sys.exit(1 if missing else 0)" || exit 1
@@ -688,13 +707,13 @@ sys.exit(1 if missing else 0)" || exit 1
 		$(MAKE) --no-print-directory lint NAME=$(NAME); \
 		echo ""; \
 		echo "🔍 Placeholder check..."; \
-		if grep -rn '\[Company\]\|\[Position Title\]\|Hiring Manager\|Company Name' "applications/$(NAME)/"*.tex 2>/dev/null; then \
+		if grep -rn '\[Company\]\|\[Position Title\]\|Hiring Manager\|Company Name' "$(APP_DIR)/$(NAME)/"*.tex 2>/dev/null; then \
 			echo "⚠️  Placeholders found — customize the templates"; \
 		else \
 			echo "✅ No placeholders found"; \
 		fi; \
 		echo ""; \
-		if [ -f "applications/$(NAME)/job.txt" ]; then \
+		if [ -f "$(APP_DIR)/$(NAME)/job.txt" ]; then \
 			$(MAKE) --no-print-directory score NAME=$(NAME); \
 		else \
 			echo "⚠️  No job.txt — skipping ATS score"; \
@@ -714,15 +733,15 @@ report:
 # Usage: make fetch NAME=2026-02-databricks
 fetch:
 	@test -n "$(NAME)" || (echo "Usage: make fetch NAME=2026-02-databricks" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/fetch-job.py "applications/$(NAME)"
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/fetch-job.py "$(APP_DIR)/$(NAME)"
 
 # Generate interview preparation notes
 # Usage: make prep NAME=2026-02-databricks
 prep:
 	@test -n "$(NAME)" || (echo "Usage: make prep NAME=2026-02-databricks" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/interview-prep.py "applications/$(NAME)"
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/interview-prep.py "$(APP_DIR)/$(NAME)"
 
 # Generate CV changelog across applications
 # Usage: make changelog  or  make changelog FORMAT=markdown
@@ -739,8 +758,8 @@ skills:
 # Requires: ImageMagick (brew install imagemagick)
 visual-diff:
 	@test -n "$(NAME)" || (echo "Usage: make visual-diff NAME=2026-02-databricks" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/visual-diff.py "applications/$(NAME)"
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/visual-diff.py "$(APP_DIR)/$(NAME)"
 
 # Application statistics and metrics
 # Usage: make stats
@@ -750,8 +769,8 @@ stats:
 clean:
 	rm -f *.pdf *.aux *.log *.out
 	rm -rf .visual-diff
-	rm -f applications/*/*.pdf applications/*/*.aux applications/*/*.log applications/*/*.out
-	rm -f applications/*/*-suggestions.tex
+	rm -f $(APP_DIR)/*/*.pdf $(APP_DIR)/*/*.aux $(APP_DIR)/*/*.log $(APP_DIR)/*/*.out
+	rm -f $(APP_DIR)/*/*-suggestions.tex
 
 # Check all dependencies
 doctor:
@@ -772,7 +791,7 @@ match:
 
 # Generate follow-up email templates
 # Usage: make follow-up              (all stale applications > 14 days)
-#        make follow-up NAME=...     (specific application → applications/NAME/followup.md)
+#        make follow-up NAME=...     (specific application → $(APP_DIR)/NAME/followup.md)
 #        make follow-up DAYS=7       (lower threshold)
 follow-up followup:
 	@if [ -n "$(NAME)" ]; then \
@@ -796,31 +815,31 @@ trends:
 # Usage: make thankyou NAME=2026-02-databricks [STAGE=interview] [AI=gemini]
 thankyou:
 	@test -n "$(NAME)" || (echo "Usage: make thankyou NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/thankyou.py "applications/$(NAME)" $(if $(STAGE),--stage $(STAGE)) --ai "$(AI)"
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/thankyou.py "$(APP_DIR)/$(NAME)" $(if $(STAGE),--stage $(STAGE)) --ai "$(AI)"
 
 # Generate negotiation script and counter-offer email using AI
 # Usage: make negotiate NAME=2026-02-databricks [OFFER="€120k + 10% bonus"] [AI=gemini]
 negotiate:
 	@test -n "$(NAME)" || (echo "Usage: make negotiate NAME=2026-02-company [OFFER=\"€120k\"]" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/negotiate.py "applications/$(NAME)" $(if $(OFFER),--offer "$(OFFER)") --ai "$(AI)"
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/negotiate.py "$(APP_DIR)/$(NAME)" $(if $(OFFER),--offer "$(OFFER)") --ai "$(AI)"
 
 # Update application status across all tracking systems
 # Usage: make notify NAME=2026-02-databricks STATUS=interview [MESSAGE="..."]
 notify:
 	@test -n "$(NAME)" || (echo "Usage: make notify NAME=2026-02-company STATUS=interview|offer|rejected|ghosted" && exit 1)
 	@test -n "$(STATUS)" || (echo "❌ STATUS is required. Values: applied interview offer rejected ghosted" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/notify.py "applications/$(NAME)" --status "$(STATUS)" $(if $(MESSAGE),--message "$(MESSAGE)")
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/notify.py "$(APP_DIR)/$(NAME)" --status "$(STATUS)" $(if $(MESSAGE),--message "$(MESSAGE)")
 
 # Watch mode — auto-recompile when YAML files change
 # Usage: make watch NAME=2026-02-databricks  (watch specific app)
 #        make watch                           (watch all applications)
 watch:
 	@if [ -n "$(NAME)" ]; then \
-		test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1); \
-		$(PYTHON) scripts/watch.py "applications/$(NAME)"; \
+		test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1); \
+		$(PYTHON) scripts/watch.py "$(APP_DIR)/$(NAME)"; \
 	else \
 		$(PYTHON) scripts/watch.py; \
 	fi
@@ -829,24 +848,24 @@ watch:
 # Usage: make tone NAME=2026-02-databricks
 tone:
 	@test -n "$(NAME)" || (echo "Usage: make tone NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/tone-check.py "applications/$(NAME)"
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/tone-check.py "$(APP_DIR)/$(NAME)"
 
 # Cover letter ATS-style score
 # Usage: make cl-score NAME=2026-02-databricks
 cl-score:
 	@test -n "$(NAME)" || (echo "Usage: make cl-score NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/cl-score.py "applications/$(NAME)"
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/cl-score.py "$(APP_DIR)/$(NAME)"
 
 # Fetch company intel (description, size, tech stack, news, funding)
 # Usage: make research NAME=2026-02-databricks
 research:
 	@test -n "$(NAME)" || (echo "Usage: make research NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/company-research.py "applications/$(NAME)"
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/company-research.py "$(APP_DIR)/$(NAME)"
 
-# Discover new job postings from configured sources (data/job-discovery.yml)
+# Discover new job postings from configured sources ($(DATA_DIR)/job-discovery.yml)
 # Usage: make discover
 discover:
 	@$(PYTHON) scripts/job-discovery.py
@@ -878,38 +897,38 @@ dashboard:
 # Usage: make review NAME=2026-02-databricks
 review:
 	@test -n "$(NAME)" || (echo "Usage: make review NAME=2026-02-databricks" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@echo "🔍 Reviewing: applications/$(NAME)"
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@echo "🔍 Reviewing: $(APP_DIR)/$(NAME)"
 	@echo "═══════════════════════════════════════════════════════════════"
 	@echo ""
 	@# 1. Render from YAML if tailored files exist
-	@if [ -f "applications/$(NAME)/cv-tailored.yml" ]; then \
+	@if [ -f "$(APP_DIR)/$(NAME)/cv-tailored.yml" ]; then \
 		echo "📄 Rendering tailored CV from YAML..."; \
-		CV_TEX=$$(ls "applications/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
+		CV_TEX=$$(ls "$(APP_DIR)/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
 		if [ -n "$$CV_TEX" ]; then \
-			$(PYTHON) scripts/render.py -d "applications/$(NAME)/cv-tailored.yml" -o "$$CV_TEX"; \
+			$(PYTHON) scripts/render.py -d "$(APP_DIR)/$(NAME)/cv-tailored.yml" -o "$$CV_TEX"; \
 		fi; \
 	fi
-	@if [ -f "applications/$(NAME)/coverletter.yml" ]; then \
+	@if [ -f "$(APP_DIR)/$(NAME)/coverletter.yml" ]; then \
 		echo "📨 Rendering cover letter from YAML..."; \
-		CL_TEX=$$(ls "applications/$(NAME)/CoverLetter "*.tex 2>/dev/null | head -1); \
+		CL_TEX=$$(ls "$(APP_DIR)/$(NAME)/CoverLetter "*.tex 2>/dev/null | head -1); \
 		if [ -n "$$CL_TEX" ]; then \
-			CV_DATA=$$([ -f "applications/$(NAME)/cv-tailored.yml" ] && echo "applications/$(NAME)/cv-tailored.yml" || echo "data/cv.yml"); \
-			$(PYTHON) scripts/render.py -d "applications/$(NAME)/coverletter.yml" -o "$$CL_TEX" --cv-data "$$CV_DATA"; \
+			CV_DATA=$$([ -f "$(APP_DIR)/$(NAME)/cv-tailored.yml" ] && echo "$(APP_DIR)/$(NAME)/cv-tailored.yml" || echo "$(DATA_DIR)/cv.yml"); \
+			$(PYTHON) scripts/render.py -d "$(APP_DIR)/$(NAME)/coverletter.yml" -o "$$CL_TEX" --cv-data "$$CV_DATA"; \
 		fi; \
 	fi
 	@echo ""
 	@# 2. Compile PDFs
 	@echo "🔨 Compiling PDFs..."
-	@for f in "applications/$(NAME)/"*.tex; do \
-		$(XELATEX) -output-directory="applications/$(NAME)" "$$f" > /dev/null 2>&1 && \
+	@for f in "$(APP_DIR)/$(NAME)/"*.tex; do \
+		$(XELATEX) -output-directory="$(APP_DIR)/$(NAME)" "$$f" > /dev/null 2>&1 && \
 		echo "   ✅ $$(basename $$f .tex).pdf" || \
 		echo "   ❌ $$(basename $$f) — compilation failed"; \
 	done
 	@echo ""
 	@# 3. Page count validation
 	@echo "📏 Page count:"
-	@for f in "applications/$(NAME)/"*.pdf; do \
+	@for f in "$(APP_DIR)/$(NAME)/"*.pdf; do \
 		[ -f "$$f" ] || continue; \
 		PAGES=$$($(PYTHON) -c "import re; d=open('$$f','rb').read(); m=re.search(rb'/Type\s*/Pages\b[^>]*/Count\s+(\d+)',d); print(m.group(1).decode() if m else '?')"); \
 		BASENAME=$$(basename "$$f"); \
@@ -927,16 +946,16 @@ review:
 	@echo ""
 	@# 4. Placeholder check
 	@echo "🔍 Placeholder check:"
-	@if grep -rn '\[Company\]\|\[Position Title\]\|Hiring Manager\|Company Name' "applications/$(NAME)/"*.tex 2>/dev/null; then \
+	@if grep -rn '\[Company\]\|\[Position Title\]\|Hiring Manager\|Company Name' "$(APP_DIR)/$(NAME)/"*.tex 2>/dev/null; then \
 		echo "   ⚠️  Placeholders found — customize the templates"; \
 	else \
 		echo "   ✅ No placeholders found"; \
 	fi
 	@echo ""
 	@# 5. ATS score
-	@if [ -f "applications/$(NAME)/job.txt" ]; then \
+	@if [ -f "$(APP_DIR)/$(NAME)/job.txt" ]; then \
 		echo "📊 ATS Score:"; \
-		$(PYTHON) scripts/ats-score.py "applications/$(NAME)"; \
+		$(PYTHON) scripts/ats-score.py "$(APP_DIR)/$(NAME)"; \
 	else \
 		echo "⚠️  No job.txt — skipping ATS score"; \
 	fi
@@ -944,19 +963,19 @@ review:
 	@echo "═══════════════════════════════════════════════════════════════"
 	@echo "✅ Review complete"
 
-# Score how well a job posting matches your personal preferences (data/preferences.yml)
+# Score how well a job posting matches your personal preferences ($(DATA_DIR)/preferences.yml)
 # Usage: make job-fit NAME=2026-02-databricks [JSON=true]
 job-fit:
 	@test -n "$(NAME)" || (echo "Usage: make job-fit NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/job-fit.py "applications/$(NAME)" $(if $(filter true,$(JSON)),--json)
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/job-fit.py "$(APP_DIR)/$(NAME)" $(if $(filter true,$(JSON)),--json)
 
 # Generate personalised LinkedIn outreach message using AI
 # Usage: make linkedin-message NAME=2026-02-databricks [TYPE=recruiter|hm|referral] [CONTACT="..."] [AI=gemini]
 linkedin-message:
 	@test -n "$(NAME)" || (echo "Usage: make linkedin-message NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/linkedin-message.py "applications/$(NAME)" \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/linkedin-message.py "$(APP_DIR)/$(NAME)" \
 		$(if $(TYPE),--type "$(TYPE)") \
 		$(if $(CONTACT),--contact "$(CONTACT)") \
 		--ai "$(AI)"
@@ -965,7 +984,7 @@ linkedin-message:
 # Usage: make cv-health [NAME=2026-02-databricks]
 cv-health:
 	@if [ -n "$(NAME)" ]; then \
-		test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1); \
+		test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1); \
 		$(PYTHON) scripts/cv-health.py --name "$(NAME)"; \
 	else \
 		$(PYTHON) scripts/cv-health.py; \
@@ -987,8 +1006,8 @@ cv-versions:
 #        make milestone            (show all apps with milestones)
 milestone:
 	@if [ -n "$(NAME)" ]; then \
-		test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1); \
-		$(PYTHON) scripts/milestone.py "applications/$(NAME)" \
+		test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1); \
+		$(PYTHON) scripts/milestone.py "$(APP_DIR)/$(NAME)" \
 			$(if $(STAGE),--stage "$(STAGE)") \
 			$(if $(DATE),--date "$(DATE)") \
 			$(if $(INTERVIEWER),--interviewer "$(INTERVIEWER)") \
@@ -1010,8 +1029,8 @@ deadline-alert:
 # Usage: make cover-angles NAME=2026-02-databricks [ANGLES=business,technical,culture] [AI=gemini]
 cover-angles:
 	@test -n "$(NAME)" || (echo "Usage: make cover-angles NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/cover-angles.py "applications/$(NAME)" \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/cover-angles.py "$(APP_DIR)/$(NAME)" \
 		$(if $(ANGLES),--angles "$(ANGLES)") \
 		--ai "$(AI)"
 
@@ -1019,7 +1038,7 @@ cover-angles:
 # Usage: make linkedin-profile [NAME=2026-02-databricks] [LANG=fr] [AI=gemini]
 linkedin-profile:
 	@$(PYTHON) scripts/linkedin-profile.py \
-		$(if $(NAME),"applications/$(NAME)") \
+		$(if $(NAME),"$(APP_DIR)/$(NAME)") \
 		$(if $(LANG),--lang "$(LANG)") \
 		$(if $(AI),--ai "$(AI)")
 
@@ -1027,8 +1046,8 @@ linkedin-profile:
 # Usage: make recruiter-email NAME=2026-02-databricks [TYPE=cold|follow-up|post-apply] [CONTACT=name] [AI=gemini]
 recruiter-email:
 	@test -n "$(NAME)" || (echo "Usage: make recruiter-email NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/recruiter-email.py "applications/$(NAME)" \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/recruiter-email.py "$(APP_DIR)/$(NAME)" \
 		$(if $(TYPE),--type "$(TYPE)") \
 		$(if $(CONTACT),--contact "$(CONTACT)") \
 		$(if $(AI),--ai "$(AI)")
@@ -1046,7 +1065,7 @@ references:
 			$(if $(REL),--relationship "$(REL)"); \
 	elif [ "$(ACTION)" = "request" ]; then \
 		test -n "$(NAME)" || (echo "Usage: make references ACTION=request NAME=2026-02-company" && exit 1); \
-		$(PYTHON) scripts/references.py request "applications/$(NAME)" $(if $(REF),--ref "$(REF)"); \
+		$(PYTHON) scripts/references.py request "$(APP_DIR)/$(NAME)" $(if $(REF),--ref "$(REF)"); \
 	elif [ "$(ACTION)" = "show" ]; then \
 		$(PYTHON) scripts/references.py show $(if $(REF),"$(REF)"); \
 	else \
@@ -1062,7 +1081,7 @@ network-map:
 # Usage: make prep-quiz [NAME=2026-02-databricks] [CAT=behavioral|technical|company|to-ask]
 prep-quiz:
 	@$(PYTHON) scripts/prep-quiz.py \
-		$(if $(NAME),"applications/$(NAME)") \
+		$(if $(NAME),"$(APP_DIR)/$(NAME)") \
 		$(if $(CAT),--category "$(CAT)") \
 		$(if $(filter true,$(LIST)),--list) \
 		$(if $(filter true,$(NO_SHUFFLE)),--no-shuffle)
@@ -1071,22 +1090,22 @@ prep-quiz:
 # Usage: make competitor-map NAME=2026-02-databricks [AI=gemini]
 competitor-map:
 	@test -n "$(NAME)" || (echo "Usage: make competitor-map NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/competitor-map.py "applications/$(NAME)" $(if $(AI),--ai "$(AI)")
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/competitor-map.py "$(APP_DIR)/$(NAME)" $(if $(AI),--ai "$(AI)")
 
 # AI-powered salary benchmarking + negotiation strategy
 # Usage: make salary-bench NAME=2026-02-databricks [AI=gemini]
 salary-bench:
 	@test -n "$(NAME)" || (echo "Usage: make salary-bench NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/salary-bench.py "applications/$(NAME)" $(if $(AI),--ai "$(AI)")
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/salary-bench.py "$(APP_DIR)/$(NAME)" $(if $(AI),--ai "$(AI)")
 
 # AI-translate tailored CV (+ Cover Letter) to French
 # Usage: make cv-fr-tailor NAME=2026-02-databricks [NO_CL=true] [AI=gemini]
 cv-fr-tailor:
 	@test -n "$(NAME)" || (echo "Usage: make cv-fr-tailor NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/cv-fr-tailor.py "applications/$(NAME)" \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/cv-fr-tailor.py "$(APP_DIR)/$(NAME)" \
 		$(if $(filter true,$(NO_CL)),--no-cl) \
 		$(if $(AI),--ai "$(AI)")
 
@@ -1101,8 +1120,8 @@ apply-board:
 # Usage: make contacts NAME=2026-02-databricks [JSON=true]
 contacts:
 	@test -n "$(NAME)" || (echo "Usage: make contacts NAME=2026-02-company" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	@$(PYTHON) scripts/contacts.py "applications/$(NAME)" $(if $(filter true,$(JSON)),--json)
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	@$(PYTHON) scripts/contacts.py "$(APP_DIR)/$(NAME)" $(if $(filter true,$(JSON)),--json)
 
 # Check if job posting URLs are still live
 # Usage: make url-check [NAME=2026-02-databricks]
@@ -1117,7 +1136,7 @@ digest:
 		$(if $(DAYS),--days "$(DAYS)")
 
 # Export cv.yml to JSON Resume v1.0.0 format
-# Usage: make json-resume [DATA=data/cv.yml] [OUTPUT=cv.json]
+# Usage: make json-resume [DATA=$(DATA_DIR)/cv.yml] [OUTPUT=cv.json]
 json-resume:
 	@$(PYTHON) scripts/json-resume.py \
 		$(if $(DATA),-d "$(DATA)") \
@@ -1137,8 +1156,8 @@ ats-rank:
 # Usage: make ats-text [NAME=2026-02-databricks] [NO_CL=true]
 ats-text:
 	@if [ -n "$(NAME)" ]; then \
-		test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1); \
-		$(PYTHON) scripts/ats-text.py "applications/$(NAME)" $(if $(filter true,$(NO_CL)),--no-cl); \
+		test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1); \
+		$(PYTHON) scripts/ats-text.py "$(APP_DIR)/$(NAME)" $(if $(filter true,$(NO_CL)),--no-cl); \
 	else \
 		$(PYTHON) scripts/ats-text.py $(if $(filter true,$(NO_CL)),--no-cl); \
 	fi
@@ -1196,10 +1215,10 @@ coverage:
 # Preview all theme variants from a single YAML
 preview:
 	@echo "Generating theme previews..."
-	@for theme in data/themes/*.yml; do \
+	@for theme in $(DATA_DIR)/themes/*.yml; do \
 		name=$$(basename "$$theme" .yml); \
 		echo "  Theme: $$name"; \
-		$(PYTHON) scripts/render.py -d data/cv.yml -o "CV-$$name.tex" -t "$$theme"; \
+		$(PYTHON) scripts/render.py -d $(DATA_DIR)/cv.yml -o "CV-$$name.tex" -t "$$theme"; \
 		$(XELATEX) -interaction=nonstopmode -output-directory=. "CV-$$name.tex" > /dev/null 2>&1; \
 	done
 	@echo "Done! Open with: open CV-*.pdf"
@@ -1207,7 +1226,7 @@ preview:
 # Deep clean: remove all generated files (PDFs, .tex, LaTeX aux)
 clean-all: clean
 	rm -f *.tex
-	rm -f applications/*/*.tex
+	rm -f $(APP_DIR)/*/*.tex
 
 # Install all system dependencies (TeX Live, uv, gh, poppler…)
 # Detects OS: macOS (brew), Debian/Ubuntu (apt), Fedora/RHEL (dnf), Arch (pacman), Windows (scoop)
@@ -1310,10 +1329,10 @@ validate-all:
 	@$(PYTHON) -c "\
 import json, yaml, sys; \
 from jsonschema import validate, ValidationError; \
-schema = json.load(open('data/cv-schema.json')); \
+schema = json.load(open('$(DATA_DIR)/cv-schema.json')); \
 errors = 0; \
 import glob; \
-for path in sorted(glob.glob('data/cv*.yml')): \
+for path in sorted(glob.glob('$(DATA_DIR)/cv*.yml')): \
     try: \
         data = yaml.safe_load(open(path)); \
         validate(instance=data, schema=schema); \
@@ -1333,7 +1352,7 @@ sys.exit(1 if errors else 0)"
 #        make predict TOP=10       — show top 10 by predicted probability
 predict:
 	@$(PYTHON) scripts/interview-predictor.py \
-		$(if $(NAME),--predict applications/$(NAME),) \
+		$(if $(NAME),--predict $(APP_DIR)/$(NAME),) \
 		$(if $(TOP),--top $(TOP),)
 
 # ---------------------------------------------------------------------------
@@ -1345,16 +1364,16 @@ predict:
 #        make compare-providers NAME=... PROVIDERS=gemini,claude
 compare-providers:
 	@test -n "$(NAME)" || (echo "Usage: make compare-providers NAME=2026-02-acme" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	$(PYTHON) scripts/compare-providers.py "applications/$(NAME)" \
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	$(PYTHON) scripts/compare-providers.py "$(APP_DIR)/$(NAME)" \
 		$(if $(PROVIDERS),--providers $(PROVIDERS),)
 
 # Auto-detect company accent color and create theme file
 # Usage: make accent NAME=2026-02-acme
 accent:
 	@test -n "$(NAME)" || (echo "Usage: make accent NAME=2026-02-acme" && exit 1)
-	@test -d "applications/$(NAME)" || (echo "Directory applications/$(NAME) not found" && exit 1)
-	$(PYTHON) scripts/accent-color.py "applications/$(NAME)"
+	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
+	$(PYTHON) scripts/accent-color.py "$(APP_DIR)/$(NAME)"
 
 # Show AI response cache statistics
 cache-stats:
@@ -1413,7 +1432,7 @@ boards:
 		$(if $(MIN_SCORE),--min-score $(MIN_SCORE),) \
 		$(if $(CREATE),--create,)
 
-# Batch job board fetch from data/job-boards.yml
+# Batch job board fetch from $(DATA_DIR)/job-boards.yml
 # Usage: make boards-file [CREATE=1]
 boards-file:
 	@cd scripts && $(PYTHON) job-boards.py \
@@ -1440,7 +1459,7 @@ doctor-fix:
 semantic:
 	@cd scripts && $(PYTHON) semantic-search.py \
 		$(if $(MODE),$(MODE),bullets) \
-		"$(if $(NAME),$(REPO_ROOT)/applications/$(NAME)/job.txt,$(QUERY))"
+		"$(if $(NAME),$(REPO_ROOT)/$(APP_DIR)/$(NAME)/job.txt,$(QUERY))"
 
 # Smart follow-up scheduler — flag stale applications, optionally create GitHub Issues
 # Usage: make smart-followup           — report only
@@ -1453,19 +1472,19 @@ smart-followup:
 		$(if $(DAYS),--threshold $(DAYS),)
 
 # Normalize YAML formatting (consistent key ordering, indentation)
-# Usage: make beautify            — beautify data/cv.yml in-place
+# Usage: make beautify            — beautify $(DATA_DIR)/cv.yml in-place
 #        make beautify DRY=1     — show diff without writing
 #        make beautify CHECK=1   — exit 1 if file would change (CI)
 beautify:
 	@$(PYTHON) scripts/yaml-beautify.py \
 		$(if $(DRY),--dry-run,) \
 		$(if $(CHECK),--check,) \
-		$(if $(FILE),$(FILE),data/cv.yml)
+		$(if $(FILE),$(FILE),$(DATA_DIR)/cv.yml)
 
 # Schema migration — add missing fields to meta.yml / cv.yml
 # Usage: make migrate                        — migrate all (cv + apps)
 #        make migrate MIGRATE_TARGET=apps    — only meta.yml files
-#        make migrate MIGRATE_TARGET=cv      — only data/cv.yml
+#        make migrate MIGRATE_TARGET=cv      — only $(DATA_DIR)/cv.yml
 #        make migrate DRYRUN=1              — dry-run preview
 #        make migrate VERBOSE=1             — show per-field details
 migrate:
@@ -1491,7 +1510,7 @@ market-installed:    ## List locally installed templates
 	@$(PYTHON) scripts/template-market.py installed
 
 # ---------------------------------------------------------------------------
-# Portfolio — static HTML from data/cv.yml → portfolio/index.html
+# Portfolio — static HTML from $(DATA_DIR)/cv.yml → portfolio/index.html
 # ---------------------------------------------------------------------------
 
 # Generate English portfolio
@@ -1590,7 +1609,7 @@ help:
 	@echo "  make notion-pull                  Pull Notion status → meta.yml"
 	@echo "  make notion-push                  Push meta.yml → Notion"
 	@echo "  make boards BOARD=gh COMPANY=...  Fetch jobs from Greenhouse/Lever"
-	@echo "  make boards-file                  Batch fetch from data/job-boards.yml"
+	@echo "  make boards-file                  Batch fetch from $(DATA_DIR)/job-boards.yml"
 	@echo "  make cv-api [PORT=8765]           HTTP API server for external triggers"
 	@echo ""
 	@echo "Smart Automation:"
