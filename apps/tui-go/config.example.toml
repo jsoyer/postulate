@@ -1,0 +1,21 @@
+# cv-tui-go configuration
+# Copy to ~/.config/cv/config.toml
+
+[api]
+# cv-api server URL
+base_url = "http://localhost:3001"
+
+# API key for authentication (generate with: openssl rand -base64 32)
+api_key  = "your-api-key-here"
+
+# Request timeout
+timeout  = "30s"
+
+# insecure = true  # allow http:// for non-localhost hosts (not recommended)
+
+[ui]
+# Color theme: catppuccin-mocha | dracula | nord
+theme = "catppuccin-mocha"
+
+# Date format (Go time layout)
+date_format = "2006-01-02"

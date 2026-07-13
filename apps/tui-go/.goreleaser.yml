@@ -1,0 +1,53 @@
+version: 2
+
+project_name: cv
+
+builds:
+  - id: cv
+    main: ./cmd/cv
+    binary: cv
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}}
+
+archives:
+  - id: cv
+    builds:
+      - cv
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+brews:
+  - name: cv
+    repository:
+      owner: jsoyer
+      name: homebrew-tap
+    directory: Formula
+    homepage: "https://github.com/jsoyer/cv-tui-go"
+    description: "Terminal UI for CV management system"
+    license: "MIT"
+    install: |
+      bin.install "cv"
+    test: |
+      system "#{bin}/cv", "--version"

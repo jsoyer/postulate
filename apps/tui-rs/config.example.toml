@@ -1,0 +1,16 @@
+# cv-tui-rs configuration
+# Copy to ~/.config/cv/config.toml (shared with cv-tui-go)
+
+[api]
+# cv-api server URL
+base_url = "http://localhost:3001"
+
+# API key for authentication (generate with: openssl rand -base64 32)
+api_key  = "your-api-key-here"
+
+# Request timeout in seconds
+timeout_secs = 30
+
+[ui]
+# Color theme: catppuccin-mocha | dracula | nord
+theme = "catppuccin-mocha"

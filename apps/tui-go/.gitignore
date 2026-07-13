@@ -1,0 +1,29 @@
+# Binaries
+/cv
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# GoReleaser
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
