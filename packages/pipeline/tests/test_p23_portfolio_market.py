@@ -17,6 +17,7 @@ import importlib
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 import tempfile
 from argparse import Namespace
@@ -425,6 +426,127 @@ class TestPortfolioProcess:
 
         leftover = list(tmp_path.glob(".portfolio_tmp_*"))
         assert leftover == []
+
+
+# ── --data-dir consumability (Fix 2: DATA_DIR ignored by portfolio.py) ─────────
+
+
+class TestPortfolioResolveDataDir:
+    def setup_method(self):
+        self.mod = _load("portfolio")
+
+    def test_cli_value_wins(self, tmp_path):
+        result = self.mod._resolve_data_dir(str(tmp_path / "explicit"))
+        assert result == tmp_path / "explicit"
+
+    def test_env_fallback_when_no_cli_value(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("DATA_DIR", str(tmp_path / "from-env"))
+        result = self.mod._resolve_data_dir(None)
+        assert result == tmp_path / "from-env"
+
+    def test_default_reproduces_repo_root_data(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("DATA_DIR", raising=False)
+        with patch.object(self.mod, "REPO_ROOT", tmp_path):
+            result = self.mod._resolve_data_dir(None)
+        assert result == tmp_path / "data"
+
+
+class TestPortfolioMainDataDirFlag:
+    def setup_method(self):
+        self.mod = _load("portfolio")
+
+    def _write_consumer_cv(self, consumer_dir: Path, filename: str = "cv.yml") -> None:
+        import yaml
+
+        consumer_dir.mkdir(parents=True, exist_ok=True)
+        cv = {
+            "personal": {"first_name": "Consumer", "last_name": "Person", "position": "Dev", "email": "c@example.com"},
+            "profile": "Consumer profile.",
+            "skills": [],
+            "experience": [],
+            "education": [],
+            "languages": [],
+        }
+        (consumer_dir / filename).write_text(yaml.dump(cv), encoding="utf-8")
+
+    def test_main_honors_data_dir_cli_flag(self, tmp_path):
+        consumer_dir = tmp_path / "consumer-data"
+        self._write_consumer_cv(consumer_dir)
+
+        decoy_root = tmp_path / "decoy-repo-root"
+        (decoy_root / "data").mkdir(parents=True)
+
+        out_path = tmp_path / "out" / "index.html"
+        with (
+            patch.object(self.mod, "REPO_ROOT", decoy_root),
+            patch(
+                "sys.argv",
+                ["portfolio.py", "-o", str(out_path), "--data-dir", str(consumer_dir)],
+            ),
+        ):
+            self.mod.main()
+        assert out_path.exists()
+        content = out_path.read_text(encoding="utf-8")
+        assert "Consumer" in content
+        assert "Person" in content
+
+    def test_main_honors_data_dir_env_var(self, monkeypatch, tmp_path):
+        consumer_dir = tmp_path / "consumer-data"
+        self._write_consumer_cv(consumer_dir)
+        monkeypatch.setenv("DATA_DIR", str(consumer_dir))
+
+        decoy_root = tmp_path / "decoy-repo-root"
+        (decoy_root / "data").mkdir(parents=True)
+
+        out_path = tmp_path / "out" / "index.html"
+        with (
+            patch.object(self.mod, "REPO_ROOT", decoy_root),
+            patch("sys.argv", ["portfolio.py", "-o", str(out_path)]),
+        ):
+            self.mod.main()
+        assert out_path.exists()
+        assert "Consumer" in out_path.read_text(encoding="utf-8")
+
+    def test_missing_cv_in_data_dir_errors_cleanly(self, tmp_path, capsys):
+        empty_consumer_dir = tmp_path / "empty-consumer-data"
+        empty_consumer_dir.mkdir()
+
+        out_path = tmp_path / "out" / "index.html"
+        with (
+            patch.object(self.mod, "REPO_ROOT", tmp_path),
+            patch(
+                "sys.argv",
+                ["portfolio.py", "-o", str(out_path), "--data-dir", str(empty_consumer_dir)],
+            ),
+            pytest.raises(SystemExit) as exc_info,
+        ):
+            self.mod.main()
+        assert exc_info.value.code == 1
+        assert not out_path.exists()
+
+    def test_help_shows_data_dir_flag(self):
+        """CLI --help output must document --data-dir (consumer-facing contract)."""
+        script = Path(__file__).resolve().parent.parent / "scripts" / "portfolio.py"
+        result = subprocess.run(
+            [sys.executable, str(script), "--help"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        assert result.returncode == 0
+        assert "--data-dir" in result.stdout
+
+    def test_standalone_default_unaffected_by_data_dir_flag_absence(self, tmp_path):
+        """No --data-dir given -> falls back to REPO_ROOT/data (sample-data safe default)."""
+        self._write_consumer_cv(tmp_path / "data")
+        out_path = tmp_path / "out" / "index.html"
+        with (
+            patch.object(self.mod, "REPO_ROOT", tmp_path),
+            patch("sys.argv", ["portfolio.py", "-o", str(out_path)]),
+        ):
+            self.mod.main()
+        assert out_path.exists()
+        assert "Consumer" in out_path.read_text(encoding="utf-8")
 
 
 # ===========================================================================

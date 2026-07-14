@@ -23,6 +23,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.common import REPO_ROOT, require_yaml
 
 
+def _resolve_data_dir(cli_value: str | None) -> Path:
+    """Resolve the CV data root.
+
+    Precedence: --data-dir flag > DATA_DIR env var > REPO_ROOT/data.
+    Lets external consumers (Makefile passes DATA_DIR) point portfolio
+    generation at their own cv.yml instead of the engine's sample data.
+    """
+    if cli_value:
+        return Path(cli_value)
+    env_value = os.environ.get("DATA_DIR")
+    if env_value:
+        return Path(env_value)
+    return REPO_ROOT / "data"
+
+
 def _esc(text: str) -> str:
     """HTML-escape a string."""
     return html.escape(str(text), quote=True)
@@ -426,12 +441,20 @@ def main() -> None:
         default="en",
         help="Language variant: en (cv.yml) or fr (cv-fr.yml)",
     )
+    parser.add_argument(
+        "--data-dir",
+        metavar="DIR",
+        dest="data_dir",
+        default=None,
+        help="Root directory containing cv.yml/cv-fr.yml (default: $DATA_DIR env var, then <repo>/data)",
+    )
     args = parser.parse_args()
 
     yaml = require_yaml()
 
     data_file = "cv-fr.yml" if args.lang == "fr" else "cv.yml"
-    cv_path = REPO_ROOT / "data" / data_file
+    data_root = _resolve_data_dir(args.data_dir)
+    cv_path = data_root / data_file
 
     if not cv_path.exists():
         print(f"Error: {cv_path} not found", file=sys.stderr)
