@@ -74,6 +74,7 @@ HEADERS = {
 # Cache helpers
 # ---------------------------------------------------------------------------
 
+
 def load_cache() -> dict:
     """Load the RSS cache from disk."""
     if not CACHE_FILE.exists():
@@ -105,6 +106,7 @@ def job_id(entry: dict) -> str:
 def normalize_text(text: str) -> str:
     """Strip HTML tags and normalize whitespace."""
     import re
+
     text = re.sub(r"<[^>]+>", "", text)
     text = re.sub(r"&[a-zA-Z]+;", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
@@ -133,6 +135,7 @@ def extract_company(entry: dict, source: str) -> str:
         # Try to extract company from description
         for pattern in [r"([A-Z][A-Za-z\s&.,'-]+)\s+(?:is|looking for|hiring|seeks)"]:
             import re
+
             m = re.search(pattern, desc)
             if m:
                 return m.group(1).strip()
@@ -182,6 +185,7 @@ def extract_posted(entry: dict) -> str:
 # Feed fetching
 # ---------------------------------------------------------------------------
 
+
 def fetch_feed(feed_cfg: dict, cache: dict) -> list[dict]:
     """Fetch a single RSS feed, using cache if fresh."""
     url = feed_cfg["url"]
@@ -208,16 +212,18 @@ def fetch_feed(feed_cfg: dict, cache: dict) -> list[dict]:
 
     entries = []
     for entry in feed.entries:
-        entries.append({
-            "title": entry.get("title", "").strip(),
-            "company": extract_company(entry, source),
-            "location": extract_location(entry, source),
-            "url": entry.get("link", ""),
-            "posted": extract_posted(entry),
-            "description_snippet": normalize_text(entry.get("summary", ""))[:300],
-            "source": source,
-            "id": job_id(entry),
-        })
+        entries.append(
+            {
+                "title": entry.get("title", "").strip(),
+                "company": extract_company(entry, source),
+                "location": extract_location(entry, source),
+                "url": entry.get("link", ""),
+                "posted": extract_posted(entry),
+                "description_snippet": normalize_text(entry.get("summary", ""))[:300],
+                "source": source,
+                "id": job_id(entry),
+            }
+        )
 
     # Update cache
     cache[url] = {
@@ -231,6 +237,7 @@ def fetch_feed(feed_cfg: dict, cache: dict) -> list[dict]:
 # ---------------------------------------------------------------------------
 # Keyword / location matching
 # ---------------------------------------------------------------------------
+
 
 def matches_keywords(job: dict, keywords: list[str]) -> list[str]:
     """Return list of matched keywords (empty = no match)."""
@@ -251,6 +258,7 @@ def matches_location(job: dict, location: str | None) -> bool:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(

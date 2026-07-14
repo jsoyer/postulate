@@ -114,10 +114,7 @@ class TestProcessText:
 
 
 class TestRenderProfile:
-    SAMPLE_PROFILE = (
-        "Experienced software engineer with a focus on distributed systems "
-        "and cloud infrastructure."
-    )
+    SAMPLE_PROFILE = "Experienced software engineer with a focus on distributed systems and cloud infrastructure."
 
     def test_contains_cvsection(self):
         output = render_profile(self.SAMPLE_PROFILE)

@@ -126,9 +126,7 @@ class CvApiClient:
         self._raise_for_status(resp)
         return Application.model_validate(resp.json())
 
-    async def create_application(
-        self, company: str, position: str, url: str = ""
-    ) -> Application:
+    async def create_application(self, company: str, position: str, url: str = "") -> Application:
         """Create a new application directory.
 
         Args:
@@ -261,9 +259,7 @@ class CvApiClient:
         self._raise_for_status(resp)
         return ActionResult.model_validate(resp.json())
 
-    async def stream_action(
-        self, target: str, app: str = ""
-    ) -> AsyncIterator[str]:
+    async def stream_action(self, target: str, app: str = "") -> AsyncIterator[str]:
         """Stream real-time output from a Make target via WebSocket.
 
         Yields JSON-encoded WSMessage strings as they arrive. The caller

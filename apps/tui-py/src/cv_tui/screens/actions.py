@@ -100,7 +100,6 @@ class ActionsScreen(Screen):  # type: ignore[type-arg]
     def action_list_cursor_up(self) -> None:
         self.query_one("#target-list-view", ListView).action_cursor_up()
 
-
     async def _load(self) -> None:
         try:
             self._targets = await self._client.list_targets()
@@ -145,7 +144,7 @@ class ActionsScreen(Screen):  # type: ignore[type-arg]
         item_id = event.item.id
         if not item_id or not item_id.startswith("item-"):
             return
-        raw_name = item_id[len("item-"):]
+        raw_name = item_id[len("item-") :]
         match = next(
             (t for t in self._targets if _item_id(t.name) == item_id),
             None,

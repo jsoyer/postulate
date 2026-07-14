@@ -35,6 +35,7 @@ except ImportError:
 try:
     import requests
     from bs4 import BeautifulSoup
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -46,15 +47,26 @@ HEADERS = {
 }
 
 RECRUITER_KEYWORDS = {
-    "recruiter", "talent", "hr", "human resources", "people", "hiring",
-    "staffing", "acquisition", "headhunter", "talent acquisition",
-    "people partner", "people ops", "talent partner",
+    "recruiter",
+    "talent",
+    "hr",
+    "human resources",
+    "people",
+    "hiring",
+    "staffing",
+    "acquisition",
+    "headhunter",
+    "talent acquisition",
+    "people partner",
+    "people ops",
+    "talent partner",
 }
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def extract_domain(app_dir: Path, company: str) -> str:
     """Extract domain from job.url or infer from company name."""
@@ -64,16 +76,32 @@ def extract_domain(app_dir: Path, company: str) -> str:
         parsed = urllib.parse.urlparse(url)
         netloc = parsed.netloc.lower()
         # Strip www. and job board prefixes
-        for prefix in ("www.", "jobs.", "careers.", "job.", "apply.", "boards.greenhouse.io",
-                       "job-boards.greenhouse.io", "api.lever.co", "jobs.ashbyhq.com"):
+        for prefix in (
+            "www.",
+            "jobs.",
+            "careers.",
+            "job.",
+            "apply.",
+            "boards.greenhouse.io",
+            "job-boards.greenhouse.io",
+            "api.lever.co",
+            "jobs.ashbyhq.com",
+        ):
             if netloc.startswith(prefix):
-                netloc = netloc[len(prefix):]
+                netloc = netloc[len(prefix) :]
                 break
         # If netloc contains slashes (like greenhouse: domain/company), take first part
         netloc = netloc.split("/")[0]
         # Ignore generic job boards — fall through to company name fallback
-        job_boards = ("linkedin.com", "indeed.com", "glassdoor.com", "wellfound.com",
-                      "monster.com", "ziprecruiter.com", "simplyhired.com")
+        job_boards = (
+            "linkedin.com",
+            "indeed.com",
+            "glassdoor.com",
+            "wellfound.com",
+            "monster.com",
+            "ziprecruiter.com",
+            "simplyhired.com",
+        )
         if "." in netloc and netloc != parsed.netloc.lower() and netloc not in job_boards:
             return netloc
 
@@ -96,27 +124,27 @@ def _safe_get(url, timeout=10):
 # Source 1: Hunter.io API
 # ---------------------------------------------------------------------------
 
+
 def search_hunter(domain: str, api_key: str) -> list:
     """Search Hunter.io for email addresses at domain."""
     if not api_key:
         return []
-    url = (
-        f"https://api.hunter.io/v2/domain-search"
-        f"?domain={urllib.parse.quote(domain)}&limit=5&api_key={api_key}"
-    )
+    url = f"https://api.hunter.io/v2/domain-search?domain={urllib.parse.quote(domain)}&limit=5&api_key={api_key}"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "python-contacts-script"})
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read())
         contacts = []
         for e in data.get("data", {}).get("emails", []):
-            contacts.append({
-                "name": f"{e.get('first_name', '')} {e.get('last_name', '')}".strip(),
-                "email": e.get("value", ""),
-                "position": e.get("position", ""),
-                "confidence": e.get("confidence", 0),
-                "source": "hunter",
-            })
+            contacts.append(
+                {
+                    "name": f"{e.get('first_name', '')} {e.get('last_name', '')}".strip(),
+                    "email": e.get("value", ""),
+                    "position": e.get("position", ""),
+                    "confidence": e.get("confidence", 0),
+                    "source": "hunter",
+                }
+            )
         return contacts
     except urllib.error.HTTPError as e:
         if e.code == 401:
@@ -132,6 +160,7 @@ def search_hunter(domain: str, api_key: str) -> list:
 # ---------------------------------------------------------------------------
 # Source 2: Company website scraping
 # ---------------------------------------------------------------------------
+
 
 def _is_recruiter_context(text_near: str) -> bool:
     text_lower = text_near.lower()
@@ -165,13 +194,15 @@ def scrape_company_website(domain: str) -> list:
                     context = parent.get_text(" ", strip=True) if parent else ""
                     if _is_recruiter_context(context) or _is_recruiter_context(email):
                         seen_emails.add(email)
-                        contacts.append({
-                            "name": "",
-                            "email": email,
-                            "position": "Contact (website)",
-                            "confidence": 50,
-                            "source": "website",
-                        })
+                        contacts.append(
+                            {
+                                "name": "",
+                                "email": email,
+                                "position": "Contact (website)",
+                                "confidence": 50,
+                                "source": "website",
+                            }
+                        )
 
         # Extract emails from visible text using regex
         page_text = soup.get_text(" ")
@@ -180,13 +211,15 @@ def scrape_company_website(domain: str) -> list:
             email = email.lower()
             if email not in seen_emails and domain.split(".")[0] in email:
                 seen_emails.add(email)
-                contacts.append({
-                    "name": "",
-                    "email": email,
-                    "position": "Contact (website)",
-                    "confidence": 40,
-                    "source": "website",
-                })
+                contacts.append(
+                    {
+                        "name": "",
+                        "email": email,
+                        "position": "Contact (website)",
+                        "confidence": 40,
+                        "source": "website",
+                    }
+                )
 
         if contacts:
             break  # Stop at first page that yielded results
@@ -197,6 +230,7 @@ def scrape_company_website(domain: str) -> list:
 # ---------------------------------------------------------------------------
 # Source 3: GitHub search
 # ---------------------------------------------------------------------------
+
 
 def search_github(company: str) -> list:
     """Search GitHub for company employees with public emails."""
@@ -231,14 +265,16 @@ def search_github(company: str) -> list:
             profile = profile_resp.json()
             email = profile.get("email", "")
             if email:
-                contacts.append({
-                    "name": profile.get("name", user["login"]),
-                    "email": email,
-                    "position": profile.get("bio", f"@{user['login']}"),
-                    "confidence": 30,
-                    "source": "github",
-                    "handle": user["login"],
-                })
+                contacts.append(
+                    {
+                        "name": profile.get("name", user["login"]),
+                        "email": email,
+                        "position": profile.get("bio", f"@{user['login']}"),
+                        "confidence": 30,
+                        "source": "github",
+                        "handle": user["login"],
+                    }
+                )
         except Exception:
             continue
 
@@ -248,6 +284,7 @@ def search_github(company: str) -> list:
 # ---------------------------------------------------------------------------
 # Output
 # ---------------------------------------------------------------------------
+
 
 def _pick_primary(all_contacts: list) -> dict | None:
     """Pick the best primary contact (highest confidence, prefer recruiter roles)."""
@@ -259,7 +296,7 @@ def _pick_primary(all_contacts: list) -> dict | None:
         key=lambda c: (
             0 if c["source"] == "hunter" else 1,
             -c.get("confidence", 0),
-        )
+        ),
     )
     # Prefer contacts with recruiter-related positions
     for c in ordered:
@@ -297,9 +334,15 @@ def print_results(company: str, domain: str, hunter: list, website: list, github
     print()
 
 
-def save_contacts(app_dir: Path, company: str, domain: str,
-                  hunter: list, website: list, github: list,
-                  candidate_name: str = "Candidate") -> None:
+def save_contacts(
+    app_dir: Path,
+    company: str,
+    domain: str,
+    hunter: list,
+    website: list,
+    github: list,
+    candidate_name: str = "Candidate",
+) -> None:
     all_contacts = hunter + website + github
     primary = _pick_primary(all_contacts)
     today = date.today().isoformat()
@@ -307,11 +350,16 @@ def save_contacts(app_dir: Path, company: str, domain: str,
     lines = [f"# Contacts — {company}", f"*Generated: {today} · Domain: {domain}*", ""]
 
     if hunter:
-        lines += ["## Hunter.io", "",
-                  "| Name | Email | Position | Confidence |",
-                  "|------|-------|----------|------------|"]
+        lines += [
+            "## Hunter.io",
+            "",
+            "| Name | Email | Position | Confidence |",
+            "|------|-------|----------|------------|",
+        ]
         for c in hunter:
-            lines.append(f"| {c.get('name','—')} | {c['email']} | {c.get('position','—')} | {c.get('confidence',0)}% |")
+            lines.append(
+                f"| {c.get('name', '—')} | {c['email']} | {c.get('position', '—')} | {c.get('confidence', 0)}% |"
+            )
         lines.append("")
 
     if website:
@@ -336,10 +384,13 @@ def save_contacts(app_dir: Path, company: str, domain: str,
             f"Subject: Following up on my application for [Position] — {candidate_name}",
         ]
     elif not all_contacts:
-        lines += ["## No contacts found", "",
-                  "- Check LinkedIn for hiring manager manually",
-                  "- Try: https://www.linkedin.com/search/results/people/?keywords=" +
-                  urllib.parse.quote(f"{company} recruiter talent")]
+        lines += [
+            "## No contacts found",
+            "",
+            "- Check LinkedIn for hiring manager manually",
+            "- Try: https://www.linkedin.com/search/results/people/?keywords="
+            + urllib.parse.quote(f"{company} recruiter talent"),
+        ]
     lines.append("")
 
     out_path = app_dir / "contacts.md"
@@ -352,12 +403,11 @@ def save_contacts(app_dir: Path, company: str, domain: str,
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main():
     load_env()
 
-    parser = argparse.ArgumentParser(
-        description="Find recruiter/hiring manager contacts for a job application"
-    )
+    parser = argparse.ArgumentParser(description="Find recruiter/hiring manager contacts for a job application")
     parser.add_argument("app_dir", help="Application directory")
     parser.add_argument("--json", action="store_true", help="Output JSON")
     args = parser.parse_args()
@@ -413,8 +463,7 @@ def main():
         print(json.dumps(all_contacts, indent=2, ensure_ascii=False))
     else:
         print_results(company, domain, hunter, website, github)
-        save_contacts(app_dir, company, domain, hunter, website, github,
-                      candidate_name=candidate_name)
+        save_contacts(app_dir, company, domain, hunter, website, github, candidate_name=candidate_name)
 
 
 if __name__ == "__main__":

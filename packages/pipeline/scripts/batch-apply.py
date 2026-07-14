@@ -29,12 +29,15 @@ def detect_name_from_git() -> str:
     try:
         result = subprocess.run(
             ["git", "branch", "--sort=-committerdate"],
-            capture_output=True, text=True, timeout=10, cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=REPO_ROOT,
         )
         for line in result.stdout.splitlines():
             line = line.strip().lstrip("* ")
             if line.startswith("apply/"):
-                return line[len("apply/"):]
+                return line[len("apply/") :]
     except Exception:
         pass
     return ""
@@ -43,6 +46,7 @@ def detect_name_from_git() -> str:
 def company_to_slug(company: str) -> str:
     """Convert company name to slug for fallback NAME detection."""
     from datetime import datetime
+
     date = datetime.now().strftime("%Y-%m")
     slug = re.sub(r"[^a-z0-9]+", "-", company.lower()).strip("-")
     return f"{date}-{slug}"
@@ -57,14 +61,11 @@ def run_make(target: str, args: dict, dry_run: bool = False) -> tuple[bool, str]
     for k, v in args.items():
         # Quote values with spaces
         if " " in str(v):
-            cmd.append(f'{k}={v}')
+            cmd.append(f"{k}={v}")
         else:
             cmd.append(f"{k}={v}")
 
-    cmd_str = " ".join(
-        f'{k}="{v}"' if " " in str(v) else f"{k}={v}"
-        for k, v in args.items()
-    )
+    cmd_str = " ".join(f'{k}="{v}"' if " " in str(v) else f"{k}={v}" for k, v in args.items())
     label = f"make {target} {cmd_str}"
 
     if dry_run:
@@ -74,8 +75,11 @@ def run_make(target: str, args: dict, dry_run: bool = False) -> tuple[bool, str]
     print(f"   ▶  {label}")
     try:
         result = subprocess.run(
-            cmd, cwd=REPO_ROOT, timeout=300,
-            text=True, capture_output=False,
+            cmd,
+            cwd=REPO_ROOT,
+            timeout=300,
+            text=True,
+            capture_output=False,
         )
         if result.returncode != 0:
             return False, f"exit code {result.returncode}"
@@ -89,7 +93,7 @@ def run_make(target: str, args: dict, dry_run: bool = False) -> tuple[bool, str]
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Batch Apply — Run the full apply/tailor/compile pipeline for multiple jobs. "
-                    "Input: CSV file with columns: company, position, url.",
+        "Input: CSV file with columns: company, position, url.",
         epilog="CSV format (header required):\n  company,position,url\n  Datadog,Senior Solutions Engineer EMEA,https://...",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -164,7 +168,7 @@ def main():
     # Apply --start-from
     if start_from > 1:
         print(f"⏭  Skipping first {start_from - 1} row(s) (--start-from {start_from})")
-        rows = rows[start_from - 1:]
+        rows = rows[start_from - 1 :]
 
     total = len(rows)
     original_total = len(rows) + start_from - 1

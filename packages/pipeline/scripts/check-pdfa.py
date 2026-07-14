@@ -65,10 +65,7 @@ def check_pdfa(pdf_path: str) -> dict:
     has_pdfa_marker = bool(pdfa_conformance)
 
     # Also check if pdfx package metadata is present
-    has_pdfx_metadata = any(
-        key.startswith("/pdfx:") or "pdfx" in key.lower()
-        for key in info
-    )
+    has_pdfx_metadata = any(key.startswith("/pdfx:") or "pdfx" in key.lower() for key in info)
 
     results["checks"]["pdfa_conformance"] = {
         "status": "PASS" if (has_pdfa_marker or has_pdfx_metadata) else "WARN",
@@ -104,10 +101,12 @@ def check_pdfa(pdf_path: str) -> dict:
             embedded = font_descriptor is not None
             if not embedded:
                 all_embedded = False
-            font_details.append({
-                "name": str(font_name)[:60],
-                "embedded": embedded,
-            })
+            font_details.append(
+                {
+                    "name": str(font_name)[:60],
+                    "embedded": embedded,
+                }
+            )
 
     results["checks"]["embedded_fonts"] = {
         "status": "PASS" if all_embedded else "FAIL",
@@ -135,9 +134,9 @@ def format_text(results: list[dict]) -> str:
     all_pass = True
 
     for r in results:
-        lines.append(f"\n{'='*60}")
+        lines.append(f"\n{'=' * 60}")
         lines.append(f"File: {r['file']}")
-        lines.append(f"{'='*60}")
+        lines.append(f"{'=' * 60}")
 
         if "error" in r:
             lines.append(f"❌ ERROR: {r['error']}")

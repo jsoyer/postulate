@@ -197,10 +197,16 @@ class TestLoadApplications:
         assert result == []
 
     def test_loads_single_app(self, mod, tmp_path):
-        _make_app(tmp_path, "2026-01-acme", {
-            "company": "Acme", "outcome": "applied",
-            "created": "2026-01-01", "tailor_provider": "gemini",
-        })
+        _make_app(
+            tmp_path,
+            "2026-01-acme",
+            {
+                "company": "Acme",
+                "outcome": "applied",
+                "created": "2026-01-01",
+                "tailor_provider": "gemini",
+            },
+        )
         with patch.object(mod, "APPS_DIR", tmp_path / "applications"):
             result = mod.load_applications()
         assert len(result) == 1
@@ -235,7 +241,7 @@ class TestLoadApplications:
 
     def test_active_only_filters_rejected(self, mod, tmp_path):
         _make_app(tmp_path, "2026-01-active", {"company": "A", "outcome": "applied"})
-        _make_app(tmp_path, "2026-01-dead",   {"company": "B", "outcome": "rejected"})
+        _make_app(tmp_path, "2026-01-dead", {"company": "B", "outcome": "rejected"})
         with patch.object(mod, "APPS_DIR", tmp_path / "applications"):
             result = mod.load_applications(active_only=True)
         assert len(result) == 1
@@ -260,17 +266,27 @@ class TestLoadApplications:
         assert len(result) == 1
 
     def test_ats_loaded(self, mod, tmp_path):
-        _make_app(tmp_path, "2026-01-a", {
-            "company": "A", "ats_history": [{"score": 78}],
-        })
+        _make_app(
+            tmp_path,
+            "2026-01-a",
+            {
+                "company": "A",
+                "ats_history": [{"score": 78}],
+            },
+        )
         with patch.object(mod, "APPS_DIR", tmp_path / "applications"):
             result = mod.load_applications()
         assert result[0]["ats"] == "78%"
 
     def test_provider_loaded(self, mod, tmp_path):
-        _make_app(tmp_path, "2026-01-a", {
-            "company": "A", "tailor_provider": "claude",
-        })
+        _make_app(
+            tmp_path,
+            "2026-01-a",
+            {
+                "company": "A",
+                "tailor_provider": "claude",
+            },
+        )
         with patch.object(mod, "APPS_DIR", tmp_path / "applications"):
             result = mod.load_applications()
         assert result[0]["provider"] == "claude"
@@ -282,10 +298,14 @@ class TestLoadApplications:
         assert result[0]["provider"] == "--"
 
     def test_created_fallback_to_applied_field(self, mod, tmp_path):
-        _make_app(tmp_path, "2026-01-a", {
-            "company": "A",
-            "applied": "2026-01-01",
-        })
+        _make_app(
+            tmp_path,
+            "2026-01-a",
+            {
+                "company": "A",
+                "applied": "2026-01-01",
+            },
+        )
         with patch.object(mod, "APPS_DIR", tmp_path / "applications"):
             result = mod.load_applications()
         assert result[0]["days"] >= 0
@@ -307,7 +327,7 @@ class TestLoadApplications:
 
     def test_multiple_apps_all_loaded(self, mod, tmp_path):
         for i in range(5):
-            _make_app(tmp_path, f"2026-0{i+1}-app", {"company": f"Co{i}"})
+            _make_app(tmp_path, f"2026-0{i + 1}-app", {"company": f"Co{i}"})
         with patch.object(mod, "APPS_DIR", tmp_path / "applications"):
             result = mod.load_applications()
         assert len(result) == 5
@@ -388,9 +408,9 @@ class TestPrintTable:
 
     def test_multiple_rows(self, mod):
         apps = [
-            {"name": "2026-01-a", "outcome": "applied",   "days": 1,  "ats": "70%", "provider": "gemini"},
-            {"name": "2026-02-b", "outcome": "interview",  "days": 14, "ats": "85%", "provider": "claude"},
-            {"name": "2026-03-c", "outcome": "rejected",   "days": 30, "ats": "55%", "provider": "--"},
+            {"name": "2026-01-a", "outcome": "applied", "days": 1, "ats": "70%", "provider": "gemini"},
+            {"name": "2026-02-b", "outcome": "interview", "days": 14, "ats": "85%", "provider": "claude"},
+            {"name": "2026-03-c", "outcome": "rejected", "days": 30, "ats": "55%", "provider": "--"},
         ]
         out = self._capture(mod, apps)
         assert "2026-01-a" in out
@@ -421,8 +441,8 @@ class TestJsonOutput:
         assert all(k in apps[0] for k in ("name", "outcome", "days", "ats", "provider"))
 
     def test_json_active_filter(self, mod, tmp_path):
-        _make_app(tmp_path, "2026-01-active",   {"company": "A", "outcome": "applied"})
-        _make_app(tmp_path, "2026-01-rejected",  {"company": "B", "outcome": "rejected"})
+        _make_app(tmp_path, "2026-01-active", {"company": "A", "outcome": "applied"})
+        _make_app(tmp_path, "2026-01-rejected", {"company": "B", "outcome": "rejected"})
         with patch.object(mod, "APPS_DIR", tmp_path / "applications"):
             apps = mod.load_applications(active_only=True)
         assert len(apps) == 1
@@ -437,9 +457,14 @@ class TestJsonOutput:
         assert parsed[0]["outcome"] == "offer"
 
     def test_json_days_is_int(self, mod, tmp_path):
-        _make_app(tmp_path, "2026-01-a", {
-            "company": "A", "created": "2026-01-01",
-        })
+        _make_app(
+            tmp_path,
+            "2026-01-a",
+            {
+                "company": "A",
+                "created": "2026-01-01",
+            },
+        )
         with patch.object(mod, "APPS_DIR", tmp_path / "applications"):
             apps = mod.load_applications()
         assert isinstance(apps[0]["days"], int)

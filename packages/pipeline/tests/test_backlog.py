@@ -268,9 +268,7 @@ class TestSchemaMigrate:
         mod = self._mod
         data_dir = tmp_path / "data"
         data_dir.mkdir()
-        (data_dir / "cv.yml").write_text(
-            yaml.dump({"personal": {}, "projects": [{"name": "X"}], "volunteer": []})
-        )
+        (data_dir / "cv.yml").write_text(yaml.dump({"personal": {}, "projects": [{"name": "X"}], "volunteer": []}))
         original_repo = mod.REPO_ROOT
         try:
             mod.REPO_ROOT = tmp_path
@@ -437,9 +435,9 @@ class TestInterviewPredictor:
     def test_rank_all_sorted_by_prob(self):
         mod = self._mod
         samples = [
-            {"name": "low",  "ats_score": 10, "label": -1, "outcome": "applied"},
+            {"name": "low", "ats_score": 10, "label": -1, "outcome": "applied"},
             {"name": "high", "ats_score": 90, "label": -1, "outcome": "applied"},
-            {"name": "mid",  "ats_score": 50, "label": -1, "outcome": "applied"},
+            {"name": "mid", "ats_score": 50, "label": -1, "outcome": "applied"},
         ]
         ranked = mod._rank_all(samples, None, 3)
         probs = [r["prob"] for r in ranked]
@@ -447,7 +445,9 @@ class TestInterviewPredictor:
 
     def test_rank_all_respects_top_n(self):
         mod = self._mod
-        samples = [{"name": f"app{i}", "ats_score": float(i * 10), "label": -1, "outcome": "applied"} for i in range(10)]
+        samples = [
+            {"name": f"app{i}", "ats_score": float(i * 10), "label": -1, "outcome": "applied"} for i in range(10)
+        ]
         ranked = mod._rank_all(samples, None, 3)
         assert len(ranked) == 3
 
@@ -467,9 +467,15 @@ class TestInterviewPredictor:
         apps.mkdir()
         d = apps / "2026-01-test"
         d.mkdir()
-        (d / "meta.yml").write_text(yaml.dump({
-            "company": "Test", "position": "SRE", "outcome": "applied",
-        }))
+        (d / "meta.yml").write_text(
+            yaml.dump(
+                {
+                    "company": "Test",
+                    "position": "SRE",
+                    "outcome": "applied",
+                }
+            )
+        )
         original_repo = mod.REPO_ROOT
         try:
             mod.REPO_ROOT = tmp_path
@@ -486,7 +492,7 @@ class TestInterviewPredictor:
         for company, outcome, expected_label in [
             ("A", "interview", 1),
             ("B", "rejected", 0),
-            ("C", "applied",  -1),
+            ("C", "applied", -1),
         ]:
             slug = company.lower()
             d = apps / f"2026-01-{slug}"
@@ -502,4 +508,3 @@ class TestInterviewPredictor:
         assert labels["a"] == 1
         assert labels["b"] == 0
         assert labels["c"] == -1
-

@@ -100,9 +100,7 @@ class TestCallAiDispatcher:
     def test_openai_does_not_raise_without_api_key(self):
         # openai/mistral are allowed to proceed without an API key at the dispatcher
         # level (the HTTP call itself would fail). We just check no ValueError is raised.
-        mock_resp = _make_mock_response({
-            "choices": [{"message": {"content": "ok"}}]
-        })
+        mock_resp = _make_mock_response({"choices": [{"message": {"content": "ok"}}]})
         with patch("urllib.request.urlopen", return_value=mock_resp):
             result = call_ai("prompt", "openai", api_key=None)
         assert result == "ok"
@@ -135,11 +133,7 @@ def _make_http_error(code: int) -> urllib.error.HTTPError:
 
 class TestCallGemini:
     def test_successful_response(self):
-        payload = {
-            "candidates": [
-                {"content": {"parts": [{"text": "Hello from Gemini"}]}}
-            ]
-        }
+        payload = {"candidates": [{"content": {"parts": [{"text": "Hello from Gemini"}]}}]}
         mock_resp = _make_mock_response(payload)
         with patch("urllib.request.urlopen", return_value=mock_resp):
             result = call_gemini("test prompt", api_key="fake-key", retries=1)
@@ -162,11 +156,7 @@ class TestCallGemini:
                 call_gemini("prompt", api_key="fake-key", model="gemini-2.5-flash", retries=1)
 
     def test_retry_on_429_then_success(self):
-        payload = {
-            "candidates": [
-                {"content": {"parts": [{"text": "retry worked"}]}}
-            ]
-        }
+        payload = {"candidates": [{"content": {"parts": [{"text": "retry worked"}]}}]}
         success_resp = _make_mock_response(payload)
         http_error_429 = _make_http_error(429)
 
@@ -178,11 +168,12 @@ class TestCallGemini:
                 raise http_error_429
             return success_resp
 
-        with patch("urllib.request.urlopen", side_effect=side_effect), \
-             patch("time.sleep") as mock_sleep:
+        with patch("urllib.request.urlopen", side_effect=side_effect), patch("time.sleep") as mock_sleep:
             result = call_gemini(
-                "prompt", api_key="fake-key",
-                model="gemini-2.5-flash", retries=3,
+                "prompt",
+                api_key="fake-key",
+                model="gemini-2.5-flash",
+                retries=3,
             )
 
         assert result == "retry worked"
@@ -193,8 +184,7 @@ class TestCallGemini:
         # When the fallback model is also rate-limited and has no further fallback,
         # the last HTTPError propagates (the function re-raises it).
         http_error_429 = _make_http_error(429)
-        with patch("urllib.request.urlopen", side_effect=http_error_429), \
-             patch("time.sleep"):
+        with patch("urllib.request.urlopen", side_effect=http_error_429), patch("time.sleep"):
             with pytest.raises(urllib.error.HTTPError):
                 call_gemini("prompt", api_key="fake-key", retries=1)
 
@@ -241,11 +231,12 @@ class TestCallClaude:
                 raise http_error_429
             return success_resp
 
-        with patch("urllib.request.urlopen", side_effect=side_effect), \
-             patch("time.sleep") as mock_sleep:
+        with patch("urllib.request.urlopen", side_effect=side_effect), patch("time.sleep") as mock_sleep:
             result = call_claude(
-                "prompt", api_key="fake-key",
-                model="claude-sonnet-4-6", retries=3,
+                "prompt",
+                api_key="fake-key",
+                model="claude-sonnet-4-6",
+                retries=3,
             )
 
         assert result == "retry worked"
@@ -255,8 +246,7 @@ class TestCallClaude:
         # When the fallback model is also rate-limited and has no further fallback,
         # the last HTTPError propagates (the function re-raises it).
         http_error_429 = _make_http_error(429)
-        with patch("urllib.request.urlopen", side_effect=http_error_429), \
-             patch("time.sleep"):
+        with patch("urllib.request.urlopen", side_effect=http_error_429), patch("time.sleep"):
             with pytest.raises(urllib.error.HTTPError):
                 call_claude("prompt", api_key="fake-key", retries=1)
 

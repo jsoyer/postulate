@@ -40,6 +40,7 @@ from lib.common import load_env, REPO_ROOT
 # Context helpers
 # ---------------------------------------------------------------------------
 
+
 def _flatten_items(items: list) -> list[str]:
     """Flatten experience items (str or {label, text}) to plain strings."""
     out = []
@@ -48,16 +49,15 @@ def _flatten_items(items: list) -> list[str]:
             out.append(re.sub(r"\*\*(.+?)\*\*", r"\1", item))
         elif isinstance(item, dict):
             label = item.get("label", "")
-            text  = item.get("text", "")
-            out.append(re.sub(r"\*\*(.+?)\*\*", r"\1",
-                               f"{label}: {text}" if label else text))
+            text = item.get("text", "")
+            out.append(re.sub(r"\*\*(.+?)\*\*", r"\1", f"{label}: {text}" if label else text))
     return out
 
 
 def extract_cv_context(cv_data: dict) -> dict:
     """Pull the key fields needed for the prompt."""
     personal = cv_data.get("personal", {})
-    profile  = cv_data.get("profile", "")
+    profile = cv_data.get("profile", "")
 
     # Current role
     exp = cv_data.get("experience", [])
@@ -81,22 +81,23 @@ def extract_cv_context(cv_data: dict) -> dict:
     languages = cv_data.get("languages", [])
 
     return {
-        "name":     personal.get("name", ""),
+        "name": personal.get("name", ""),
         "position": personal.get("position", ""),
         "location": personal.get("address", ""),
-        "email":    personal.get("email", ""),
+        "email": personal.get("email", ""),
         "linkedin": personal.get("linkedin", ""),
-        "profile":  re.sub(r"\*\*(.+?)\*\*", r"\1", profile) if isinstance(profile, str) else "",
-        "current_title":   current.get("position", ""),
+        "profile": re.sub(r"\*\*(.+?)\*\*", r"\1", profile) if isinstance(profile, str) else "",
+        "current_title": current.get("position", ""),
         "current_company": current.get("company", ""),
-        "current_dates":   current.get("dates", ""),
-        "current_items":   _flatten_items(current.get("items", [])),
-        "key_wins":        [
+        "current_dates": current.get("dates", ""),
+        "current_items": _flatten_items(current.get("items", [])),
+        "key_wins": [
             w.get("title", "") + ": " + re.sub(r"\*\*(.+?)\*\*", r"\1", w.get("text", ""))
-            for w in wins if isinstance(w, dict)
+            for w in wins
+            if isinstance(w, dict)
         ],
         "top_skills": skills_flat[:20],
-        "languages":  [l.get("idiom", "") for l in languages if isinstance(l, dict)],
+        "languages": [l.get("idiom", "") for l in languages if isinstance(l, dict)],
     }
 
 
@@ -189,12 +190,14 @@ def build_prompt(ctx: dict, target_role: str = "", lang: str = "en") -> str:
 
     language_instruction = ""
     if lang == "fr":
-        language_instruction = "\n**Language: Write everything in French** (professional register, tutoyez → vouvoyer).\n"
+        language_instruction = (
+            "\n**Language: Write everything in French** (professional register, tutoyez → vouvoyer).\n"
+        )
 
     current_items_str = "\n".join(f"- {i}" for i in ctx["current_items"][:6]) or "(none)"
-    key_wins_str      = "\n".join(f"- {w}" for w in ctx["key_wins"][:5]) or "(none)"
-    top_skills_str    = ", ".join(ctx["top_skills"][:15]) or "(none)"
-    languages_str     = ", ".join(ctx["languages"]) or "French, English"
+    key_wins_str = "\n".join(f"- {w}" for w in ctx["key_wins"][:5]) or "(none)"
+    top_skills_str = ", ".join(ctx["top_skills"][:15]) or "(none)"
+    languages_str = ", ".join(ctx["languages"]) or "French, English"
 
     return PROMPT_TEMPLATE.format(
         name=ctx["name"],
@@ -215,6 +218,7 @@ def build_prompt(ctx: dict, target_role: str = "", lang: str = "en") -> str:
 # Output
 # ---------------------------------------------------------------------------
 
+
 def _count_chars(text: str) -> int:
     return len(text)
 
@@ -225,10 +229,7 @@ def _check_limits(raw: str) -> list[str]:
     limits = {"HEADLINE": 220, "ABOUT": 2600, "BANNER": 160}
 
     for section, limit in limits.items():
-        m = re.search(
-            rf"---{section}.*?---\s*\n(.*?)(?=\n---|\Z)",
-            raw, re.DOTALL | re.IGNORECASE
-        )
+        m = re.search(rf"---{section}.*?---\s*\n(.*?)(?=\n---|\Z)", raw, re.DOTALL | re.IGNORECASE)
         if m:
             text = m.group(1).strip()
             n = _count_chars(text)
@@ -238,10 +239,10 @@ def _check_limits(raw: str) -> list[str]:
     return warnings
 
 
-def save_output(out_path: Path, raw: str, provider: str,
-                app_name: str = "", lang: str = "en") -> Path:
+def save_output(out_path: Path, raw: str, provider: str, app_name: str = "", lang: str = "en") -> Path:
     from datetime import date
-    today  = date.today().isoformat()
+
+    today = date.today().isoformat()
     lang_label = " (FR)" if lang == "fr" else ""
     context_label = f" — {app_name}" if app_name else " — Master Profile"
 
@@ -281,23 +282,14 @@ def save_output(out_path: Path, raw: str, provider: str,
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate optimised LinkedIn profile from CV data"
-    )
+    parser = argparse.ArgumentParser(description="Generate optimised LinkedIn profile from CV data")
     parser.add_argument(
-        "app_dir", nargs="?", default="",
-        help="Application directory (optional — uses cv-tailored.yml if present)"
+        "app_dir", nargs="?", default="", help="Application directory (optional — uses cv-tailored.yml if present)"
     )
-    parser.add_argument(
-        "--ai", default="gemini",
-        choices=sorted(VALID_PROVIDERS),
-        help="AI provider (default: gemini)"
-    )
-    parser.add_argument(
-        "--lang", default="en", choices=["en", "fr"],
-        help="Output language: en (default) or fr"
-    )
+    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS), help="AI provider (default: gemini)")
+    parser.add_argument("--lang", default="en", choices=["en", "fr"], help="Output language: en (default) or fr")
     args = parser.parse_args()
 
     load_env()
@@ -310,8 +302,8 @@ def main():
 
     # Locate CV source
     target_role = ""
-    app_name    = ""
-    app_dir     = None
+    app_name = ""
+    app_dir = None
 
     if args.app_dir:
         app_dir = Path(args.app_dir)
@@ -322,7 +314,7 @@ def main():
             sys.exit(1)
 
         app_name = app_dir.name
-        cv_src   = app_dir / "cv-tailored.yml"
+        cv_src = app_dir / "cv-tailored.yml"
         if not cv_src.exists():
             cv_src = REPO_ROOT / "data" / "cv.yml"
             print(f"   ℹ️  No cv-tailored.yml — using data/cv.yml")
@@ -331,11 +323,11 @@ def main():
         if meta_path.exists():
             with open(meta_path, encoding="utf-8") as f:
                 meta = yaml.safe_load(f) or {}
-            target_role = f"{meta.get('position','')} at {meta.get('company','')}".strip(" at")
+            target_role = f"{meta.get('position', '')} at {meta.get('company', '')}".strip(" at")
 
         out_path = app_dir / "linkedin-profile.md"
     else:
-        cv_src   = REPO_ROOT / "data" / "cv.yml"
+        cv_src = REPO_ROOT / "data" / "cv.yml"
         out_path = REPO_ROOT / "data" / "linkedin-profile.md"
 
     if not cv_src.exists():
@@ -358,7 +350,7 @@ def main():
     print(f"   AI: {args.ai}...")
     print()
 
-    prompt     = build_prompt(ctx, target_role=target_role, lang=args.lang)
+    prompt = build_prompt(ctx, target_role=target_role, lang=args.lang)
     raw_output = call_ai(prompt, args.ai, api_key, temperature=0.5, max_tokens=4096)
 
     # Show character count warnings
@@ -367,8 +359,7 @@ def main():
         print("\n".join(warnings))
         print()
 
-    saved = save_output(out_path, raw_output, args.ai,
-                        app_name=app_name, lang=args.lang)
+    saved = save_output(out_path, raw_output, args.ai, app_name=app_name, lang=args.lang)
 
     print(raw_output.strip())
     print(f"\n✅ Saved to {saved}")

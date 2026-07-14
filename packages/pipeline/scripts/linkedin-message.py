@@ -38,14 +38,15 @@ from lib.common import load_env, REPO_ROOT
 
 MESSAGE_TYPE_LABEL = {
     "recruiter": "Recruiter / Talent Team",
-    "hm":        "Hiring Manager",
-    "referral":  "Employee (Referral Request)",
+    "hm": "Hiring Manager",
+    "referral": "Employee (Referral Request)",
 }
 
 
 # ---------------------------------------------------------------------------
 # Context loading
 # ---------------------------------------------------------------------------
+
 
 def _read_file(path: Path, max_chars: int = 3000) -> str:
     if not path.exists():
@@ -102,10 +103,10 @@ Return ONLY the two messages in this exact format — no intro, no commentary:
 """
 
 
-def build_prompt(meta: dict, msg_type: str, contact_name: str,
-                 job_text: str, research_text: str,
-                 cv_data: dict | None = None) -> str:
-    company  = meta.get("company", "the company")
+def build_prompt(
+    meta: dict, msg_type: str, contact_name: str, job_text: str, research_text: str, cv_data: dict | None = None
+) -> str:
+    company = meta.get("company", "the company")
     position = meta.get("position", "the role")
 
     personal = (cv_data or {}).get("personal", {})
@@ -127,10 +128,7 @@ def build_prompt(meta: dict, msg_type: str, contact_name: str,
         msg_type_label=MESSAGE_TYPE_LABEL.get(msg_type, msg_type),
         contact_section=contact_section,
         job_excerpt=job_text[:2000] if job_text else "(no job.txt available)",
-        research_excerpt=(
-            f"\n**Company research:**\n{research_text[:1000]}\n"
-            if research_text else ""
-        ),
+        research_excerpt=(f"\n**Company research:**\n{research_text[:1000]}\n" if research_text else ""),
     )
 
 
@@ -138,12 +136,13 @@ def build_prompt(meta: dict, msg_type: str, contact_name: str,
 # Output
 # ---------------------------------------------------------------------------
 
-def save_output(app_dir: Path, meta: dict, msg_type: str, contact_name: str,
-                raw_output: str, provider: str) -> Path:
+
+def save_output(app_dir: Path, meta: dict, msg_type: str, contact_name: str, raw_output: str, provider: str) -> Path:
     from datetime import date
-    company  = meta.get("company", app_dir.name)
+
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "")
-    today    = date.today().isoformat()
+    today = date.today().isoformat()
     type_label = MESSAGE_TYPE_LABEL.get(msg_type, msg_type)
 
     lines = [
@@ -176,24 +175,15 @@ def save_output(app_dir: Path, meta: dict, msg_type: str, contact_name: str,
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate personalised LinkedIn outreach messages"
-    )
+    parser = argparse.ArgumentParser(description="Generate personalised LinkedIn outreach messages")
     parser.add_argument("app_dir", help="Application directory")
     parser.add_argument(
-        "--type", choices=["recruiter", "hm", "referral"], default="recruiter",
-        help="Message type (default: recruiter)"
+        "--type", choices=["recruiter", "hm", "referral"], default="recruiter", help="Message type (default: recruiter)"
     )
-    parser.add_argument(
-        "--contact", default="",
-        help="Contact name to address (from contacts.md)"
-    )
-    parser.add_argument(
-        "--ai", default="gemini",
-        choices=sorted(VALID_PROVIDERS),
-        help="AI provider (default: gemini)"
-    )
+    parser.add_argument("--contact", default="", help="Contact name to address (from contacts.md)")
+    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS), help="AI provider (default: gemini)")
     args = parser.parse_args()
 
     load_env()
@@ -217,7 +207,7 @@ def main():
         with open(meta_path, encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "")
 
     cv_src = app_dir / "cv-tailored.yml"
@@ -228,7 +218,7 @@ def main():
         with open(cv_src, encoding="utf-8") as f:
             cv_data = yaml.safe_load(f) or {}
 
-    job_text      = _read_file(app_dir / "job.txt")
+    job_text = _read_file(app_dir / "job.txt")
     research_text = _read_file(app_dir / "company-research.md")
 
     # Try to extract contact name from contacts.md if not provided
@@ -236,6 +226,7 @@ def main():
     if not contact_name:
         contacts_md = _read_file(app_dir / "contacts.md", 500)
         import re
+
         m = re.search(r"Primary contact:\s*(.+?)\s*<", contacts_md)
         if m:
             contact_name = m.group(1).strip()
@@ -248,8 +239,7 @@ def main():
     print(f"   AI: {args.ai}...")
     print()
 
-    prompt     = build_prompt(meta, args.type, contact_name, job_text, research_text,
-                             cv_data=cv_data)
+    prompt = build_prompt(meta, args.type, contact_name, job_text, research_text, cv_data=cv_data)
     raw_output = call_ai(prompt, args.ai, api_key, temperature=0.5, max_tokens=2048)
 
     out_path = save_output(app_dir, meta, args.type, contact_name, raw_output, args.ai)

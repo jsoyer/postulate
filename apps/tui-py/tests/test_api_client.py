@@ -161,9 +161,7 @@ async def test_list_applications_error_raises() -> None:
 
 
 async def test_get_application_ok() -> None:
-    client, _ = _make_client(
-        {"GET /api/applications/acme-software-engineer": (200, _APP_JSON)}
-    )
+    client, _ = _make_client({"GET /api/applications/acme-software-engineer": (200, _APP_JSON)})
     try:
         app = await client.get_application("acme-software-engineer")
         assert isinstance(app, Application)
@@ -174,9 +172,7 @@ async def test_get_application_ok() -> None:
 
 
 async def test_get_application_404() -> None:
-    client, _ = _make_client(
-        {"GET /api/applications/missing": (404, {"message": "not found"})}
-    )
+    client, _ = _make_client({"GET /api/applications/missing": (404, {"message": "not found"})})
     try:
         with pytest.raises(APIError) as exc_info:
             await client.get_application("missing")
@@ -255,9 +251,7 @@ async def test_list_targets_ok() -> None:
 
 
 async def test_execute_action_ok() -> None:
-    client, _ = _make_client(
-        {"POST /api/actions/tailor": (200, _ACTION_RESULT_JSON)}
-    )
+    client, _ = _make_client({"POST /api/actions/tailor": (200, _ACTION_RESULT_JSON)})
     try:
         result = await client.execute_action("tailor", app="acme-software-engineer")
         assert isinstance(result, ActionResult)
@@ -270,13 +264,9 @@ async def test_execute_action_ok() -> None:
 
 
 async def test_execute_action_with_args() -> None:
-    client, transport = _make_client(
-        {"POST /api/actions/tailor": (200, _ACTION_RESULT_JSON)}
-    )
+    client, transport = _make_client({"POST /api/actions/tailor": (200, _ACTION_RESULT_JSON)})
     try:
-        result = await client.execute_action(
-            "tailor", app="acme", args={"THEME": "modern"}
-        )
+        result = await client.execute_action("tailor", app="acme", args={"THEME": "modern"})
         assert result.status == "completed"
         assert transport.call_count == 1
     finally:
@@ -317,9 +307,7 @@ async def test_update_settings_ok() -> None:
 
 
 async def test_raise_for_status_uses_message_field() -> None:
-    client, _ = _make_client(
-        {"GET /api/applications": (400, {"message": "bad request detail"})}
-    )
+    client, _ = _make_client({"GET /api/applications": (400, {"message": "bad request detail"})})
     try:
         with pytest.raises(APIError) as exc_info:
             await client.list_applications()

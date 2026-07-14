@@ -198,11 +198,7 @@ async def test_action_switch_tab_hides_other_panes() -> None:
         # Check synchronously — see test_action_switch_tab_shows_apps_pane.
         pilot.app.action_switch_tab("tab-apps")
         tabs = pilot.app.query_one("#main-tabs", TabbedContent)
-        hidden_panes = [
-            p
-            for p in tabs.query("TabPane")
-            if p.id != "tab-apps" and p.display
-        ]
+        hidden_panes = [p for p in tabs.query("TabPane") if p.id != "tab-apps" and p.display]
         visible_ids = [p.id for p in hidden_panes]
         assert hidden_panes == [], f"Expected no visible non-apps panes, got: {visible_ids}"
 

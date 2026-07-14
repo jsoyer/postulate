@@ -18,64 +18,65 @@ from export import strip_bold, render_json, render_markdown, render_text, FORMAT
 SAMPLE_CV = {
     "personal": {
         "first_name": "Jane",
-        "last_name":  "Smith",
-        "position":   "Engineering Manager",
-        "address":    "London, UK",
-        "email":      "jane@example.com",
-        "mobile":     "+44 7700 000000",
-        "linkedin":   "janesmith",
+        "last_name": "Smith",
+        "position": "Engineering Manager",
+        "address": "London, UK",
+        "email": "jane@example.com",
+        "mobile": "+44 7700 000000",
+        "linkedin": "janesmith",
     },
     "profile": "Experienced engineering manager with **10 years** in distributed systems.",
     "skills": [
-        {"category": "Languages",  "items": "Python, Go, Rust"},
-        {"category": "Cloud",      "items": "AWS, GCP"},
+        {"category": "Languages", "items": "Python, Go, Rust"},
+        {"category": "Cloud", "items": "AWS, GCP"},
     ],
     "key_wins": [
         {"title": "Revenue Growth", "text": "Grew ARR by **50%** in 12 months"},
-        {"title": "Team",           "text": "Hired and led 20 engineers across 3 offices"},
+        {"title": "Team", "text": "Hired and led 20 engineers across 3 offices"},
     ],
     "experience": [
         {
-            "title":    "Senior Engineer",
-            "company":  "Acme Corp",
+            "title": "Senior Engineer",
+            "company": "Acme Corp",
             "location": "London",
-            "dates":    "2020 -- Present",
+            "dates": "2020 -- Present",
             "items": [
                 {"text": "Built distributed systems serving 10M users", "label": ""},
-                {"text": "Reduced latency by 40%",                      "label": "Performance"},
+                {"text": "Reduced latency by 40%", "label": "Performance"},
             ],
         }
     ],
     "early_career": [
         {
-            "title":    "Junior Developer",
-            "company":  "Startup",
+            "title": "Junior Developer",
+            "company": "Startup",
             "location": "Manchester",
-            "dates":    "2015 -- 2020",
+            "dates": "2015 -- 2020",
         }
     ],
     "education": [
         {
-            "degree":   "MSc Computer Science",
-            "school":   "University of London",
+            "degree": "MSc Computer Science",
+            "school": "University of London",
             "location": "London",
-            "dates":    "2013 -- 2015",
-            "note":     "Distinction",
+            "dates": "2013 -- 2015",
+            "note": "Distinction",
         }
     ],
     "certifications": [
         {"name": "AWS Solutions Architect", "institution": "Amazon", "date": "2022"},
     ],
-    "awards":       "Speaker at PyCon 2023",
+    "awards": "Speaker at PyCon 2023",
     "publications": "Author of 3 technical blog posts on distributed systems",
-    "languages":    ["French (Native)", "English (Fluent)"],
-    "interests":    ["Open source", "Cycling"],
+    "languages": ["French (Native)", "English (Fluent)"],
+    "interests": ["Open source", "Cycling"],
 }
 
 
 # ---------------------------------------------------------------------------
 # strip_bold
 # ---------------------------------------------------------------------------
+
 
 class TestStripBold:
     def test_removes_bold_markers(self):
@@ -97,6 +98,7 @@ class TestStripBold:
 # ---------------------------------------------------------------------------
 # render_json
 # ---------------------------------------------------------------------------
+
 
 class TestRenderJson:
     def test_returns_valid_json(self):
@@ -130,6 +132,7 @@ class TestRenderJson:
 # ---------------------------------------------------------------------------
 # render_markdown
 # ---------------------------------------------------------------------------
+
 
 class TestRenderMarkdown:
     def setup_method(self):
@@ -194,6 +197,7 @@ class TestRenderMarkdown:
 # render_text
 # ---------------------------------------------------------------------------
 
+
 class TestRenderText:
     def setup_method(self):
         self.result = render_text(SAMPLE_CV)
@@ -253,6 +257,7 @@ class TestRenderText:
 # ---------------------------------------------------------------------------
 # FORMATS dict / aliases
 # ---------------------------------------------------------------------------
+
 
 class TestFormatsDict:
     def test_json_key(self):

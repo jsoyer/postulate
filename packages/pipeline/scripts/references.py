@@ -32,12 +32,14 @@ except ImportError:
     sys.exit(1)
 
 from lib.common import REPO_ROOT
+
 _REFS_FILE = REPO_ROOT / "data" / "references.yml"
 
 
 # ---------------------------------------------------------------------------
 # Data helpers
 # ---------------------------------------------------------------------------
+
 
 def load_refs() -> list:
     if not _REFS_FILE.exists():
@@ -50,8 +52,7 @@ def load_refs() -> list:
 def save_refs(refs: list) -> None:
     _REFS_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(_REFS_FILE, "w", encoding="utf-8") as f:
-        yaml.dump({"references": refs}, f, allow_unicode=True,
-                  default_flow_style=False, sort_keys=False)
+        yaml.dump({"references": refs}, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
 
 
 def _find_ref(refs: list, name: str) -> dict | None:
@@ -78,21 +79,22 @@ def _load_app_meta(app_dir: Path) -> dict:
 # Commands
 # ---------------------------------------------------------------------------
 
+
 def cmd_list(_args) -> int:
     refs = load_refs()
     if not refs:
         print("📋 No references saved yet.")
-        print(f"   Add one: scripts/references.py add --name \"Jane Doe\" ...")
+        print(f'   Add one: scripts/references.py add --name "Jane Doe" ...')
         return 0
 
     print(f"\n📋 References ({len(refs)})\n")
     print(f"   {'Name':<25}  {'Title':<30}  {'Company':<20}  Contact")
     print("   " + "─" * 85)
     for r in refs:
-        name     = r.get("name", "?")[:24]
-        title    = r.get("title", "")[:29]
-        company  = r.get("company", "")[:19]
-        email    = r.get("email", r.get("phone", ""))
+        name = r.get("name", "?")[:24]
+        title = r.get("title", "")[:29]
+        company = r.get("company", "")[:19]
+        email = r.get("email", r.get("phone", ""))
         print(f"   {name:<25}  {title:<30}  {company:<20}  {email}")
     print()
     return 0
@@ -112,14 +114,14 @@ def cmd_add(args) -> int:
         refs.remove(existing)
 
     ref = {
-        "name":         args.name,
-        "title":        args.title or "",
-        "company":      args.company or "",
-        "email":        args.email or "",
-        "phone":        args.phone or "",
+        "name": args.name,
+        "title": args.title or "",
+        "company": args.company or "",
+        "email": args.email or "",
+        "phone": args.phone or "",
         "relationship": args.relationship or "",
-        "notes":        args.notes or "",
-        "added":        date.today().isoformat(),
+        "notes": args.notes or "",
+        "added": date.today().isoformat(),
     }
     # Remove empty fields
     ref = {k: v for k, v in ref.items() if v}
@@ -166,10 +168,10 @@ def cmd_request(args) -> int:
         print("❌ No references saved. Add one first: scripts/references.py add ...")
         return 1
 
-    meta    = _load_app_meta(app_dir)
+    meta = _load_app_meta(app_dir)
     company = meta.get("company", app_dir.name)
     position = meta.get("position", "the position")
-    today   = date.today().isoformat()
+    today = date.today().isoformat()
 
     cv_src = app_dir / "cv-tailored.yml"
     if not cv_src.exists():
@@ -200,9 +202,9 @@ def cmd_request(args) -> int:
     ]
 
     for ref in selected:
-        ref_name     = ref.get("name", "")
-        ref_title    = ref.get("title", "")
-        ref_company  = ref.get("company", "")
+        ref_name = ref.get("name", "")
+        ref_title = ref.get("title", "")
+        ref_company = ref.get("company", "")
         relationship = ref.get("relationship", "colleague")
 
         # Determine salutation
@@ -241,15 +243,19 @@ def cmd_request(args) -> int:
         if ref.get("email"):
             out_lines.append(f"**To:** {ref.get('email')}")
 
-        out_lines += [
-            "",
-            f"**Subject:** {subject}",
-            "",
-            "```",
-        ] + body_lines + [
-            "```",
-            "",
-        ]
+        out_lines += (
+            [
+                "",
+                f"**Subject:** {subject}",
+                "",
+                "```",
+            ]
+            + body_lines
+            + [
+                "```",
+                "",
+            ]
+        )
 
     out_lines += [
         "---",
@@ -279,9 +285,9 @@ def cmd_request(args) -> int:
 # ---------------------------------------------------------------------------
 
 COMMANDS = {
-    "list":    cmd_list,
-    "add":     cmd_add,
-    "show":    cmd_show,
+    "list": cmd_list,
+    "add": cmd_add,
+    "show": cmd_show,
     "request": cmd_request,
 }
 

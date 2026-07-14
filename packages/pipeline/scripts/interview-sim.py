@@ -39,9 +39,9 @@ from lib.common import load_env, REPO_ROOT
 
 TYPE_LABEL = {
     "behavioral": "Behavioral (STAR)",
-    "technical":  "Technical / Role-Specific",
-    "mixed":      "Mixed (Behavioral + Technical)",
-    "pressure":   "Pressure / Devil's Advocate",
+    "technical": "Technical / Role-Specific",
+    "mixed": "Mixed (Behavioral + Technical)",
+    "pressure": "Pressure / Devil's Advocate",
 }
 
 TYPE_INSTRUCTIONS = {
@@ -50,18 +50,15 @@ Generate behavioral interview questions using STAR format triggers.
 Focus on: leadership under pressure, scaling teams, managing conflict, driving revenue,
 strategic decisions with incomplete info, M&A integration, coaching team members.
 Start each question with "Tell me about a time..." or "Describe a situation where...".""",
-
     "technical": """\
 Generate technical and role-specific questions for a VP of Sales Engineering role.
 Focus on: SE team structure and metrics, demo strategy, technical win rates, POC management,
 competitive positioning, SE/AE alignment, pipeline coverage, building technical sales culture,
 handling a complex enterprise deal from a technical perspective.""",
-
     "mixed": """\
 Generate a mix: half behavioral (STAR format), half technical/role-specific.
 Behavioral: leadership, scaling, conflict, revenue.
 Technical: SE metrics, demo strategy, team structure, enterprise deals.""",
-
     "pressure": """\
 Generate challenging, pressure-test questions. Include:
 - Devil's advocate challenges ("Why should we pick you over someone with direct industry experience?")
@@ -172,11 +169,14 @@ def _get_multiline_input(prompt_text: str) -> str:
 def main():
     parser = argparse.ArgumentParser(description="Interactive AI interview simulator")
     parser.add_argument("app_dir", help="Application directory")
-    parser.add_argument("--rounds", type=int, default=5,
-                        help="Number of questions (default: 5)")
-    parser.add_argument("--type", dest="interview_type", default="mixed",
-                        choices=list(TYPE_LABEL),
-                        help="Interview type (default: mixed)")
+    parser.add_argument("--rounds", type=int, default=5, help="Number of questions (default: 5)")
+    parser.add_argument(
+        "--type",
+        dest="interview_type",
+        default="mixed",
+        choices=list(TYPE_LABEL),
+        help="Interview type (default: mixed)",
+    )
     parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
@@ -200,7 +200,7 @@ def main():
         with open(app_dir / "meta.yml", encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "the role")
 
     cv_src = app_dir / "cv-tailored.yml"
@@ -250,7 +250,7 @@ def main():
             line = re.sub(r"^\s*\d+[\.\)]\s*", "", line).strip().strip('"').strip("'")
             if line and line.endswith("?"):
                 questions.append(line)
-    questions = [str(q).strip() for q in questions[:args.rounds] if str(q).strip()]
+    questions = [str(q).strip() for q in questions[: args.rounds] if str(q).strip()]
 
     if not questions:
         print("❌ Failed to generate questions. Try again.")
@@ -306,6 +306,7 @@ def main():
 
     # Save transcript + evaluation
     from datetime import date
+
     today = date.today().isoformat()
     out_name = f"interview-sim-{args.interview_type}-{today}.md"
 

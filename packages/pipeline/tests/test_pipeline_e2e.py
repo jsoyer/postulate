@@ -39,6 +39,7 @@ def cv_fr_data():
 
 # ── Schema validation ────────────────────────────────────────────────────────
 
+
 class TestSchemaValidation:
     def test_cv_yml_validates(self, cv_data):
         jsonschema = pytest.importorskip("jsonschema")
@@ -54,6 +55,7 @@ class TestSchemaValidation:
 
 
 # ── Required sections ────────────────────────────────────────────────────────
+
 
 class TestRequiredSections:
     def test_personal_has_required_fields(self, cv_data):
@@ -86,6 +88,7 @@ class TestRequiredSections:
 
 
 # ── Render pipeline ──────────────────────────────────────────────────────────
+
 
 class TestRenderPipeline:
     def test_render_cv_produces_tex(self, cv_data):
@@ -140,6 +143,7 @@ class TestRenderPipeline:
 
 
 # ── Cover letter render ───────────────────────────────────────────────────────
+
 
 class TestCoverLetterRender:
     @pytest.fixture

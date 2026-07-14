@@ -30,9 +30,7 @@ from lib.common import REPO_ROOT, require_yaml
 yaml = require_yaml()
 
 # ── Import helpers from ats-score.py ─────────────────────────────────────────
-_ats_spec = importlib.util.spec_from_file_location(
-    "ats_score", _SCRIPT_DIR / "ats-score.py"
-)
+_ats_spec = importlib.util.spec_from_file_location("ats_score", _SCRIPT_DIR / "ats-score.py")
 _ats_mod = importlib.util.module_from_spec(_ats_spec)
 _ats_spec.loader.exec_module(_ats_mod)
 
@@ -44,6 +42,7 @@ STOP_WORDS = _ats_mod.STOP_WORDS
 
 
 # ── Syllable / formality helpers ──────────────────────────────────────────────
+
 
 def count_syllables(word: str) -> int:
     word = re.sub(r"[^a-z]", "", word.lower())
@@ -68,6 +67,7 @@ def formality_score(text: str) -> float:
 
 # ── CL text extraction ─────────────────────────────────────────────────────────
 
+
 def extract_cl_text(cl_data: dict) -> str:
     """Concatenate all prose from coverletter.yml."""
     parts = []
@@ -90,6 +90,7 @@ def bar(score: float, width: int = 10) -> str:
 
 
 # ── Scoring components ────────────────────────────────────────────────────────
+
 
 def score_keyword_coverage(cl_text: str, job_text: str) -> dict:
     """Score keyword coverage (0–40 pts)."""
@@ -200,7 +201,9 @@ def score_structure(cl_text: str, cl_data: dict) -> dict:
         pts += 5
 
     # Quantified achievements: numbers / percentages / currency (7 pts)
-    metrics_pattern = re.compile(r"\d+%|\$\d+|€\d+|£\d+|\d+x\b|\d+ million|\d+m\b|\d+k\b|\d+ team|\d+ countries", re.IGNORECASE)
+    metrics_pattern = re.compile(
+        r"\d+%|\$\d+|€\d+|£\d+|\d+x\b|\d+ million|\d+m\b|\d+k\b|\d+ team|\d+ countries", re.IGNORECASE
+    )
     has_metrics = bool(metrics_pattern.search(cl_text))
     detail["has_metrics"] = has_metrics
     if has_metrics:
@@ -344,9 +347,9 @@ def main():
         elif kw["missing"]:
             tips.append(f"Consider adding: {', '.join(m['keyword'] for m in kw['missing'][:4])}")
     if pers["detail"]["company_mentions"] == 0 and company_name:
-        tips.append(f"Mention company name \"{company_name}\" at least once")
+        tips.append(f'Mention company name "{company_name}" at least once')
     if not pers["detail"]["role_title_found"] and pers["detail"]["role_title"]:
-        tips.append(f"Mention the position title: \"{pers['detail']['role_title']}\"")
+        tips.append(f'Mention the position title: "{pers["detail"]["role_title"]}"')
     if not struct["detail"]["specific_opener"]:
         tips.append("Replace generic opener with a specific hook or achievement")
     if not struct["detail"]["has_metrics"]:
@@ -354,9 +357,11 @@ def main():
     if not struct["detail"]["why_company_section"]:
         tips.append("Add a 'Why [Company]?' section (30+ words about their specific products/mission)")
     if not struct["detail"]["closing_ask"]:
-        tips.append("End with an explicit call to action (\"I'd love to discuss...\" / \"I look forward to speaking\")")
+        tips.append('End with an explicit call to action ("I\'d love to discuss..." / "I look forward to speaking")')
     if tone["delta"] > 20:
-        tips.append(f"Align tone with job description (CL formality {tone['cl_formality']} vs job {tone['job_formality']})")
+        tips.append(
+            f"Align tone with job description (CL formality {tone['cl_formality']} vs job {tone['job_formality']})"
+        )
 
     # ── JSON output ───────────────────────────────────────────────────
     if json_mode:
@@ -391,7 +396,9 @@ def main():
         label = "🔴 Weak — substantial revision required"
 
     print(f"📨 Cover Letter Score: {total}/100  {label}")
-    print(f"   (Keywords: {kw['pts']}/40 · Personalization: {pers['pts']}/25 · Structure: {struct['pts']}/20 · Tone: {tone['pts']}/15)")
+    print(
+        f"   (Keywords: {kw['pts']}/40 · Personalization: {pers['pts']}/25 · Structure: {struct['pts']}/20 · Tone: {tone['pts']}/15)"
+    )
     print()
 
     # Keyword coverage
@@ -416,12 +423,12 @@ def main():
     d = pers["detail"]
     print(f"🎯 Personalization ({pers['pts']}/25)  [{bar(pers['pts'] / 25 * 100)}]")
     co_icon = "✅" if d["company_mentions"] >= 2 else ("⚠️ " if d["company_mentions"] == 1 else "❌")
-    print(f"   {co_icon} Company \"{company_name or 'N/A'}\" mentioned {d['company_mentions']} time(s)")
+    print(f'   {co_icon} Company "{company_name or "N/A"}" mentioned {d["company_mentions"]} time(s)')
     tech_icon = "✅" if d["tech_mentions"] >= 3 else ("⚠️ " if d["tech_mentions"] >= 1 else "❌")
     print(f"   {tech_icon} Specific tech/terms mentioned: {d['tech_mentions']}")
     role_icon = "✅" if d["role_title_found"] else "⚠️ "
     if d.get("role_title"):
-        print(f"   {role_icon} Role title \"{d['role_title'][:40]}\" {'found' if d['role_title_found'] else 'not found'}")
+        print(f'   {role_icon} Role title "{d["role_title"][:40]}" {"found" if d["role_title_found"] else "not found"}')
     print()
 
     # Structure
@@ -429,14 +436,16 @@ def main():
     print(f"📐 Structure ({struct['pts']}/20)  [{bar(struct['pts'] / 20 * 100)}]")
     print(f"   {'✅' if sd['specific_opener'] else '⚠️ '} Specific opening hook")
     print(f"   {'✅' if sd['has_metrics'] else '⚠️ '} Quantified achievements (numbers/% / €)")
-    print(f"   {'✅' if sd['why_company_section'] else '⚠️ '} \"Why [Company]?\" section present")
+    print(f'   {"✅" if sd["why_company_section"] else "⚠️ "} "Why [Company]?" section present')
     print(f"   {'✅' if sd['closing_ask'] else '⚠️ '} Explicit closing ask (interview/discussion)")
     print()
 
     # Tone
     tone_icon = "✅" if tone["delta"] <= 15 else ("⚠️ " if tone["delta"] <= 25 else "❌")
     print(f"🎵 Tone Match ({tone['pts']}/15)  [{bar(tone['pts'] / 15 * 100)}]")
-    print(f"   {tone_icon} CL formality: {tone['cl_formality']} · Job formality: {tone['job_formality']} · Δ={tone['delta']}")
+    print(
+        f"   {tone_icon} CL formality: {tone['cl_formality']} · Job formality: {tone['job_formality']} · Δ={tone['delta']}"
+    )
     print()
 
     if tips:

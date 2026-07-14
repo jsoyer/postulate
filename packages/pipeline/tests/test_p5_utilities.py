@@ -97,19 +97,13 @@ class TestInterviewPrepIdentifyGaps:
             "experience": [{"company": "Acme", "items": [{"label": "X", "text": "Python cloud SaaS"}]}],
             "skills": [{"items": "Python, SQL"}],
         }
-        job_sections = {
-            "requirements": [
-                "Must have experience with Kubernetes and Terraform and GitOps"
-            ]
-        }
+        job_sections = {"requirements": ["Must have experience with Kubernetes and Terraform and GitOps"]}
         gaps = interviewprep.identify_gaps(cv_data, job_sections)
         assert isinstance(gaps, list)
 
     def test_at_most_8_gaps(self):
         cv_data = {}
-        job_sections = {
-            "requirements": [f"requires specific skill_{i} with knowledge_{i}" for i in range(20)]
-        }
+        job_sections = {"requirements": [f"requires specific skill_{i} with knowledge_{i}" for i in range(20)]}
         gaps = interviewprep.identify_gaps(cv_data, job_sections)
         assert len(gaps) <= 8
 
@@ -142,7 +136,13 @@ class TestInterviewPrepGeneratePrep:
             "experience": [],
             "skills": [],
         }
-        result = interviewprep.generate_prep(cv_data, "job text", {"requirements": [], "responsibilities": [], "about": [], "other": []}, "Beta", "Engineer")
+        result = interviewprep.generate_prep(
+            cv_data,
+            "job text",
+            {"requirements": [], "responsibilities": [], "about": [], "other": []},
+            "Beta",
+            "Engineer",
+        )
         assert "#" in result
 
 
@@ -359,7 +359,7 @@ class TestArchiveAppParseDate:
     def test_returns_datetime_or_none_for_date_string(self):
         # Due to s[:len(fmt)] slicing, may return None
         result = archiveapp._parse_date("2024-03-15")
-        assert result is None or hasattr(result, 'year')
+        assert result is None or hasattr(result, "year")
 
     def test_returns_none_for_invalid(self):
         assert archiveapp._parse_date("not-a-date") is None
@@ -400,7 +400,9 @@ class TestArchiveAppBuildArchiveMd:
 
     def test_includes_milestones_when_present(self, tmp_path):
         meta = {"company": "Delta", "position": "VP", "outcome": "offer", "created": "2024-01-01"}
-        ms_data = {"milestones": [{"stage": "phone-screen", "date": "2024-01-20", "interviewer": "Jane", "outcome": "passed"}]}
+        ms_data = {
+            "milestones": [{"stage": "phone-screen", "date": "2024-01-20", "interviewer": "Jane", "outcome": "passed"}]
+        }
         (tmp_path / "milestones.yml").write_text(yaml.dump(ms_data))
         result = archiveapp.build_archive_md(tmp_path, meta, None)
         assert "phone-screen" in result

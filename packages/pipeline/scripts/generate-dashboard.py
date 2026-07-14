@@ -52,10 +52,23 @@ def get_pr_info(name: str) -> dict:
     """Query GitHub CLI for PR info on an apply/* branch."""
     try:
         result = subprocess.run(
-            ["gh", "pr", "list", "--head", f"apply/{name}", "--state", "all",
-             "--json", "state,url,labels,createdAt,mergedAt",
-             "--jq", "if length > 0 then .[0] | tojson else \"\" end"],
-            capture_output=True, text=True, timeout=10, cwd=REPO_ROOT,
+            [
+                "gh",
+                "pr",
+                "list",
+                "--head",
+                f"apply/{name}",
+                "--state",
+                "all",
+                "--json",
+                "state,url,labels,createdAt,mergedAt",
+                "--jq",
+                'if length > 0 then .[0] | tojson else "" end',
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=REPO_ROOT,
         )
         if result.stdout.strip():
             return json.loads(result.stdout.strip())
@@ -72,7 +85,10 @@ def get_ats_score(app_dir: Path) -> float | None:
     try:
         result = subprocess.run(
             ["python3", "scripts/ats-score.py", str(app_dir), "--json"],
-            capture_output=True, text=True, timeout=20, cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=20,
+            cwd=REPO_ROOT,
         )
         if result.returncode in (0, 1) and result.stdout.strip():
             data = json.loads(result.stdout.strip())
@@ -159,18 +175,20 @@ def collect_data(no_gh: bool = False, data_dir: str | Path | None = None) -> dic
         # ATS score (only if job.txt exists)
         ats_score = get_ats_score(app_dir)
 
-        apps.append({
-            "name": name,
-            "company": company,
-            "position": position,
-            "created": str(created) if created else "",
-            "created_month": created.strftime("%Y-%m") if created else "",
-            "stage": stage,
-            "ats_score": ats_score,
-            "days_since": days_since,
-            "pr_url": pr.get("url", ""),
-            "outcome": meta.get("outcome", ""),
-        })
+        apps.append(
+            {
+                "name": name,
+                "company": company,
+                "position": position,
+                "created": str(created) if created else "",
+                "created_month": created.strftime("%Y-%m") if created else "",
+                "stage": stage,
+                "ats_score": ats_score,
+                "days_since": days_since,
+                "pr_url": pr.get("url", ""),
+                "outcome": meta.get("outcome", ""),
+            }
+        )
 
     # Stats
     total = len(apps)
@@ -513,8 +531,8 @@ sorted.forEach(app => {
 def main():
     parser = argparse.ArgumentParser(
         description="Generate Dashboard — Build a self-contained HTML dashboard of application stats. "
-                    "Features: funnel doughnut chart, ATS scores bar chart, "
-                    "applications per month bar chart, and active applications table."
+        "Features: funnel doughnut chart, ATS scores bar chart, "
+        "applications per month bar chart, and active applications table."
     )
     parser.add_argument(
         "--output-dir",

@@ -83,20 +83,20 @@ def call_gemini(
     """Call Gemini API with exponential backoff on 429 and model fallback."""
     models_to_try = [model] if model else [GEMINI_MODEL, GEMINI_FALLBACK]
     for m in models_to_try:
-        url = (
-            f"https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{m}:generateContent"
-        )
-        payload = json.dumps({
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": temperature,
-                "maxOutputTokens": max_tokens,
-            },
-        }).encode()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent"
+        payload = json.dumps(
+            {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_tokens,
+                },
+            }
+        ).encode()
         for attempt in range(retries):
             req = urllib.request.Request(
-                url, data=payload,
+                url,
+                data=payload,
                 headers={
                     "Content-Type": "application/json",
                     "Authorization": f"Bearer {api_key}",
@@ -114,22 +114,23 @@ def call_gemini(
                 try:
                     return result["candidates"][0]["content"]["parts"][0]["text"]
                 except (KeyError, IndexError, TypeError) as e:
-                    raise RuntimeError(
-                        f"Gemini unexpected response structure: {e}"
-                        f" — {str(result)[:200]}"
-                    )
+                    raise RuntimeError(f"Gemini unexpected response structure: {e} — {str(result)[:200]}")
             except urllib.error.HTTPError as e:
                 if e.code == 429 and attempt < retries - 1:
                     wait = min(2 ** (attempt + 2), 120)
                     log.warning(
                         "Rate limited (429) on %s, retrying in %ds... (%d/%d)",
-                        m, wait, attempt + 1, retries,
+                        m,
+                        wait,
+                        attempt + 1,
+                        retries,
                     )
                     time.sleep(wait)
                 elif e.code == 429 and m != models_to_try[-1]:
                     log.warning(
                         "%s still rate-limited, switching to %s...",
-                        m, models_to_try[-1],
+                        m,
+                        models_to_try[-1],
                     )
                     break
                 else:
@@ -156,11 +157,13 @@ def call_claude(
     }
     models_to_try = [model] if model else [CLAUDE_MODEL, CLAUDE_FALLBACK]
     for m in models_to_try:
-        payload = json.dumps({
-            "model": m,
-            "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}],
-        }).encode()
+        payload = json.dumps(
+            {
+                "model": m,
+                "max_tokens": max_tokens,
+                "messages": [{"role": "user", "content": prompt}],
+            }
+        ).encode()
         for attempt in range(retries):
             req = urllib.request.Request(url, data=payload, headers=headers)
             try:
@@ -175,30 +178,29 @@ def call_claude(
                 try:
                     return result["content"][0]["text"]
                 except (KeyError, IndexError, TypeError) as e:
-                    raise RuntimeError(
-                        f"Claude unexpected response structure: {e}"
-                        f" — {str(result)[:200]}"
-                    )
+                    raise RuntimeError(f"Claude unexpected response structure: {e} — {str(result)[:200]}")
             except urllib.error.HTTPError as e:
                 if e.code == 429 and attempt < retries - 1:
                     wait = min(2 ** (attempt + 2), 120)
                     log.warning(
                         "Rate limited (429) on %s, retrying in %ds... (%d/%d)",
-                        m, wait, attempt + 1, retries,
+                        m,
+                        wait,
+                        attempt + 1,
+                        retries,
                     )
                     time.sleep(wait)
                 elif e.code == 429 and m != models_to_try[-1]:
                     log.warning(
                         "%s still rate-limited, switching to %s...",
-                        m, models_to_try[-1],
+                        m,
+                        models_to_try[-1],
                     )
                     break
                 else:
                     raise
     tried = model or f"{CLAUDE_MODEL} and {CLAUDE_FALLBACK}"
-    raise RuntimeError(
-        f"Claude API rate-limited on {tried}. Try again later."
-    )
+    raise RuntimeError(f"Claude API rate-limited on {tried}. Try again later.")
 
 
 def call_openai_compat(
@@ -218,15 +220,19 @@ def call_openai_compat(
         "content-type": "application/json",
     }
     for m in (primary, fallback):
-        payload = json.dumps({
-            "model": m,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        }).encode()
+        payload = json.dumps(
+            {
+                "model": m,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            }
+        ).encode()
         for attempt in range(retries):
             req = urllib.request.Request(
-                endpoint, data=payload, headers=headers,
+                endpoint,
+                data=payload,
+                headers=headers,
             )
             try:
                 with urllib.request.urlopen(req, timeout=120) as resp:
@@ -234,37 +240,36 @@ def call_openai_compat(
                 try:
                     result = json.loads(body)
                 except json.JSONDecodeError as e:
-                    raise RuntimeError(
-                        f"OpenAI-compat ({endpoint}) returned invalid JSON: {e}"
-                    )
+                    raise RuntimeError(f"OpenAI-compat ({endpoint}) returned invalid JSON: {e}")
                 if m != primary:
                     log.debug("Used fallback model: %s", m)
                 try:
                     return result["choices"][0]["message"]["content"]
                 except (KeyError, IndexError, TypeError) as e:
                     raise RuntimeError(
-                        f"OpenAI-compat ({endpoint}) unexpected response structure:"
-                        f" {e} — {str(result)[:200]}"
+                        f"OpenAI-compat ({endpoint}) unexpected response structure: {e} — {str(result)[:200]}"
                     )
             except urllib.error.HTTPError as e:
                 if e.code == 429 and attempt < retries - 1:
                     wait = min(2 ** (attempt + 2), 120)
                     log.warning(
                         "Rate limited (429) on %s, retrying in %ds... (%d/%d)",
-                        m, wait, attempt + 1, retries,
+                        m,
+                        wait,
+                        attempt + 1,
+                        retries,
                     )
                     time.sleep(wait)
                 elif e.code == 429 and m != fallback:
                     log.warning(
                         "%s still rate-limited, switching to %s...",
-                        m, fallback,
+                        m,
+                        fallback,
                     )
                     break
                 else:
                     raise
-    raise RuntimeError(
-        f"API rate-limited on both {primary} and {fallback}. Try again later."
-    )
+    raise RuntimeError(f"API rate-limited on both {primary} and {fallback}. Try again later.")
 
 
 def call_ollama(
@@ -281,15 +286,18 @@ def call_ollama(
     host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
     model = os.environ.get("OLLAMA_MODEL", "llama3")
     url = f"{host}/api/chat"
-    payload = json.dumps({
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "stream": False,
-        "options": {"temperature": temperature},
-    }).encode()
+    payload = json.dumps(
+        {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "options": {"temperature": temperature},
+        }
+    ).encode()
     for attempt in range(retries):
         req = urllib.request.Request(
-            url, data=payload,
+            url,
+            data=payload,
             headers={"content-type": "application/json"},
         )
         try:
@@ -302,30 +310,23 @@ def call_ollama(
             try:
                 return result["message"]["content"]
             except (KeyError, IndexError, TypeError) as e:
-                raise RuntimeError(
-                    f"Ollama unexpected response structure: {e}"
-                    f" — {str(result)[:200]}"
-                )
+                raise RuntimeError(f"Ollama unexpected response structure: {e} — {str(result)[:200]}")
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                raise RuntimeError(
-                    f"Model '{model}' not found in Ollama. "
-                    f"Pull it first: ollama pull {model}"
-                ) from e
+                raise RuntimeError(f"Model '{model}' not found in Ollama. Pull it first: ollama pull {model}") from e
             raise
         except urllib.error.URLError as e:
             if attempt < retries - 1:
                 wait = 2 ** (attempt + 1)
                 log.warning(
                     "Ollama unreachable, retrying in %ds... (%d/%d)",
-                    wait, attempt + 1, retries,
+                    wait,
+                    attempt + 1,
+                    retries,
                 )
                 time.sleep(wait)
             else:
-                raise RuntimeError(
-                    f"Cannot connect to Ollama at {host}. "
-                    f"Is Ollama running? Try: ollama serve"
-                ) from e
+                raise RuntimeError(f"Cannot connect to Ollama at {host}. Is Ollama running? Try: ollama serve") from e
     raise RuntimeError(f"Cannot connect to Ollama at {host}")
 
 
@@ -361,31 +362,43 @@ def call_ai(
     if provider == "gemini":
         assert api_key is not None  # guarded above
         return call_gemini(
-            prompt, api_key, model=model,
-            temperature=temperature, max_tokens=max_tokens,
+            prompt,
+            api_key,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
     if provider == "claude":
         assert api_key is not None  # guarded above
         return call_claude(
-            prompt, api_key, model=model,
-            temperature=temperature, max_tokens=max_tokens,
+            prompt,
+            api_key,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
     if provider == "openai":
         primary = model or OPENAI_MODEL
         models = (primary, primary) if model else (OPENAI_MODEL, OPENAI_FALLBACK)
         return call_openai_compat(
-            prompt, OPENAI_ENDPOINT, api_key, models,
-            temperature=temperature, max_tokens=max_tokens,
+            prompt,
+            OPENAI_ENDPOINT,
+            api_key,
+            models,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
     if provider == "mistral":
         primary = model or MISTRAL_MODEL
         models = (primary, primary) if model else (MISTRAL_MODEL, MISTRAL_FALLBACK)
         return call_openai_compat(
-            prompt, MISTRAL_ENDPOINT, api_key, models,
-            temperature=temperature, max_tokens=max_tokens,
+            prompt,
+            MISTRAL_ENDPOINT,
+            api_key,
+            models,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
     if provider == "ollama":
         return call_ollama(prompt, temperature=temperature)
-    raise ValueError(
-        f"Unknown provider: '{provider}'. Valid: {sorted(VALID_PROVIDERS)}"
-    )
+    raise ValueError(f"Unknown provider: '{provider}'. Valid: {sorted(VALID_PROVIDERS)}")

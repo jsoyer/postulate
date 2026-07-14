@@ -100,9 +100,7 @@ class ApplicationsScreen(Screen):  # type: ignore[type-arg]
                 app.outcome or "",
                 key=app.name,
             )
-        self.query_one("#status-line", Static).update(
-            f"[green]{len(apps)} application(s)[/green]"
-        )
+        self.query_one("#status-line", Static).update(f"[green]{len(apps)} application(s)[/green]")
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "search-input":

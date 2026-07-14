@@ -83,9 +83,7 @@ def test_deep_merge_adds_new_keys() -> None:
     assert result["ui"]["theme"] == "nord"
 
 
-def test_load_config_with_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_load_config_with_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("CV_API_URL", raising=False)
     monkeypatch.delenv("CV_API_KEY", raising=False)
     monkeypatch.delenv("CV_TIMEOUT", raising=False)
@@ -107,7 +105,7 @@ def test_load_config_file_partial_overrides_defaults(
     monkeypatch.delenv("CV_API_KEY", raising=False)
     monkeypatch.delenv("CV_TIMEOUT", raising=False)
     config_file = tmp_path / "config.toml"
-    config_file.write_text('[api]\ntimeout = 10.0\n')
+    config_file.write_text("[api]\ntimeout = 10.0\n")
     cfg = load_config(str(config_file))
     assert cfg["api"]["timeout"] == 10.0
     assert cfg["api"]["base_url"] == "http://localhost:3001"

@@ -83,20 +83,27 @@ def update_meta_yml(app_dir: Path, status: str, message: str, dry_run: bool) -> 
     try:
         subprocess.run(
             ["git", "add", str(app_dir / "meta.yml")],
-            cwd=REPO_ROOT, check=True, capture_output=True,
+            cwd=REPO_ROOT,
+            check=True,
+            capture_output=True,
         )
         diff = subprocess.run(
             ["git", "diff", "--cached", "--quiet"],
-            cwd=REPO_ROOT, capture_output=True,
+            cwd=REPO_ROOT,
+            capture_output=True,
         )
         if diff.returncode != 0:
             subprocess.run(
                 ["git", "commit", "-m", f"notify: {app_dir.name} → {status}"],
-                cwd=REPO_ROOT, check=True, capture_output=True,
+                cwd=REPO_ROOT,
+                check=True,
+                capture_output=True,
             )
             subprocess.run(
                 ["git", "push"],
-                cwd=REPO_ROOT, check=True, capture_output=True,
+                cwd=REPO_ROOT,
+                check=True,
+                capture_output=True,
             )
             print(f"   ✅ Committed and pushed")
         else:
@@ -111,11 +118,11 @@ def _slack_blocks(company: str, position: str, status: str, message: str, app_na
     """Build a Slack Block Kit payload for rich notification formatting."""
     emoji = STATUS_EMOJI.get(status, "📋")
     color_map = {
-        "applied":   "#3B82F6",
+        "applied": "#3B82F6",
         "interview": "#EAB308",
-        "offer":     "#22C55E",
-        "rejected":  "#EF4444",
-        "ghosted":   "#94A3B8",
+        "offer": "#22C55E",
+        "rejected": "#EF4444",
+        "ghosted": "#94A3B8",
     }
     color = color_map.get(status, "#94A3B8")
 
@@ -139,8 +146,7 @@ def _slack_blocks(company: str, position: str, status: str, message: str, app_na
     }
 
 
-def notify_slack(company: str, position: str, status: str, message: str,
-                 app_name: str, dry_run: bool) -> bool:
+def notify_slack(company: str, position: str, status: str, message: str, app_name: str, dry_run: bool) -> bool:
     webhook = os.environ.get("SLACK_WEBHOOK_URL", "")
     if not webhook:
         print("   ⚠️  Slack: SLACK_WEBHOOK_URL not set — skipping")
@@ -168,8 +174,7 @@ def notify_slack(company: str, position: str, status: str, message: str,
         return False
 
 
-def notify_discord(company: str, position: str, status: str, message: str,
-                   app_name: str, dry_run: bool) -> bool:
+def notify_discord(company: str, position: str, status: str, message: str, app_name: str, dry_run: bool) -> bool:
     webhook = os.environ.get("DISCORD_WEBHOOK_URL", "")
     if not webhook:
         print("   ⚠️  Discord: DISCORD_WEBHOOK_URL not set — skipping")
@@ -179,9 +184,14 @@ def notify_discord(company: str, position: str, status: str, message: str,
         return False
 
     emoji = STATUS_EMOJI.get(status, "📋")
-    color_map = {"applied": 0x3b82f6, "interview": 0xeab308, "offer": 0x22c55e,
-                 "rejected": 0xef4444, "ghosted": 0x94a3b8}
-    color = color_map.get(status, 0x94a3b8)
+    color_map = {
+        "applied": 0x3B82F6,
+        "interview": 0xEAB308,
+        "offer": 0x22C55E,
+        "rejected": 0xEF4444,
+        "ghosted": 0x94A3B8,
+    }
+    color = color_map.get(status, 0x94A3B8)
 
     embed = {
         "title": f"{emoji} {company} — {position}",
@@ -208,8 +218,7 @@ def notify_discord(company: str, position: str, status: str, message: str,
         return False
 
 
-def update_notion(company: str, position: str, status: str,
-                  app_name: str, dry_run: bool) -> bool:
+def update_notion(company: str, position: str, status: str, app_name: str, dry_run: bool) -> bool:
     token = os.environ.get("NOTION_TOKEN", "")
     db_id = os.environ.get("NOTION_DATABASE_ID", "") or os.environ.get("NOTION_DB_ID", "")
     if not token or not db_id:
@@ -289,7 +298,10 @@ def add_github_label(app_name: str, status: str, dry_run: bool) -> bool:
     try:
         result = subprocess.run(
             ["gh", "pr", "edit", branch, "--add-label", label],
-            capture_output=True, text=True, timeout=15, cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=15,
+            cwd=REPO_ROOT,
         )
         if result.returncode == 0:
             print(f"   ✅ GitHub PR label added: {label}")
@@ -310,7 +322,7 @@ def add_github_label(app_name: str, status: str, dry_run: bool) -> bool:
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Notify — Update application status across all tracking systems in one command. "
-                    "Updates meta.yml, posts to Slack/Discord, updates Notion, and adds a GitHub PR label.",
+        "Updates meta.yml, posts to Slack/Discord, updates Notion, and adds a GitHub PR label.",
         epilog=f"STATUS values: {' | '.join(sorted(VALID_STATUSES))}",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

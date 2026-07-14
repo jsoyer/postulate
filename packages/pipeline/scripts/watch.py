@@ -27,11 +27,13 @@ from lib.common import REPO_ROOT
 try:
     from watchdog.observers import Observer
     from watchdog.events import FileSystemEventHandler
+
     HAS_WATCHDOG = True
 except ImportError:
     HAS_WATCHDOG = False
 
 from lib.common import find_xelatex
+
 XELATEX = find_xelatex()
 
 TEXINPUTS = str(REPO_ROOT / "awesome-cv") + ":" + os.environ.get("TEXINPUTS", "")
@@ -42,6 +44,7 @@ WATCH_FILES = {"cv-tailored.yml", "coverletter.yml", "data/cv.yml", "data/coverl
 def get_pdf_pages(pdf_path: Path) -> int:
     """Count PDF pages using regex on raw bytes."""
     import re
+
     try:
         with open(pdf_path, "rb") as f:
             content = f.read()
@@ -67,7 +70,9 @@ def render_and_compile(app_dir: Path, changed_file: str = "") -> bool:
         print(f"   📄 Rendering CV...", end=" ", flush=True)
         result = subprocess.run(
             ["python3", "scripts/render.py", "-d", str(cv_tailored), "-o", str(cv_tex)],
-            capture_output=True, text=True, cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
         )
         if result.returncode == 0:
             print("✅")
@@ -82,9 +87,19 @@ def render_and_compile(app_dir: Path, changed_file: str = "") -> bool:
         cv_data = str(cv_tailored) if cv_tailored.exists() else "data/cv.yml"
         print(f"   📨 Rendering Cover Letter...", end=" ", flush=True)
         result = subprocess.run(
-            ["python3", "scripts/render.py", "-d", str(cl_yml), "-o", str(cl_tex),
-             "--cv-data", str(REPO_ROOT / cv_data)],
-            capture_output=True, text=True, cwd=REPO_ROOT,
+            [
+                "python3",
+                "scripts/render.py",
+                "-d",
+                str(cl_yml),
+                "-o",
+                str(cl_tex),
+                "--cv-data",
+                str(REPO_ROOT / cv_data),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
         )
         if result.returncode == 0:
             print("✅")
@@ -103,7 +118,10 @@ def render_and_compile(app_dir: Path, changed_file: str = "") -> bool:
         print(f"   🔨 Compiling {tex.name}...", end=" ", flush=True)
         result = subprocess.run(
             [XELATEX, "-interaction=nonstopmode", f"-output-directory={app_dir}", str(tex)],
-            capture_output=True, text=True, env=env, cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            env=env,
+            cwd=REPO_ROOT,
         )
         pdf = app_dir / (tex.stem + ".pdf")
         if result.returncode == 0 and pdf.exists():
@@ -129,6 +147,7 @@ def render_and_compile(app_dir: Path, changed_file: str = "") -> bool:
 # ── Watchdog handler ───────────────────────────────────────────────────────────
 
 if HAS_WATCHDOG:
+
     class YAMLChangeHandler(FileSystemEventHandler):
         def __init__(self, app_dirs: list):
             self.app_dirs = app_dirs
@@ -158,6 +177,7 @@ if HAS_WATCHDOG:
 
 
 # ── Polling fallback ───────────────────────────────────────────────────────────
+
 
 def poll_watch(app_dirs: list, interval: float = 1.5) -> None:
     """Polling-based file watcher (fallback when watchdog is not installed)."""
@@ -189,11 +209,12 @@ def poll_watch(app_dirs: list, interval: float = 1.5) -> None:
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Watch Mode — Auto-recompile when YAML files change in an application folder. "
-                    "Watches cv-tailored.yml and coverletter.yml for changes, then automatically "
-                    "renders YAML to LaTeX and compiles to PDF."
+        "Watches cv-tailored.yml and coverletter.yml for changes, then automatically "
+        "renders YAML to LaTeX and compiles to PDF."
     )
     parser.add_argument(
         "app_dir",
@@ -216,8 +237,7 @@ def main():
         # Watch all application folders
         apps_root = REPO_ROOT / "applications"
         if apps_root.exists():
-            app_dirs = [d for d in sorted(apps_root.iterdir())
-                        if d.is_dir() and any(d.glob("*.tex"))]
+            app_dirs = [d for d in sorted(apps_root.iterdir()) if d.is_dir() and any(d.glob("*.tex"))]
         if not app_dirs:
             print("❌ No application directories with .tex files found")
             print("   Usage: scripts/watch.py <app-dir>")

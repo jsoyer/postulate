@@ -12,48 +12,35 @@ fetch_job = importlib.import_module("fetch-job")
 # _extract_from_url
 # ---------------------------------------------------------------------------
 
+
 class TestExtractFromUrl:
     def test_greenhouse(self):
-        company, _ = fetch_job._extract_from_url(
-            "https://job-boards.greenhouse.io/anthropic/jobs/12345"
-        )
+        company, _ = fetch_job._extract_from_url("https://job-boards.greenhouse.io/anthropic/jobs/12345")
         assert company.lower() == "anthropic"
 
     def test_lever(self):
-        company, _ = fetch_job._extract_from_url(
-            "https://jobs.lever.co/figma/abc-123"
-        )
+        company, _ = fetch_job._extract_from_url("https://jobs.lever.co/figma/abc-123")
         assert company.lower() == "figma"
 
     def test_workday(self):
-        company, _ = fetch_job._extract_from_url(
-            "https://sailpoint.wd1.myworkdayjobs.com/en-US/careers/job/12345"
-        )
+        company, _ = fetch_job._extract_from_url("https://sailpoint.wd1.myworkdayjobs.com/en-US/careers/job/12345")
         assert company.lower() == "sailpoint"
 
     def test_ashby(self):
-        company, _ = fetch_job._extract_from_url(
-            "https://cloudflare.ashbyhq.com/jobs/12345"
-        )
+        company, _ = fetch_job._extract_from_url("https://cloudflare.ashbyhq.com/jobs/12345")
         assert company.lower() == "cloudflare"
 
     def test_smartrecruiters(self):
-        company, _ = fetch_job._extract_from_url(
-            "https://jobs.smartrecruiters.com/Datadog/12345-senior-se"
-        )
+        company, _ = fetch_job._extract_from_url("https://jobs.smartrecruiters.com/Datadog/12345-senior-se")
         assert company.lower() == "datadog"
 
     def test_unknown_url(self):
-        company, position = fetch_job._extract_from_url(
-            "https://example.com/careers/apply"
-        )
+        company, position = fetch_job._extract_from_url("https://example.com/careers/apply")
         assert company == ""
         assert position == ""
 
     def test_hyphenated_company(self):
-        company, _ = fetch_job._extract_from_url(
-            "https://job-boards.greenhouse.io/palo-alto-networks/jobs/123"
-        )
+        company, _ = fetch_job._extract_from_url("https://job-boards.greenhouse.io/palo-alto-networks/jobs/123")
         assert "palo" in company.lower()
         assert "alto" in company.lower()
 
@@ -61,6 +48,7 @@ class TestExtractFromUrl:
 # ---------------------------------------------------------------------------
 # _extract_from_html
 # ---------------------------------------------------------------------------
+
 
 class TestExtractFromHtml:
     def test_og_site_name(self):
@@ -95,6 +83,7 @@ class TestExtractFromHtml:
 # extract_text
 # ---------------------------------------------------------------------------
 
+
 class TestExtractText:
     def test_strips_script_tags(self):
         html = "<html><body><script>alert(1)</script><p>Job description</p></body></html>"
@@ -110,7 +99,7 @@ class TestExtractText:
         assert "Copyright" not in text
 
     def test_finds_job_container(self):
-        html = '<html><body><div>Noise</div><article>The real job posting</article></body></html>'
+        html = "<html><body><div>Noise</div><article>The real job posting</article></body></html>"
         text = fetch_job.extract_text(html)
         assert "real job posting" in text
 
@@ -123,6 +112,7 @@ class TestExtractText:
 # ---------------------------------------------------------------------------
 # extract_job_info
 # ---------------------------------------------------------------------------
+
 
 class TestExtractJobInfo:
     def test_combines_url_and_html(self):

@@ -28,25 +28,42 @@ from lib.common import REPO_ROOT, STOP_WORDS
 # Section header keywords → canonical category
 CATEGORY_MAP = {
     "questions to ask": "Questions to Ask",
-    "questions":        "Questions to Ask",
-    "to ask":           "Questions to Ask",
-    "role":             "Questions to Ask — Role",
-    "company":          "Questions to Ask — Company",
-    "culture":          "Questions to Ask — Culture",
-    "team":             "Questions to Ask — Team",
-    "potential gaps":   "Potential Gaps",
-    "gaps":             "Potential Gaps",
-    "checklist":        "Checklist",
-    "star":             "STAR Stories",
-    "stories":          "STAR Stories",
-    "behavioral":       "STAR Stories",
+    "questions": "Questions to Ask",
+    "to ask": "Questions to Ask",
+    "role": "Questions to Ask — Role",
+    "company": "Questions to Ask — Company",
+    "culture": "Questions to Ask — Culture",
+    "team": "Questions to Ask — Team",
+    "potential gaps": "Potential Gaps",
+    "gaps": "Potential Gaps",
+    "checklist": "Checklist",
+    "star": "STAR Stories",
+    "stories": "STAR Stories",
+    "behavioral": "STAR Stories",
 }
 
-QUESTION_WORDS = frozenset({
-    "what", "how", "why", "when", "where", "who", "which",
-    "is", "are", "do", "does", "can", "will", "would", "could", "should",
-    "have", "has",
-})
+QUESTION_WORDS = frozenset(
+    {
+        "what",
+        "how",
+        "why",
+        "when",
+        "where",
+        "who",
+        "which",
+        "is",
+        "are",
+        "do",
+        "does",
+        "can",
+        "will",
+        "would",
+        "could",
+        "should",
+        "have",
+        "has",
+    }
+)
 
 
 def _tokenize(text: str) -> frozenset:
@@ -63,8 +80,8 @@ def _overlap(a: frozenset, b: frozenset) -> float:
 def _strip_item_marker(line: str) -> str:
     line = line.strip()
     line = re.sub(r"^-\s*\[[ xX]\]\s*", "", line)  # checkbox
-    line = re.sub(r"^[-*]\s+", "", line)             # bullet
-    line = re.sub(r"^\d+\.\s+", "", line)            # numbered
+    line = re.sub(r"^[-*]\s+", "", line)  # bullet
+    line = re.sub(r"^\d+\.\s+", "", line)  # numbered
     return line.strip()
 
 
@@ -128,11 +145,7 @@ def parse_prep_md(path: Path) -> dict:
             continue
 
         stripped = line.strip()
-        is_list_item = (
-            stripped.startswith("-")
-            or stripped.startswith("*")
-            or re.match(r"^\d+\.", stripped)
-        )
+        is_list_item = stripped.startswith("-") or stripped.startswith("*") or re.match(r"^\d+\.", stripped)
         if stripped and is_list_item:
             item = _strip_item_marker(stripped)
             if item:
@@ -176,13 +189,8 @@ def deduplicate(items_with_sources: list) -> list:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Aggregate questions from all prep.md files"
-    )
-    parser.add_argument(
-        "--name", default="", metavar="APP_NAME",
-        help="Only include this application"
-    )
+    parser = argparse.ArgumentParser(description="Aggregate questions from all prep.md files")
+    parser.add_argument("--name", default="", metavar="APP_NAME", help="Only include this application")
     parser.add_argument("--json", action="store_true", help="Output JSON")
     args = parser.parse_args()
 

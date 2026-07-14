@@ -89,11 +89,9 @@ def _sample_cv() -> dict:
                 "note": "Graduated top 5%",
             }
         ],
-        "certifications": [
-            {"name": "AWS Solutions Architect", "institution": "Amazon", "date": "2023"}
-        ],
+        "certifications": [{"name": "AWS Solutions Architect", "institution": "Amazon", "date": "2023"}],
         "awards": "Best Engineering Award 2022.",
-        "publications": "\"Scaling Teams\" — Medium, 2021.",
+        "publications": '"Scaling Teams" — Medium, 2021.',
         "languages": ["French (native)", "English (fluent)"],
         "interests": ["Open source", "Triathlon"],
     }

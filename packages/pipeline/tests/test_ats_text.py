@@ -9,14 +9,14 @@ import pytest
 # conftest.py adds scripts/ to sys.path; import hyphenated module via importlib
 ats_text = importlib.import_module("ats-text")
 
-_strip_bold        = ats_text._strip_bold
-_clean             = ats_text._clean
-_wrap              = ats_text._wrap
-_flatten_items     = ats_text._flatten_items
+_strip_bold = ats_text._strip_bold
+_clean = ats_text._clean
+_wrap = ats_text._wrap
+_flatten_items = ats_text._flatten_items
 _render_list_field = ats_text._render_list_field
-render_cv          = ats_text.render_cv
+render_cv = ats_text.render_cv
 render_coverletter = ats_text.render_coverletter
-DIVIDER            = ats_text.DIVIDER
+DIVIDER = ats_text.DIVIDER
 
 
 # ---------------------------------------------------------------------------
@@ -26,12 +26,12 @@ DIVIDER            = ats_text.DIVIDER
 MINIMAL_CV = {
     "personal": {
         "first_name": "Alice",
-        "last_name":  "Martin",
-        "position":   "Software Engineer",
-        "address":    "Paris, France",
-        "email":      "alice@example.com",
-        "mobile":     "+33 6 00 00 00 00",
-        "linkedin":   "alicemartin",
+        "last_name": "Martin",
+        "position": "Software Engineer",
+        "address": "Paris, France",
+        "email": "alice@example.com",
+        "mobile": "+33 6 00 00 00 00",
+        "linkedin": "alicemartin",
     },
     "profile": "Senior engineer with **10 years** experience in distributed systems.",
     "skills": [
@@ -42,10 +42,10 @@ MINIMAL_CV = {
     ],
     "experience": [
         {
-            "title":    "Staff Engineer",
-            "company":  "TechCorp",
+            "title": "Staff Engineer",
+            "company": "TechCorp",
             "location": "Paris",
-            "dates":    "2020 -- Present",
+            "dates": "2020 -- Present",
             "items": [
                 "Led team of 15 engineers delivering 3 products",
                 {"text": "Reduced latency by 40%", "label": "Performance"},
@@ -58,19 +58,19 @@ MINIMAL_CV = {
     "certifications": [
         {"name": "AWS SA", "institution": "Amazon", "dates": "2022"},
     ],
-    "awards":      "Speaker at PyCon 2023",
+    "awards": "Speaker at PyCon 2023",
     "publications": "Author of 3 blog posts",
-    "languages":   ["French (Native)", "English (Fluent)"],
-    "interests":   ["Open source", "Cycling"],
+    "languages": ["French (Native)", "English (Fluent)"],
+    "interests": ["Open source", "Cycling"],
 }
 
 MINIMAL_CL = {
     "recipient": {"name": "Hiring Manager", "company": "Acme Corp"},
-    "title":     "Application for Staff Engineer",
-    "opening":   "Dear Hiring Manager,",
-    "closing":   "Best regards,",
+    "title": "Application for Staff Engineer",
+    "opening": "Dear Hiring Manager,",
+    "closing": "Best regards,",
     "sections": [
-        {"title": "About Me",  "content": "I am a passionate engineer with broad experience."},
+        {"title": "About Me", "content": "I am a passionate engineer with broad experience."},
         {"title": "Why Acme?", "content": "Acme's mission aligns with my values."},
     ],
     "closing_paragraph": "Thank you for your time and consideration.",
@@ -82,6 +82,7 @@ PERSONAL = MINIMAL_CV["personal"]
 # ---------------------------------------------------------------------------
 # _strip_bold
 # ---------------------------------------------------------------------------
+
 
 class TestStripBold:
     def test_removes_markers(self):
@@ -105,6 +106,7 @@ class TestStripBold:
 # _clean
 # ---------------------------------------------------------------------------
 
+
 class TestClean:
     def test_strips_bold(self):
         assert _clean("**bold**") == "bold"
@@ -123,6 +125,7 @@ class TestClean:
 # ---------------------------------------------------------------------------
 # _wrap
 # ---------------------------------------------------------------------------
+
 
 class TestWrap:
     def test_short_text_unchanged(self):
@@ -146,6 +149,7 @@ class TestWrap:
 # ---------------------------------------------------------------------------
 # _flatten_items
 # ---------------------------------------------------------------------------
+
 
 class TestFlattenItems:
     def test_string_item(self):
@@ -180,6 +184,7 @@ class TestFlattenItems:
 # _render_list_field
 # ---------------------------------------------------------------------------
 
+
 class TestRenderListField:
     def test_list_of_strings(self):
         result = _render_list_field(["French", "English"])
@@ -208,6 +213,7 @@ class TestRenderListField:
 # ---------------------------------------------------------------------------
 # render_cv
 # ---------------------------------------------------------------------------
+
 
 class TestRenderCv:
     def setup_method(self):
@@ -282,6 +288,7 @@ class TestRenderCv:
 # ---------------------------------------------------------------------------
 # render_coverletter
 # ---------------------------------------------------------------------------
+
 
 class TestRenderCoverletter:
     def setup_method(self):

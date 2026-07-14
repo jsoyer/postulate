@@ -122,8 +122,8 @@ class TestUserscriptMetadata:
 
 PLATFORM_PATTERNS = {
     "linkedin": re.compile(r"linkedin\.com/jobs/(view|collections)/"),
-    "indeed":   re.compile(r"indeed\.com/viewjob"),
-    "wttj":     re.compile(r"welcometothejungle\.com.*/jobs/"),
+    "indeed": re.compile(r"indeed\.com/viewjob"),
+    "wttj": re.compile(r"welcometothejungle\.com.*/jobs/"),
 }
 
 
@@ -200,12 +200,15 @@ class TestPipelineWithDescription:
     def test_description_writes_job_txt(self, tmp_path):
         apps = tmp_path / "applications"
         apps.mkdir()
-        responses = self._make_handler(tmp_path, {
-            "company": "Acme",
-            "position": "SRE",
-            "description": "We need a senior SRE with Kubernetes experience.",
-            "url": "https://example.com/job",
-        })
+        responses = self._make_handler(
+            tmp_path,
+            {
+                "company": "Acme",
+                "position": "SRE",
+                "description": "We need a senior SRE with Kubernetes experience.",
+                "url": "https://example.com/job",
+            },
+        )
         job_txt = list(tmp_path.glob("applications/*/job.txt"))
         assert len(job_txt) == 1
         assert "Kubernetes" in job_txt[0].read_text()
@@ -213,12 +216,15 @@ class TestPipelineWithDescription:
     def test_description_skips_fetch_step(self, tmp_path):
         apps = tmp_path / "applications"
         apps.mkdir()
-        responses = self._make_handler(tmp_path, {
-            "company": "Beta",
-            "position": "Engineer",
-            "description": "Python API backend engineer.",
-            "url": "https://example.com/job",
-        })
+        responses = self._make_handler(
+            tmp_path,
+            {
+                "company": "Beta",
+                "position": "Engineer",
+                "description": "Python API backend engineer.",
+                "url": "https://example.com/job",
+            },
+        )
         assert len(responses) == 1
         steps = responses[0]["data"]["steps"]
         step_names = [s["step"] for s in steps]
@@ -229,11 +235,14 @@ class TestPipelineWithDescription:
     def test_description_step_has_rc_zero(self, tmp_path):
         apps = tmp_path / "applications"
         apps.mkdir()
-        responses = self._make_handler(tmp_path, {
-            "company": "Gamma",
-            "position": "PM",
-            "description": "Product manager role.",
-        })
+        responses = self._make_handler(
+            tmp_path,
+            {
+                "company": "Gamma",
+                "position": "PM",
+                "description": "Product manager role.",
+            },
+        )
         desc_step = next(s for s in responses[0]["data"]["steps"] if s["step"] == "description")
         assert desc_step["rc"] == 0
 
@@ -257,11 +266,14 @@ class TestPipelineWithDescription:
     def test_auto_name_from_company(self, tmp_path):
         apps = tmp_path / "applications"
         apps.mkdir()
-        responses = self._make_handler(tmp_path, {
-            "company": "Stripe Inc",
-            "position": "SRE",
-            "description": "SRE role at Stripe.",
-        })
+        responses = self._make_handler(
+            tmp_path,
+            {
+                "company": "Stripe Inc",
+                "position": "SRE",
+                "description": "SRE role at Stripe.",
+            },
+        )
         assert responses[0]["status"] == 200
         name = responses[0]["data"]["name"]
         assert "stripe" in name.lower()
@@ -269,11 +281,14 @@ class TestPipelineWithDescription:
     def test_meta_yml_created(self, tmp_path):
         apps = tmp_path / "applications"
         apps.mkdir()
-        self._make_handler(tmp_path, {
-            "company": "Notion",
-            "position": "Backend Engineer",
-            "description": "Backend role.",
-        })
+        self._make_handler(
+            tmp_path,
+            {
+                "company": "Notion",
+                "position": "Backend Engineer",
+                "description": "Backend role.",
+            },
+        )
         meta_files = list(tmp_path.glob("applications/*/meta.yml"))
         assert len(meta_files) == 1
         meta = yaml.safe_load(meta_files[0].read_text())
@@ -283,12 +298,15 @@ class TestPipelineWithDescription:
     def test_url_written_to_job_url_file(self, tmp_path):
         apps = tmp_path / "applications"
         apps.mkdir()
-        self._make_handler(tmp_path, {
-            "company": "Vercel",
-            "position": "Engineer",
-            "description": "Vercel job.",
-            "url": "https://vercel.com/careers/123",
-        })
+        self._make_handler(
+            tmp_path,
+            {
+                "company": "Vercel",
+                "position": "Engineer",
+                "description": "Vercel job.",
+                "url": "https://vercel.com/careers/123",
+            },
+        )
         url_files = list(tmp_path.glob("applications/*/job.url"))
         assert len(url_files) == 1
         assert "vercel.com" in url_files[0].read_text()
@@ -312,11 +330,13 @@ class TestPipelineWithDescription:
         with patch.object(mod, "REPO_ROOT", tmp_path):
             with patch.object(mod, "_json_response", side_effect=fake_json_response):
                 with patch.object(mod, "_run_make", side_effect=fake_run_make):
-                    handler._handle_pipeline({
-                        "company": "Datadog",
-                        "position": "SRE",
-                        "url": "https://datadog.com/jobs/123",
-                    })
+                    handler._handle_pipeline(
+                        {
+                            "company": "Datadog",
+                            "position": "SRE",
+                            "url": "https://datadog.com/jobs/123",
+                        }
+                    )
 
         assert any("fetch" in c for c in fetch_called)
 

@@ -38,9 +38,9 @@ from lib.ai import call_ai, KEY_ENV, VALID_PROVIDERS
 from lib.common import load_env, REPO_ROOT
 
 ANGLE_LABEL = {
-    "business":  "Business Impact",
+    "business": "Business Impact",
     "technical": "Technical Leadership",
-    "culture":   "Culture & Vision",
+    "culture": "Culture & Vision",
 }
 
 ANGLE_FOCUS = {
@@ -115,6 +115,7 @@ Rules:
 # YAML helpers
 # ---------------------------------------------------------------------------
 
+
 def fix_yaml_bold(text: str) -> str:
     """Quote YAML values starting with ** to prevent parse errors."""
     lines = text.splitlines()
@@ -148,38 +149,32 @@ def parse_yaml_safe(text: str) -> dict:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _cv_excerpt(cv_data: dict) -> str:
     """Brief CV summary for the prompt."""
     personal = cv_data.get("personal", {})
-    name     = f"{personal.get('first_name', '')} {personal.get('last_name', '')}".strip()
+    name = f"{personal.get('first_name', '')} {personal.get('last_name', '')}".strip()
     position = personal.get("position", "")
-    profile  = cv_data.get("profile", "")[:400]
+    profile = cv_data.get("profile", "")[:400]
     wins = cv_data.get("key_wins", [])
     win_lines = [f"- {w.get('title', '')}" for w in wins[:3]]
-    return (
-        f"Position: {position}\n"
-        f"Profile: {profile}\n"
-        f"Key achievements:\n" + "\n".join(win_lines)
-    )
+    return f"Position: {position}\nProfile: {profile}\nKey achievements:\n" + "\n".join(win_lines)
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate 3 cover letter variants with different angles"
-    )
+    parser = argparse.ArgumentParser(description="Generate 3 cover letter variants with different angles")
     parser.add_argument("app_dir", help="Application directory")
     parser.add_argument(
-        "--angles", default="business,technical,culture",
-        help="Comma-separated angles to generate (default: business,technical,culture)"
+        "--angles",
+        default="business,technical,culture",
+        help="Comma-separated angles to generate (default: business,technical,culture)",
     )
-    parser.add_argument(
-        "--ai", default="gemini", choices=sorted(VALID_PROVIDERS),
-        help="AI provider (default: gemini)"
-    )
+    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS), help="AI provider (default: gemini)")
     args = parser.parse_args()
 
     load_env()
@@ -208,7 +203,7 @@ def main():
         with open(meta_path, encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "the role")
 
     job_text = ""
@@ -233,7 +228,7 @@ def main():
     print(f"   AI: {args.ai}\n")
 
     generated = {}
-    errors    = {}
+    errors = {}
 
     for angle in angles:
         label = ANGLE_LABEL[angle]
@@ -260,8 +255,7 @@ def main():
 
             out_path = app_dir / f"coverletter-{angle}.yml"
             with open(out_path, "w", encoding="utf-8") as f:
-                yaml.dump(cl_data, f, default_flow_style=False, allow_unicode=True,
-                          sort_keys=False, width=120)
+                yaml.dump(cl_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False, width=120)
 
             generated[angle] = (cl_data, out_path)
             print("✅")
@@ -273,6 +267,7 @@ def main():
     # Write comparison summary
     if generated:
         from datetime import date
+
         today = date.today().isoformat()
         lines = [
             f"# Cover Letter Angles — {company}",
@@ -304,8 +299,7 @@ def main():
                 "",
                 f"**To use:** `make app NAME={app_dir.name}` after copying:",
                 f"```",
-                f"cp applications/{app_dir.name}/coverletter-{angle}.yml "
-                f"applications/{app_dir.name}/coverletter.yml",
+                f"cp applications/{app_dir.name}/coverletter-{angle}.yml applications/{app_dir.name}/coverletter.yml",
                 f"```",
                 "",
             ]

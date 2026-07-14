@@ -102,19 +102,21 @@ class TestFormatTerminal:
 class TestRunMatch:
     @patch.object(job_match, "call_ai")
     def test_returns_valid_structure(self, mock_ai, tmp_path):
-        mock_ai.return_value = json.dumps({
-            "overall_score": 72,
-            "breakdown": {
-                "skills": {"score": 80, "matched": ["Python", "Go"], "missing": ["Rust"]},
-                "experience": {"score": 75, "notes": "5+ years matches"},
-                "location": {"score": 90, "notes": "Remote"},
-                "salary": {"score": 60, "notes": "P50 vs P75"},
-                "culture": {"score": 65, "notes": "Startup vs enterprise"},
-            },
-            "red_flags": ["Requires Rust"],
-            "recommendation": "proceed",
-            "reasoning": "Good match overall.",
-        })
+        mock_ai.return_value = json.dumps(
+            {
+                "overall_score": 72,
+                "breakdown": {
+                    "skills": {"score": 80, "matched": ["Python", "Go"], "missing": ["Rust"]},
+                    "experience": {"score": 75, "notes": "5+ years matches"},
+                    "location": {"score": 90, "notes": "Remote"},
+                    "salary": {"score": 60, "notes": "P50 vs P75"},
+                    "culture": {"score": 65, "notes": "Startup vs enterprise"},
+                },
+                "red_flags": ["Requires Rust"],
+                "recommendation": "proceed",
+                "reasoning": "Good match overall.",
+            }
+        )
 
         app_dir = tmp_path / "test-app"
         app_dir.mkdir()
@@ -133,19 +135,21 @@ class TestRunMatch:
     @patch.object(job_match, "call_ai")
     def test_score_weighting(self, mock_ai, tmp_path):
         """Verify the 40/20/15/15/10 weighting produces correct overall."""
-        mock_ai.return_value = json.dumps({
-            "overall_score": 100,
-            "breakdown": {
-                "skills": {"score": 100, "matched": [], "missing": []},
-                "experience": {"score": 100, "notes": ""},
-                "location": {"score": 100, "notes": ""},
-                "salary": {"score": 100, "notes": ""},
-                "culture": {"score": 100, "notes": ""},
-            },
-            "red_flags": [],
-            "recommendation": "proceed",
-            "reasoning": "Perfect match.",
-        })
+        mock_ai.return_value = json.dumps(
+            {
+                "overall_score": 100,
+                "breakdown": {
+                    "skills": {"score": 100, "matched": [], "missing": []},
+                    "experience": {"score": 100, "notes": ""},
+                    "location": {"score": 100, "notes": ""},
+                    "salary": {"score": 100, "notes": ""},
+                    "culture": {"score": 100, "notes": ""},
+                },
+                "red_flags": [],
+                "recommendation": "proceed",
+                "reasoning": "Perfect match.",
+            }
+        )
 
         app_dir = tmp_path / "test-app"
         app_dir.mkdir()

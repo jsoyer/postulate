@@ -94,9 +94,8 @@ note if information may be outdated.
 """
 
 
-def build_prompt(meta: dict, job_text: str, research_text: str,
-                 cv_data: dict | None = None) -> str:
-    company  = meta.get("company", "the company")
+def build_prompt(meta: dict, job_text: str, research_text: str, cv_data: dict | None = None) -> str:
+    company = meta.get("company", "the company")
     position = meta.get("position", "the role")
 
     personal = (cv_data or {}).get("personal", {})
@@ -109,10 +108,7 @@ def build_prompt(meta: dict, job_text: str, research_text: str,
         company=company,
         position=position,
         job_excerpt=job_text[:2000] if job_text else "(no job.txt available)",
-        research_excerpt=(
-            f"\n**Company research:**\n{research_text[:1500]}\n"
-            if research_text else ""
-        ),
+        research_excerpt=(f"\n**Company research:**\n{research_text[:1500]}\n" if research_text else ""),
     )
 
 
@@ -120,11 +116,13 @@ def build_prompt(meta: dict, job_text: str, research_text: str,
 # Output
 # ---------------------------------------------------------------------------
 
+
 def save_output(app_dir: Path, meta: dict, raw_output: str, provider: str) -> Path:
     from datetime import date
-    company  = meta.get("company", app_dir.name)
+
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "")
-    today    = date.today().isoformat()
+    today = date.today().isoformat()
 
     lines = [
         f"# Competitor Map — {company}",
@@ -147,16 +145,11 @@ def save_output(app_dir: Path, meta: dict, raw_output: str, provider: str) -> Pa
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Generate competitor landscape map for a target company"
-    )
+    parser = argparse.ArgumentParser(description="Generate competitor landscape map for a target company")
     parser.add_argument("app_dir", help="Application directory")
-    parser.add_argument(
-        "--ai", default="gemini",
-        choices=sorted(VALID_PROVIDERS),
-        help="AI provider (default: gemini)"
-    )
+    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS), help="AI provider (default: gemini)")
     args = parser.parse_args()
 
     load_env()
@@ -178,7 +171,7 @@ def main():
         with open(meta_path, encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "")
 
     cv_src = app_dir / "cv-tailored.yml"
@@ -189,7 +182,7 @@ def main():
         with open(cv_src, encoding="utf-8") as f:
             cv_data = yaml.safe_load(f) or {}
 
-    job_text      = _read_file(app_dir / "job.txt")
+    job_text = _read_file(app_dir / "job.txt")
     research_text = _read_file(app_dir / "company-research.md")
 
     print(f"🗺️  Mapping competitors — {company}")
@@ -197,7 +190,7 @@ def main():
     print(f"   AI: {args.ai}...")
     print()
 
-    prompt     = build_prompt(meta, job_text, research_text, cv_data=cv_data)
+    prompt = build_prompt(meta, job_text, research_text, cv_data=cv_data)
     raw_output = call_ai(prompt, args.ai, api_key)
 
     out_path = save_output(app_dir, meta, raw_output, args.ai)

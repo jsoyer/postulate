@@ -54,10 +54,10 @@ def _detect_stage(app_dir: Path) -> str:
         return "phone-screen"
     last = milestones[-1].get("stage", "phone-screen")
     stage_next = {
-        "phone-screen":    "technical",
-        "technical":       "panel",
-        "panel":           "final",
-        "final":           "final",
+        "phone-screen": "technical",
+        "technical": "panel",
+        "panel": "final",
+        "final": "final",
         "reference-check": "offer",
     }
     return stage_next.get(last, "technical")
@@ -169,9 +169,9 @@ def main():
         with open(app_dir / "meta.yml", encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "the role")
-    stage    = args.stage or _detect_stage(app_dir)
+    stage = args.stage or _detect_stage(app_dir)
 
     cv_src = app_dir / "cv-tailored.yml"
     if not cv_src.exists():
@@ -182,8 +182,7 @@ def main():
         with open(cv_src, encoding="utf-8") as f:
             cv_data = yaml.safe_load(f) or {}
         profile = cv_data.get("profile", "")
-        profile_excerpt = re.sub(r"\*\*(.+?)\*\*", r"\1",
-                                  profile if isinstance(profile, str) else "")[:600]
+        profile_excerpt = re.sub(r"\*\*(.+?)\*\*", r"\1", profile if isinstance(profile, str) else "")[:600]
 
     personal = cv_data.get("personal", {})
     candidate_name = f"{personal.get('first_name', '')} {personal.get('last_name', '')}".strip() or "Candidate"
@@ -207,10 +206,15 @@ def main():
     raw = call_ai(prompt, args.ai, api_key, temperature=0.3)
 
     from datetime import date
+
     lines = [
         f"# Interview Brief — {company}",
         f"*{position} · Stage: {stage} · {date.today().isoformat()} · AI: {args.ai}*",
-        "", "---", "", raw.strip(), "",
+        "",
+        "---",
+        "",
+        raw.strip(),
+        "",
     ]
     out = app_dir / "interview-brief.md"
     out.write_text("\n".join(lines), encoding="utf-8")

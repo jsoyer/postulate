@@ -86,9 +86,7 @@ class TestBuildPreamblePdfa:
         assert "\\usepackage[english]{babel}" in preamble
 
     def test_pdfa_enabled_has_babel_french(self):
-        preamble = build_preamble(
-            {}, pdfa=True, personal=SAMPLE_CV_DATA["personal"], lang="fr"
-        )
+        preamble = build_preamble({}, pdfa=True, personal=SAMPLE_CV_DATA["personal"], lang="fr")
         assert "\\usepackage[french]{babel}" in preamble
 
     def test_pdfa_enabled_has_tagpdf(self):

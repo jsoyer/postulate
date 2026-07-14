@@ -116,20 +116,12 @@ je vous adresse mes cordiales salutations.")
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="AI-translate tailored CV and Cover Letter to French"
-    )
+    parser = argparse.ArgumentParser(description="AI-translate tailored CV and Cover Letter to French")
     parser.add_argument("app_dir", help="Application directory")
-    parser.add_argument(
-        "--no-cl", action="store_true",
-        help="Skip cover letter translation"
-    )
-    parser.add_argument(
-        "--ai", default="gemini",
-        choices=sorted(VALID_PROVIDERS),
-        help="AI provider (default: gemini)"
-    )
+    parser.add_argument("--no-cl", action="store_true", help="Skip cover letter translation")
+    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS), help="AI provider (default: gemini)")
     args = parser.parse_args()
 
     load_env()
@@ -151,7 +143,7 @@ def main():
         with open(meta_path, encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "")
 
     # --- Locate source CV ---
@@ -170,8 +162,8 @@ def main():
     print(f"   Source: {cv_src.name}")
     print(f"   AI: {args.ai}...")
 
-    cv_prompt  = CV_PROMPT_TEMPLATE.format(cv_yaml=cv_yaml)
-    cv_raw     = call_ai(cv_prompt, args.ai, api_key)
+    cv_prompt = CV_PROMPT_TEMPLATE.format(cv_yaml=cv_yaml)
+    cv_raw = call_ai(cv_prompt, args.ai, api_key)
     cv_cleaned = extract_yaml_block(cv_raw)
     cv_cleaned = fix_yaml_bold(cv_cleaned)
 
@@ -191,8 +183,8 @@ def main():
     if not args.no_cl and cl_src.exists():
         print(f"\n   Translating cover letter...")
         cl_yaml = cl_src.read_text(encoding="utf-8")
-        cl_prompt  = CL_PROMPT_TEMPLATE.format(cl_yaml=cl_yaml)
-        cl_raw     = call_ai(cl_prompt, args.ai, api_key)
+        cl_prompt = CL_PROMPT_TEMPLATE.format(cl_yaml=cl_yaml)
+        cl_raw = call_ai(cl_prompt, args.ai, api_key)
         cl_cleaned = extract_yaml_block(cl_raw)
         cl_cleaned = fix_yaml_bold(cl_cleaned)
 

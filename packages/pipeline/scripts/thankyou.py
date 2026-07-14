@@ -53,7 +53,7 @@ def extract_top_key_wins(cv_yml_path, n=3):
         items = []
         for w in wins[:n]:
             title = str(w.get("title", "")).replace("**", "")
-            text  = str(w.get("text",  "")).replace("**", "")[:150]
+            text = str(w.get("text", "")).replace("**", "")[:150]
             items.append(f"  - {title}: {text}")
         return "\n".join(items)
     except Exception:
@@ -64,10 +64,11 @@ def extract_top_key_wins(cv_yml_path, n=3):
 # Core generation
 # ---------------------------------------------------------------------------
 
+
 def build_prompt(app_dir, stage):
-    meta      = load_meta(app_dir)
-    company   = meta.get("company",   "the company")
-    position  = meta.get("position",  "the position")
+    meta = load_meta(app_dir)
+    company = meta.get("company", "the company")
+    position = meta.get("position", "the position")
     recipient = meta.get("recipient", "")
 
     cv_src = os.path.join(app_dir, "cv-tailored.yml")
@@ -82,10 +83,10 @@ def build_prompt(app_dir, stage):
         if name:
             candidate_name = name
 
-    job_text  = load_text(os.path.join(app_dir, "job.txt"), max_chars=300)
-    key_wins  = extract_top_key_wins(os.path.join(app_dir, "cv-tailored.yml"), n=3)
+    job_text = load_text(os.path.join(app_dir, "job.txt"), max_chars=300)
+    key_wins = extract_top_key_wins(os.path.join(app_dir, "cv-tailored.yml"), n=3)
     prep_text = load_text(os.path.join(app_dir, "prep.md"), max_chars=600)
-    research  = load_text(os.path.join(app_dir, "company-research.md"), max_chars=400)
+    research = load_text(os.path.join(app_dir, "company-research.md"), max_chars=400)
 
     context_lines = []
     if recipient:
@@ -132,12 +133,11 @@ Subject: [subject line]
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main():
     load_env()
 
-    parser = argparse.ArgumentParser(
-        description="Generate a thank-you email after a job interview using AI"
-    )
+    parser = argparse.ArgumentParser(description="Generate a thank-you email after a job interview using AI")
     parser.add_argument(
         "app_dir",
         help="Application directory (e.g. applications/2026-02-databricks)",
@@ -158,7 +158,7 @@ def main():
     args = parser.parse_args()
 
     provider = args.provider
-    app_dir  = args.app_dir
+    app_dir = args.app_dir
 
     if not os.path.isdir(app_dir):
         print(f"❌ Directory not found: {app_dir}")
@@ -180,14 +180,14 @@ def main():
     print(f"   Stage:       {args.stage}")
     print(f"   Provider:    {provider}")
     if provider == "ollama":
-        host  = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
         model = os.environ.get("OLLAMA_MODEL", "llama3")
         print(f"   Host:        {host}  Model: {model}")
     print("   Generating...", flush=True)
     print()
 
     try:
-        prompt     = build_prompt(app_dir, args.stage)
+        prompt = build_prompt(app_dir, args.stage)
         email_text = call_ai(prompt, provider, api_key, temperature=0.7, max_tokens=2000)
     except Exception as e:
         print(f"❌ Generation failed: {e}")

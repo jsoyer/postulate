@@ -156,15 +156,17 @@ class TestSemanticTfIdf:
 class TestSearchBullets:
     def _make_cv(self, tmp_path: Path) -> Path:
         cv = {
-            "experience": [{
-                "company": "Acme",
-                "position": "SRE",
-                "items": [
-                    {"text": "Led team of 12 engineers to deliver cloud platform"},
-                    {"text": "Reduced infrastructure costs by 40% using spot instances"},
-                    {"text": "Implemented CI/CD pipelines with GitHub Actions"},
-                ],
-            }],
+            "experience": [
+                {
+                    "company": "Acme",
+                    "position": "SRE",
+                    "items": [
+                        {"text": "Led team of 12 engineers to deliver cloud platform"},
+                        {"text": "Reduced infrastructure costs by 40% using spot instances"},
+                        {"text": "Implemented CI/CD pipelines with GitHub Actions"},
+                    ],
+                }
+            ],
             "projects": [],
         }
         cv_path = tmp_path / "cv.yml"
@@ -289,8 +291,7 @@ class TestDaysSince:
 
 
 class TestLoadFollowupApplications:
-    def _make_app(self, apps_dir: Path, name: str, days_ago: int,
-                  outcome: str = "applied") -> None:
+    def _make_app(self, apps_dir: Path, name: str, days_ago: int, outcome: str = "applied") -> None:
         d = apps_dir / name
         d.mkdir()
         applied = (date.today() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
@@ -417,11 +418,19 @@ class TestSmartFollowupMain:
     def test_dry_run_does_not_call_gh(self, tmp_path, capsys):
         mod = _load("smart-followup")
         rec = {
-            "name": "app", "company": "X", "position": "Y",
-            "outcome": "applied", "provider": "gemini",
-            "app_date": "2026-01-01", "days": 14,
-            "tier": 14, "tier_label": "D+14", "tier_desc": "stale",
-            "tier_emoji": "🟠", "has_issue": False, "followup_issue": None,
+            "name": "app",
+            "company": "X",
+            "position": "Y",
+            "outcome": "applied",
+            "provider": "gemini",
+            "app_date": "2026-01-01",
+            "days": 14,
+            "tier": 14,
+            "tier_label": "D+14",
+            "tier_desc": "stale",
+            "tier_emoji": "🟠",
+            "has_issue": False,
+            "followup_issue": None,
         }
         with patch("subprocess.run") as mock_run:
             issue_num = mod.create_github_issue(rec, tmp_path, dry_run=True)

@@ -17,6 +17,7 @@ dashboard = importlib.import_module("generate-dashboard")
 
 # ── get_stage ─────────────────────────────────────────────────────────────────
 
+
 class TestGetStage:
     def test_outcome_interview(self):
         assert dashboard.get_stage({}, {"outcome": "interview"}) == "Interview"
@@ -64,6 +65,7 @@ class TestGetStage:
 
 # ── collect_data ──────────────────────────────────────────────────────────────
 
+
 class TestCollectData:
     def test_no_applications_dir(self, tmp_path):
         with patch.object(dashboard, "REPO_ROOT", tmp_path):
@@ -87,11 +89,11 @@ class TestCollectData:
     def test_app_with_meta_collected(self, tmp_path):
         app_dir = tmp_path / "applications" / "2026-01-acme"
         app_dir.mkdir(parents=True)
-        (app_dir / "meta.yml").write_text(
-            "company: Acme\nposition: Engineer\ncreated: 2026-01-15\n"
-        )
-        with patch.object(dashboard, "REPO_ROOT", tmp_path), \
-             patch.object(dashboard, "get_ats_score", return_value=75.0):
+        (app_dir / "meta.yml").write_text("company: Acme\nposition: Engineer\ncreated: 2026-01-15\n")
+        with (
+            patch.object(dashboard, "REPO_ROOT", tmp_path),
+            patch.object(dashboard, "get_ats_score", return_value=75.0),
+        ):
             data = dashboard.collect_data(no_gh=True)
         assert len(data["applications"]) == 1
         app = data["applications"][0]
@@ -106,8 +108,10 @@ class TestCollectData:
             d = apps_dir / name
             d.mkdir(parents=True)
             (d / "meta.yml").write_text(f"company: {name}\ncreated: {name[:7]}-01\noutcome: {outcome}\n")
-        with patch.object(dashboard, "REPO_ROOT", tmp_path), \
-             patch.object(dashboard, "get_ats_score", return_value=None):
+        with (
+            patch.object(dashboard, "REPO_ROOT", tmp_path),
+            patch.object(dashboard, "get_ats_score", return_value=None),
+        ):
             data = dashboard.collect_data(no_gh=True)
         assert data["stats"]["total"] == 3
         assert "by_stage" in data["stats"]
@@ -119,14 +123,17 @@ class TestCollectData:
             d = apps_dir / f"{month}-app{i}"
             d.mkdir(parents=True)
             (d / "meta.yml").write_text(f"company: app{i}\ncreated: {month}-01\n")
-        with patch.object(dashboard, "REPO_ROOT", tmp_path), \
-             patch.object(dashboard, "get_ats_score", return_value=None):
+        with (
+            patch.object(dashboard, "REPO_ROOT", tmp_path),
+            patch.object(dashboard, "get_ats_score", return_value=None),
+        ):
             data = dashboard.collect_data(no_gh=True)
         assert data["monthly"]["2026-01"] == 2
         assert data["monthly"]["2026-02"] == 1
 
 
 # ── HTML generation ───────────────────────────────────────────────────────────
+
 
 class TestHTMLGeneration:
     def test_html_template_has_placeholder(self):
@@ -152,11 +159,14 @@ class TestHTMLGeneration:
 
 # ── main (integration) ────────────────────────────────────────────────────────
 
+
 class TestMain:
     def test_json_data_mode(self, tmp_path, capsys):
         (tmp_path / "applications").mkdir()
-        with patch.object(dashboard, "REPO_ROOT", tmp_path), \
-             patch("sys.argv", ["generate-dashboard.py", "--json-data", "--no-gh"]):
+        with (
+            patch.object(dashboard, "REPO_ROOT", tmp_path),
+            patch("sys.argv", ["generate-dashboard.py", "--json-data", "--no-gh"]),
+        ):
             result = dashboard.main()
         assert result == 0
         output = capsys.readouterr().out
@@ -165,8 +175,10 @@ class TestMain:
     def test_html_output(self, tmp_path):
         (tmp_path / "applications").mkdir()
         out_dir = tmp_path / "out"
-        with patch.object(dashboard, "REPO_ROOT", tmp_path), \
-             patch("sys.argv", ["generate-dashboard.py", "--output-dir", str(out_dir), "--no-gh"]):
+        with (
+            patch.object(dashboard, "REPO_ROOT", tmp_path),
+            patch("sys.argv", ["generate-dashboard.py", "--output-dir", str(out_dir), "--no-gh"]),
+        ):
             result = dashboard.main()
         assert result == 0
         html_file = out_dir / "index.html"
@@ -251,7 +263,7 @@ class TestMainDataDirFlag:
             result = dashboard.main()
         assert result == 0
         raw = capsys.readouterr().out
-        output = json.loads(raw[raw.index("{"):])
+        output = json.loads(raw[raw.index("{") :])
         assert len(output["applications"]) == 1
         assert output["applications"][0]["company"] == "Acme"
 
@@ -273,7 +285,7 @@ class TestMainDataDirFlag:
             result = dashboard.main()
         assert result == 0
         raw = capsys.readouterr().out
-        output = json.loads(raw[raw.index("{"):])
+        output = json.loads(raw[raw.index("{") :])
         assert len(output["applications"]) == 1
 
     def test_help_shows_data_dir_flag(self):
@@ -298,5 +310,5 @@ class TestMainDataDirFlag:
             result = dashboard.main()
         assert result == 0
         raw = capsys.readouterr().out
-        output = json.loads(raw[raw.index("{"):])
+        output = json.loads(raw[raw.index("{") :])
         assert output["applications"] == []

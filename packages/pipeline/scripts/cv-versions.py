@@ -51,10 +51,7 @@ def _ensure_versions_dir() -> None:
 def _list_versions() -> list:
     if not _VERSIONS_DIR.exists():
         return []
-    return sorted(
-        p for p in _VERSIONS_DIR.glob("*.yml")
-        if not p.name.startswith(".")
-    )
+    return sorted(p for p in _VERSIONS_DIR.glob("*.yml") if not p.name.startswith("."))
 
 
 def _current_position() -> str:
@@ -94,10 +91,11 @@ def _active_version() -> str | None:
 # Commands
 # ---------------------------------------------------------------------------
 
+
 def cmd_list(_args) -> int:
     versions = _list_versions()
-    active   = _active_version()
-    cur_pos  = _current_position()
+    active = _active_version()
+    cur_pos = _current_position()
 
     print(f"\n📂 CV Versions  ({_VERSIONS_DIR})\n")
     print(f"   {'★  Current':>5}  data/cv.yml  →  {cur_pos}\n")
@@ -110,8 +108,8 @@ def cmd_list(_args) -> int:
     print(f"   {'Active':>5}  {'Name':<25}  Position")
     print("   " + "─" * 55)
     for v in versions:
-        marker  = "✅ " if v.stem == active else "   "
-        pos     = _version_position(v)
+        marker = "✅ " if v.stem == active else "   "
+        pos = _version_position(v)
         size_kb = v.stat().st_size // 1024 or 1
         print(f"   {marker}  {v.stem:<25}  {pos}")
     print()
@@ -152,7 +150,7 @@ def cmd_activate(args) -> int:
 
     # Backup current cv.yml
     if _CV_PATH.exists():
-        ts     = datetime.now().strftime("%Y%m%d-%H%M%S")
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         backup = REPO_ROOT / "data" / f"cv.backup-{ts}.yml"
         shutil.copy2(_CV_PATH, backup)
         print(f"🔒 Backup: {backup.name}")
@@ -197,7 +195,7 @@ def cmd_show(args) -> int:
         print(f"❌ Version not found: {src}")
         return 1
 
-    pos  = _version_position(src)
+    pos = _version_position(src)
     size = src.stat().st_size
     mtime = datetime.fromtimestamp(src.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
     print(f"\n📄 Version: {args.version}")
@@ -214,27 +212,20 @@ def cmd_show(args) -> int:
 # ---------------------------------------------------------------------------
 
 COMMANDS = {
-    "list":     cmd_list,
-    "save":     cmd_save,
+    "list": cmd_list,
+    "save": cmd_save,
     "activate": cmd_activate,
-    "diff":     cmd_diff,
-    "show":     cmd_show,
+    "diff": cmd_diff,
+    "show": cmd_show,
 }
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Manage named CV versions"
-    )
+    parser = argparse.ArgumentParser(description="Manage named CV versions")
     parser.add_argument(
-        "action", nargs="?", default="list",
-        choices=list(COMMANDS),
-        help=f"Action: {' | '.join(COMMANDS)}"
+        "action", nargs="?", default="list", choices=list(COMMANDS), help=f"Action: {' | '.join(COMMANDS)}"
     )
-    parser.add_argument(
-        "version", nargs="?", default=None,
-        help="Version name (e.g. vp-se, director-sales)"
-    )
+    parser.add_argument("version", nargs="?", default=None, help="Version name (e.g. vp-se, director-sales)")
     args = parser.parse_args()
 
     return COMMANDS[args.action](args)

@@ -9,20 +9,21 @@ import pytest
 # conftest.py adds scripts/ to sys.path; import hyphenated module via importlib
 cv_health = importlib.import_module("cv-health")
 
-_flatten_items      = cv_health._flatten_items
+_flatten_items = cv_health._flatten_items
 _check_quantification = cv_health._check_quantification
-_check_action_verbs   = cv_health._check_action_verbs
-_check_bullet_length  = cv_health._check_bullet_length
-_check_profile        = cv_health._check_profile
-_check_repetition     = cv_health._check_repetition
-_check_completeness   = cv_health._check_completeness
-_check_duplicates     = cv_health._check_duplicates
-audit                 = cv_health.audit
+_check_action_verbs = cv_health._check_action_verbs
+_check_bullet_length = cv_health._check_bullet_length
+_check_profile = cv_health._check_profile
+_check_repetition = cv_health._check_repetition
+_check_completeness = cv_health._check_completeness
+_check_duplicates = cv_health._check_duplicates
+audit = cv_health.audit
 
 
 # ---------------------------------------------------------------------------
 # _flatten_items
 # ---------------------------------------------------------------------------
+
 
 class TestFlattenItems:
     def test_string_items(self):
@@ -59,6 +60,7 @@ class TestFlattenItems:
 # _check_quantification
 # ---------------------------------------------------------------------------
 
+
 class TestCheckQuantification:
     def test_all_with_metrics(self):
         bullets = ["Increased revenue by 30%", "Managed team of 15 engineers"]
@@ -85,7 +87,7 @@ class TestCheckQuantification:
         assert result["with_metrics"] == 1
 
     def test_score_capped_at_100(self):
-        bullets = [f"Grew metric by {i*10}%" for i in range(1, 20)]
+        bullets = [f"Grew metric by {i * 10}%" for i in range(1, 20)]
         result = _check_quantification(bullets)
         assert result["score"] <= 100
 
@@ -102,6 +104,7 @@ class TestCheckQuantification:
 # ---------------------------------------------------------------------------
 # _check_action_verbs
 # ---------------------------------------------------------------------------
+
 
 class TestCheckActionVerbs:
     def test_strong_verb_detected(self):
@@ -140,6 +143,7 @@ class TestCheckActionVerbs:
 # _check_bullet_length
 # ---------------------------------------------------------------------------
 
+
 class TestCheckBulletLength:
     def test_ideal_length(self):
         bullet = "Built distributed system that scales to handle traffic spikes globally"
@@ -174,6 +178,7 @@ class TestCheckBulletLength:
 # ---------------------------------------------------------------------------
 # _check_profile
 # ---------------------------------------------------------------------------
+
 
 class TestCheckProfile:
     def test_ideal_length(self):
@@ -215,6 +220,7 @@ class TestCheckProfile:
 # _check_repetition
 # ---------------------------------------------------------------------------
 
+
 class TestCheckRepetition:
     def test_overused_word_detected(self):
         bullets = ["managed team", "managed project", "managed budget", "managed resources"]
@@ -249,17 +255,18 @@ class TestCheckRepetition:
 # _check_completeness
 # ---------------------------------------------------------------------------
 
+
 class TestCheckCompleteness:
     def test_all_sections_present(self):
         data = {
-            "personal":       {"name": "John"},
-            "profile":        "Text",
-            "skills":         [{"category": "x", "items": "y"}],
-            "key_wins":       [{"title": "x", "text": "y"}],
-            "experience":     [{"title": "x"}],
-            "education":      [{"degree": "x"}],
+            "personal": {"name": "John"},
+            "profile": "Text",
+            "skills": [{"category": "x", "items": "y"}],
+            "key_wins": [{"title": "x", "text": "y"}],
+            "experience": [{"title": "x"}],
+            "education": [{"degree": "x"}],
             "certifications": [{"name": "x"}],
-            "languages":      ["French"],
+            "languages": ["French"],
         }
         result = _check_completeness(data)
         assert result["score"] == 100
@@ -287,6 +294,7 @@ class TestCheckCompleteness:
 # ---------------------------------------------------------------------------
 # _check_duplicates
 # ---------------------------------------------------------------------------
+
 
 class TestCheckDuplicates:
     def test_no_duplicates(self):
@@ -332,8 +340,8 @@ _BASE_DATA = {
         "Senior software engineer with 10 years experience leading distributed "
         "teams across EMEA region delivering high-impact technical initiatives."
     ),
-    "skills":         [{"category": "Languages", "items": "Python, Go"}],
-    "key_wins":       [{"title": "Revenue", "text": "Grew ARR by 40%"}],
+    "skills": [{"category": "Languages", "items": "Python, Go"}],
+    "key_wins": [{"title": "Revenue", "text": "Grew ARR by 40%"}],
     "experience": [
         {
             "title": "VP Engineering",
@@ -348,9 +356,9 @@ _BASE_DATA = {
         }
     ],
     "early_career": [],
-    "education":      [{"degree": "MSc", "school": "MIT", "location": "Boston", "dates": "2010 -- 2012"}],
+    "education": [{"degree": "MSc", "school": "MIT", "location": "Boston", "dates": "2010 -- 2012"}],
     "certifications": [{"name": "AWS SA", "institution": "Amazon", "date": "2022"}],
-    "languages":      ["English", "French"],
+    "languages": ["English", "French"],
 }
 
 
@@ -367,8 +375,13 @@ class TestAudit:
     def test_all_metric_keys_present(self):
         result = audit(_BASE_DATA)
         for key in [
-            "quantification", "action_verbs", "bullet_length",
-            "profile", "repetition", "completeness", "duplicates",
+            "quantification",
+            "action_verbs",
+            "bullet_length",
+            "profile",
+            "repetition",
+            "completeness",
+            "duplicates",
         ]:
             assert key in result
 
@@ -395,8 +408,13 @@ class TestAudit:
             **_BASE_DATA,
             "experience": [],
             "early_career": [
-                {"title": "Dev", "company": "X", "dates": "2010--2015", "location": "Y",
-                 "items": ["Built system handling 1M users daily"]}
+                {
+                    "title": "Dev",
+                    "company": "X",
+                    "dates": "2010--2015",
+                    "location": "Y",
+                    "items": ["Built system handling 1M users daily"],
+                }
             ],
         }
         result = audit(data)

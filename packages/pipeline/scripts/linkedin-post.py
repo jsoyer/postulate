@@ -42,11 +42,10 @@ from lib.common import load_env, REPO_ROOT
 
 POST_TYPE_LABEL = {
     "open-to-work": "Open to Opportunities",
-    "transition":   "Career Transition / New Role",
-    "achievement":  "Milestone / Achievement",
-    "insight":      "Thought Leadership / Insight",
+    "transition": "Career Transition / New Role",
+    "achievement": "Milestone / Achievement",
+    "insight": "Thought Leadership / Insight",
 }
-
 
 
 PROMPT_TEMPLATE = """\
@@ -100,19 +99,16 @@ TYPE_GUIDANCE = {
 - Specify: what level of role, what domain, what geography
 - Mention what you bring (the value, not just the title)
 - Avoid "open to work" banner clichés — be specific about what you want""",
-
     "transition": """\
 - Announce the move with genuine energy, not corporate boilerplate
 - One sentence on what attracted you to the new role/company
 - One insight about what you learned in the previous role
 - Tag the new company if appropriate (use @CompanyName)""",
-
     "achievement": """\
 - Lead with the outcome/number, not the process
 - Give just enough context for non-insiders to understand
 - Credit the team if relevant (briefly)
 - End with a lesson or insight""",
-
     "insight": """\
 - Strong POV — take a real stance, don't hedge
 - Back it up with one specific example or data point
@@ -123,13 +119,15 @@ TYPE_GUIDANCE = {
 
 def main():
     parser = argparse.ArgumentParser(description="Generate a LinkedIn post using AI")
-    parser.add_argument("app_dir", nargs="?", default="",
-                        help="Application directory (optional)")
-    parser.add_argument("--type", dest="post_type",
-                        choices=list(POST_TYPE_LABEL), default="open-to-work",
-                        help="Post type (default: open-to-work)")
-    parser.add_argument("--topic", default="",
-                        help="Additional context or specific topic/achievement to cover")
+    parser.add_argument("app_dir", nargs="?", default="", help="Application directory (optional)")
+    parser.add_argument(
+        "--type",
+        dest="post_type",
+        choices=list(POST_TYPE_LABEL),
+        default="open-to-work",
+        help="Post type (default: open-to-work)",
+    )
+    parser.add_argument("--topic", default="", help="Additional context or specific topic/achievement to cover")
     parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
@@ -142,7 +140,7 @@ def main():
         sys.exit(1)
 
     # Load CV
-    app_dir  = None
+    app_dir = None
     app_name = ""
     if args.app_dir:
         app_dir = Path(args.app_dir)
@@ -150,8 +148,11 @@ def main():
             app_dir = REPO_ROOT / "applications" / Path(args.app_dir).name
         app_name = app_dir.name if app_dir.is_dir() else ""
 
-    cv_src = (app_dir / "cv-tailored.yml" if app_dir and (app_dir / "cv-tailored.yml").exists()
-              else REPO_ROOT / "data" / "cv.yml")
+    cv_src = (
+        app_dir / "cv-tailored.yml"
+        if app_dir and (app_dir / "cv-tailored.yml").exists()
+        else REPO_ROOT / "data" / "cv.yml"
+    )
     cv_data = {}
     if cv_src.exists():
         with open(cv_src, encoding="utf-8") as f:
@@ -162,8 +163,7 @@ def main():
     candidate_position = personal.get("position", "")
 
     profile = cv_data.get("profile", "")
-    profile_excerpt = re.sub(r"\*\*(.+?)\*\*", r"\1",
-                              profile if isinstance(profile, str) else "")[:500]
+    profile_excerpt = re.sub(r"\*\*(.+?)\*\*", r"\1", profile if isinstance(profile, str) else "")[:500]
     candidate_profile = profile_excerpt
 
     wins = cv_data.get("key_wins", [])
@@ -171,13 +171,13 @@ def main():
     for w in wins[:4]:
         if isinstance(w, dict):
             title = re.sub(r"\*\*(.+?)\*\*", r"\1", w.get("title", ""))
-            text  = re.sub(r"\*\*(.+?)\*\*", r"\1", w.get("text", ""))
+            text = re.sub(r"\*\*(.+?)\*\*", r"\1", w.get("text", ""))
             ach_lines.append(f"• {title}: {text}")
     achievements_excerpt = "\n".join(ach_lines) or "(no key_wins found)"
 
     topic_section = f"**Specific topic:** {args.topic}" if args.topic else "(none specified — use CV context)"
 
-    type_label   = POST_TYPE_LABEL[args.post_type]
+    type_label = POST_TYPE_LABEL[args.post_type]
     type_guidance = TYPE_GUIDANCE.get(args.post_type, "")
 
     print(f"📢 Generating LinkedIn post — {type_label}")
@@ -210,6 +210,7 @@ def main():
         print(f"⚠️  Post is {char_count} chars (LinkedIn optimal ≤ 1 300) — consider trimming")
 
     from datetime import date
+
     today = date.today().isoformat()
     out_lines = [
         f"# LinkedIn Post — {type_label}",

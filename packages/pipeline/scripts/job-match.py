@@ -259,11 +259,10 @@ def _format_terminal(result: dict, threshold: int) -> None:
 def main():
     load_env()
 
-    parser = argparse.ArgumentParser(
-        description="Job Match AI — CV ↔ job compatibility scoring"
-    )
+    parser = argparse.ArgumentParser(description="Job Match AI — CV ↔ job compatibility scoring")
     parser.add_argument(
-        "--name", required=True,
+        "--name",
+        required=True,
         help="Application name (reads from applications/{name}/)",
     )
     parser.add_argument(
@@ -273,23 +272,32 @@ def main():
         help="AI provider (default: gemini, or set AI_PROVIDER env var)",
     )
     parser.add_argument(
-        "--model", default=None,
+        "--model",
+        default=None,
         help="Override default model",
     )
     parser.add_argument(
-        "--json", action="store_true", dest="json_mode",
+        "--json",
+        action="store_true",
+        dest="json_mode",
         help="Output as JSON (for CI integration)",
     )
     parser.add_argument(
-        "--threshold", type=int, default=60,
+        "--threshold",
+        type=int,
+        default=60,
         help="Minimum score threshold (default: 60)",
     )
     parser.add_argument(
-        "--cv", default="data/cv.yml",
+        "--cv",
+        default="data/cv.yml",
         help="Path to master CV YAML (default: data/cv.yml)",
     )
     parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable debug logging",
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging",
     )
     args = parser.parse_args()
 
