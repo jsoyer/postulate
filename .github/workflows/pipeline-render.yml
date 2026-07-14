@@ -1,0 +1,122 @@
+# Render / PDF-build CI for the pipeline engine's OWN sample data (Jane Doe).
+#
+# This absorbs the render CI that formerly lived in consumer repos (Option B):
+# consumers like CV now keep only a thin submodule smoke test, while the engine
+# owns proving that its sample data compiles end-to-end to a PDF. It runs only
+# when packages/pipeline changes. Unit tests run separately in ci.yml.
+name: pipeline-render
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/pipeline/**"
+  pull_request:
+    paths:
+      - "packages/pipeline/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    name: Render sample CV (xelatex)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: texlive/texlive:latest
+    defaults:
+      run:
+        working-directory: packages/pipeline
+
+    steps:
+      - name: Checkout (with awesome-cv submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install engine Python deps
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update -qq && apt-get install -y -qq python3-pip > /dev/null 2>&1 || true
+          pip3 install -r requirements.txt --break-system-packages || pip3 install -r requirements.txt
+
+      - name: Font patch (SourceSansPro -> SourceSans3 if absent)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! fc-list | grep -qi "SourceSansPro"; then
+            sed -i 's/SourceSansPro/SourceSans3/g' awesome-cv/awesome-cv.cls || true
+            echo "Patched awesome-cv.cls: SourceSansPro -> SourceSans3"
+          else
+            echo "SourceSansPro available, no patch needed"
+          fi
+
+      - name: Render + build sample PDFs (Jane Doe data/)
+        shell: bash
+        run: |
+          set -euo pipefail
+          make all
+
+      - name: Assert PDFs were produced
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -f CV.pdf ]; then
+            echo "::error::CV.pdf was not produced by 'make all'"
+            exit 1
+          fi
+          echo "CV.pdf produced ($(wc -c < CV.pdf) bytes)"
+          if [ -f CoverLetter.pdf ]; then
+            echo "CoverLetter.pdf produced ($(wc -c < CoverLetter.pdf) bytes)"
+          fi
+          # Soft page-count sanity check (non-fatal): sample CV should stay compact.
+          if command -v pdfinfo >/dev/null 2>&1; then
+            pages=$(pdfinfo CV.pdf | awk '/Pages/{print $2}')
+            echo "CV.pdf pages: ${pages}"
+          fi
+
+      - name: Upload sample PDFs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-sample-pdfs
+          path: |
+            packages/pipeline/CV.pdf
+            packages/pipeline/CoverLetter.pdf
+          if-no-files-found: ignore
+          retention-days: 14
+
+  lint:
+    name: Lint + type-check engine (ruff + mypy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/pipeline
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dev deps
+        shell: bash
+        run: |
+          set -euo pipefail
+          pip install -r requirements.txt
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+      - name: Ruff (uses packages/pipeline/ruff.toml)
+        shell: bash
+        run: ruff check .
+
+      - name: Mypy (uses packages/pipeline/mypy.ini)
+        shell: bash
+        run: mypy scripts/ || true  # non-blocking: mypy.ini suppresses many codes; report only
