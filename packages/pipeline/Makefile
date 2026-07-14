@@ -91,10 +91,22 @@ ifeq (,$(wildcard $(abspath $(AWESOME_CV_DIR))/awesome-cv.cls))
     $(shell git submodule update --init --recursive)
 endif
 
-# Auto-install fontawesome6 if missing (required by awesome-cv.cls)
-ifeq (,$(shell kpsewhich fontawesome6.sty 2>/dev/null))
-    $(shell tlmgr init-usertree 2>/dev/null; tlmgr install fontawesome6 2>/dev/null)
-endif
+# Auto-install fontawesome6 if missing (required by awesome-cv.cls).
+# NOTE: this MUST be a build-time recipe, not a parse-time $(shell ...) call.
+# A bare $(shell ...) on its own makefile line (not part of an assignment)
+# has its stdout re-parsed as makefile syntax by make — on boxes where
+# kpsewhich fails but tlmgr exists, tlmgr's stdout got spliced into the
+# Makefile as a bogus rule ("multiple target patterns. Stop."), aborting
+# every `make render/app/review` invocation. ensure-tex-deps guards the
+# same auto-install at recipe time instead, so parsing is never corrupted.
+.PHONY: ensure-tex-deps
+ensure-tex-deps:
+	@if ! kpsewhich fontawesome6.sty >/dev/null 2>&1; then \
+		if command -v tlmgr >/dev/null 2>&1; then \
+			tlmgr init-usertree >/dev/null 2>&1 || true; \
+			tlmgr install fontawesome6 >/dev/null 2>&1 || true; \
+		fi; \
+	fi
 
 # Auto-detect NAME from current apply/* branch when not explicitly provided
 ifeq ($(NAME),)
@@ -140,7 +152,7 @@ open:
 
 # Build a specific application: make app NAME=2026-02-databricks
 # Add DRAFT=true for watermark: make app NAME=... DRAFT=true
-app:
+app: ensure-tex-deps
 	@test -n "$(NAME)" || (echo "Usage: make app NAME=2026-02-databricks" && exit 1)
 	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
 	@# Render CV: from tailored YAML if available, otherwise from root $(DATA_DIR)/cv.yml
@@ -400,7 +412,7 @@ pipeline:
 
 # Render CV.tex + CoverLetter.tex from YAML source of truth
 # Usage: make render  /  make render LANG=fr  /  make render PDFA=true  /  make render DRAFT=true
-render:
+render: ensure-tex-deps
 	@ARGS="-d $(DATA_DIR)/cv.yml -o $(OUT_DIR)/CV.tex"; \
 	if [ -n "$(LANG)" ]; then ARGS="$$ARGS -l $(LANG)"; fi; \
 	if [ "$(PDFA)" = "true" ]; then ARGS="$$ARGS --pdfa"; fi; \
@@ -889,13 +901,16 @@ batch-dry:
 	@$(PYTHON) scripts/batch-apply.py "$(CSV)" --dry-run
 
 # Generate HTML dashboard and open in browser
+# NOTE: dashboard's data source is the applications directory, which the
+# Shared Contract already parameterizes as APP_DIR (not DATA_DIR, which is
+# the cv.yml root) — see APP_DIR/DATA_DIR block above.
 dashboard:
-	@$(PYTHON) scripts/generate-dashboard.py --output-dir /tmp/cv-dashboard --no-gh
+	@$(PYTHON) scripts/generate-dashboard.py --output-dir /tmp/cv-dashboard --no-gh --data-dir $(APP_DIR)
 	@$(OPEN_CMD) /tmp/cv-dashboard/index.html 2>/dev/null || true
 
 # Full application review: render + compile + validate + score
 # Usage: make review NAME=2026-02-databricks
-review:
+review: ensure-tex-deps
 	@test -n "$(NAME)" || (echo "Usage: make review NAME=2026-02-databricks" && exit 1)
 	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
 	@echo "🔍 Reviewing: $(APP_DIR)/$(NAME)"
@@ -1517,14 +1532,14 @@ market-installed:    ## List locally installed templates
 # Usage: make portfolio
 portfolio:
 	@mkdir -p portfolio
-	@$(PYTHON) scripts/portfolio.py -o portfolio/index.html
+	@$(PYTHON) scripts/portfolio.py -o portfolio/index.html --data-dir $(DATA_DIR)
 	@echo "Portfolio generated: portfolio/index.html"
 
 # Generate French portfolio
 # Usage: make portfolio-fr
 portfolio-fr:
 	@mkdir -p portfolio
-	@$(PYTHON) scripts/portfolio.py -o portfolio/index-fr.html --lang fr
+	@$(PYTHON) scripts/portfolio.py -o portfolio/index-fr.html --lang fr --data-dir $(DATA_DIR)
 	@echo "Portfolio (FR) generated: portfolio/index-fr.html"
 
 # ---------------------------------------------------------------------------

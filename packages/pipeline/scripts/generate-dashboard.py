@@ -32,6 +32,22 @@ yaml = require_yaml()
 
 # ── Data collection ────────────────────────────────────────────────────────────
 
+
+def _resolve_apps_dir(cli_value: str | None) -> Path:
+    """Resolve the applications data root.
+
+    Precedence: --data-dir flag > DATA_DIR env var > REPO_ROOT/applications.
+    This lets external consumers (Makefile target passes APP_DIR) point the
+    dashboard at their own applications data instead of the engine's own tree.
+    """
+    if cli_value:
+        return Path(cli_value)
+    env_value = os.environ.get("DATA_DIR")
+    if env_value:
+        return Path(env_value)
+    return REPO_ROOT / "applications"
+
+
 def get_pr_info(name: str) -> dict:
     """Query GitHub CLI for PR info on an apply/* branch."""
     try:
@@ -89,9 +105,13 @@ def get_stage(pr: dict, meta: dict) -> str:
     return "Draft"
 
 
-def collect_data(no_gh: bool = False) -> dict:
-    """Collect all application data."""
-    apps_dir = REPO_ROOT / "applications"
+def collect_data(no_gh: bool = False, data_dir: str | Path | None = None) -> dict:
+    """Collect all application data.
+
+    data_dir: optional override for the applications root (defaults to
+    REPO_ROOT/applications when None, preserving standalone sample behavior).
+    """
+    apps_dir = Path(data_dir) if data_dir is not None else REPO_ROOT / "applications"
     if not apps_dir.exists():
         return {"applications": [], "generated": str(date.today())}
 
@@ -515,6 +535,13 @@ def main():
         dest="json_data",
         help="Print collected data as JSON and exit (no HTML generated)",
     )
+    parser.add_argument(
+        "--data-dir",
+        metavar="DIR",
+        dest="data_dir",
+        default=None,
+        help="Applications data root (default: $DATA_DIR env var, then <repo>/applications)",
+    )
     parsed = parser.parse_args()
     output_dir = Path(parsed.output_dir)
     no_gh = parsed.no_gh
@@ -522,12 +549,12 @@ def main():
 
     print("📊 Generating dashboard...")
 
-    apps_dir = REPO_ROOT / "applications"
+    apps_dir = _resolve_apps_dir(parsed.data_dir)
     if apps_dir.exists():
         count = sum(1 for d in apps_dir.iterdir() if d.is_dir() and (d / "meta.yml").exists())
         print(f"   Collecting data for {count} application(s)...")
 
-    data = collect_data(no_gh=no_gh)
+    data = collect_data(no_gh=no_gh, data_dir=apps_dir)
 
     if json_data:
         print(json.dumps(data, indent=2, default=str))

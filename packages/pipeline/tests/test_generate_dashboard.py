@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -173,3 +174,129 @@ class TestMain:
         content = html_file.read_text()
         assert "<!DOCTYPE html>" in content
         assert "__DATA__" not in content
+
+
+# ── --data-dir consumability (Fix 2: DATA_DIR ignored by dashboard) ────────────
+
+
+class TestResolveAppsDir:
+    def test_cli_value_wins(self, tmp_path):
+        result = dashboard._resolve_apps_dir(str(tmp_path / "explicit"))
+        assert result == tmp_path / "explicit"
+
+    def test_env_fallback_when_no_cli_value(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("DATA_DIR", str(tmp_path / "from-env"))
+        result = dashboard._resolve_apps_dir(None)
+        assert result == tmp_path / "from-env"
+
+    def test_default_reproduces_repo_root_applications(self, monkeypatch, tmp_path):
+        monkeypatch.delenv("DATA_DIR", raising=False)
+        with patch.object(dashboard, "REPO_ROOT", tmp_path):
+            result = dashboard._resolve_apps_dir(None)
+        assert result == tmp_path / "applications"
+
+
+class TestCollectDataWithDataDir:
+    def test_collect_data_honors_explicit_data_dir(self, tmp_path):
+        """collect_data must read from data_dir, not REPO_ROOT, when data_dir is given."""
+        consumer_dir = tmp_path / "consumer-applications"
+        app_dir = consumer_dir / "2026-03-acme"
+        app_dir.mkdir(parents=True)
+        (app_dir / "meta.yml").write_text("company: Acme\nposition: Engineer\ncreated: 2026-03-01\n")
+
+        decoy_root = tmp_path / "decoy-repo-root"
+        decoy_root.mkdir()
+        (decoy_root / "applications").mkdir()
+
+        with (
+            patch.object(dashboard, "REPO_ROOT", decoy_root),
+            patch.object(dashboard, "get_ats_score", return_value=None),
+        ):
+            data = dashboard.collect_data(no_gh=True, data_dir=consumer_dir)
+
+        assert len(data["applications"]) == 1
+        assert data["applications"][0]["company"] == "Acme"
+
+    def test_collect_data_default_still_uses_repo_root(self, tmp_path):
+        """Backward compatibility: omitting data_dir must keep using REPO_ROOT/applications."""
+        app_dir = tmp_path / "applications" / "2026-03-acme"
+        app_dir.mkdir(parents=True)
+        (app_dir / "meta.yml").write_text("company: Acme\ncreated: 2026-03-01\n")
+        with (
+            patch.object(dashboard, "REPO_ROOT", tmp_path),
+            patch.object(dashboard, "get_ats_score", return_value=None),
+        ):
+            data = dashboard.collect_data(no_gh=True)
+        assert len(data["applications"]) == 1
+
+
+class TestMainDataDirFlag:
+    def test_main_honors_data_dir_cli_flag(self, tmp_path, capsys):
+        consumer_dir = tmp_path / "consumer-applications"
+        app_dir = consumer_dir / "2026-03-acme"
+        app_dir.mkdir(parents=True)
+        (app_dir / "meta.yml").write_text("company: Acme\ncreated: 2026-03-01\n")
+
+        decoy_root = tmp_path / "decoy-repo-root"
+        decoy_root.mkdir()
+        (decoy_root / "applications").mkdir()
+
+        with (
+            patch.object(dashboard, "REPO_ROOT", decoy_root),
+            patch(
+                "sys.argv",
+                ["generate-dashboard.py", "--json-data", "--no-gh", "--data-dir", str(consumer_dir)],
+            ),
+        ):
+            result = dashboard.main()
+        assert result == 0
+        raw = capsys.readouterr().out
+        output = json.loads(raw[raw.index("{"):])
+        assert len(output["applications"]) == 1
+        assert output["applications"][0]["company"] == "Acme"
+
+    def test_main_honors_data_dir_env_var(self, monkeypatch, tmp_path, capsys):
+        consumer_dir = tmp_path / "consumer-applications"
+        app_dir = consumer_dir / "2026-03-acme"
+        app_dir.mkdir(parents=True)
+        (app_dir / "meta.yml").write_text("company: Acme\ncreated: 2026-03-01\n")
+        monkeypatch.setenv("DATA_DIR", str(consumer_dir))
+
+        decoy_root = tmp_path / "decoy-repo-root"
+        decoy_root.mkdir()
+        (decoy_root / "applications").mkdir()
+
+        with (
+            patch.object(dashboard, "REPO_ROOT", decoy_root),
+            patch("sys.argv", ["generate-dashboard.py", "--json-data", "--no-gh"]),
+        ):
+            result = dashboard.main()
+        assert result == 0
+        raw = capsys.readouterr().out
+        output = json.loads(raw[raw.index("{"):])
+        assert len(output["applications"]) == 1
+
+    def test_help_shows_data_dir_flag(self):
+        """CLI --help output must document --data-dir (consumer-facing contract)."""
+        script = Path(__file__).resolve().parent.parent / "scripts" / "generate-dashboard.py"
+        result = subprocess.run(
+            [sys.executable, str(script), "--help"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        assert result.returncode == 0
+        assert "--data-dir" in result.stdout
+
+    def test_standalone_default_unaffected_by_data_dir_flag_absence(self, tmp_path, capsys):
+        """No --data-dir given -> falls back to REPO_ROOT/applications (sample-data safe default)."""
+        (tmp_path / "applications").mkdir()
+        with (
+            patch.object(dashboard, "REPO_ROOT", tmp_path),
+            patch("sys.argv", ["generate-dashboard.py", "--json-data", "--no-gh"]),
+        ):
+            result = dashboard.main()
+        assert result == 0
+        raw = capsys.readouterr().out
+        output = json.loads(raw[raw.index("{"):])
+        assert output["applications"] == []
