@@ -83,6 +83,7 @@ class TestBuildPreamblePdfa:
         preamble = build_preamble({}, pdfa=True, personal=SAMPLE_CV_DATA["personal"])
         assert "\\DocumentMetadata{" in preamble
         assert "pdfstandard=A-2b" in preamble
+        assert "tagging=off" in preamble
         assert "\\usepackage[a-2b]{pdfx}" not in preamble
 
     def test_pdfa_enabled_documentmetadata_is_first_line(self):
@@ -113,6 +114,21 @@ class TestBuildPreamblePdfa:
         assert "\\tagpdfsetup{tags=true}" not in preamble
         assert "\\DocumentMetadata{" in preamble
 
+    def test_pdfa_enabled_tagging_off(self):
+        """PDF/A-2b ("basic") does not require tagging, and TeXLive 2026's
+        default tagging activation is incompatible with `enumitem`'s
+        `leftmargin`/`noitemsep` keys used throughout awesome-cv itemize
+        environments ("Package block Error: Some keys specified on the
+        itemize environment are unknown"). `tagging=off` is the LaTeX-team
+        supported key to disable tagging while keeping full A-2b conformance
+        (output intent + XMP marker + font embedding). See
+        latex3/tagging-project#1301."""
+        preamble = build_preamble({}, pdfa=True, personal=SAMPLE_CV_DATA["personal"])
+        assert "tagging=off" in preamble
+        idx = preamble.index("\\DocumentMetadata{")
+        line_end = preamble.index("\n", idx)
+        assert "tagging=off" in preamble[idx:line_end]
+
     def test_pdfa_disabled_no_tagpdf(self):
         preamble = build_preamble({}, pdfa=False)
         assert "tagpdf" not in preamble
@@ -134,11 +150,11 @@ class TestRenderCvPdfa:
         (fr-FR / en-US) instead of a pdfx/babel-only concern."""
         fr_output = render_cv(SAMPLE_CV_DATA, pdfa=True, lang="fr")
         assert "\\usepackage[french]{babel}" in fr_output
-        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=fr-FR}" in fr_output
+        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=fr-FR, tagging=off}" in fr_output
 
         en_output = render_cv(SAMPLE_CV_DATA, pdfa=True)
         assert "\\usepackage[english]{babel}" in en_output
-        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=en-US}" in en_output
+        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=en-US, tagging=off}" in en_output
 
     def test_render_cv_pdfa_english(self):
         output = render_cv(SAMPLE_CV_DATA, pdfa=True)
@@ -168,8 +184,10 @@ class TestPdfaMetadataFlow:
         about a sidecar file that no longer exists."""
         output = render_cv(SAMPLE_CV_DATA, pdfa=True)
 
-        # \DocumentMetadata carries the PDF/A standard + version + lang keys.
-        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=en-US}" in output
+        # \DocumentMetadata carries the PDF/A standard + version + lang keys,
+        # plus tagging=off (A-2b needs no tagging; avoids the enumitem/
+        # tagging incompatibility on TL2026 -- latex3/tagging-project#1301).
+        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=en-US, tagging=off}" in output
 
         # Title/author metadata (formerly duplicated into CV.xmpdata for
         # pdfx to consume) still flows through \hypersetup -- \DocumentMetadata
