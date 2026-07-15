@@ -12,7 +12,7 @@ Pipeline opérationnel. Utilisé en production pour candidater (ex. Anthropic, s
 ### Rendu & build
 - Rendu YAML → LaTeX via `render.py` : escaping complet, `**bold**` → `\textbf{}`, support Awesome-CV
 - Compilation XeLaTeX avec auto-détection multi-plateforme et sous-module `awesome-cv/`
-- Support PDF/A-2b (XMP metadata via `CV.xmpdata`, validation `check-pdfa.py`)
+- Support PDF/A-2b (XMP metadata via `\DocumentMetadata{pdfstandard=A-2b}`, TeXLive 2026+, validation `check-pdfa.py`)
 - Watermark DRAFT, validation du nombre de pages (CV ≤ 2p, CL ≤ 1p)
 - Rendu multilingue EN/FR (`cv-fr.yml`, `cv-fr-tailor.py`)
 - Export multi-format : JSON, Markdown, texte plat ATS-safe, DOCX (pandoc), JSON Resume v1.0.0

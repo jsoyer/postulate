@@ -31,7 +31,7 @@ make doctor            # vérifier toutes les dépendances
 # Rendu LaTeX
 make render                        # data/cv.yml → CV.tex + CoverLetter.tex
 make render LANG=fr                # version française
-make render PDFA=true              # mode PDF/A (XMP metadata via CV.xmpdata)
+make render PDFA=true              # mode PDF/A (\DocumentMetadata{pdfstandard=A-2b}, TeXLive 2026+)
 make pdfa                          # render + compile + renommer en CV-pdfa.pdf
 make check-pdfa                    # vérifier conformité PDF/A (scripts/check-pdfa.py)
 
