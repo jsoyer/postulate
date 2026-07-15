@@ -52,6 +52,12 @@ def check_pdfa(pdf_path: str) -> dict:
     has_subject = bool(info.get("/Subject"))
 
     results["checks"]["metadata"] = {
+        # `status` was missing here (unlike every other sub-check), so
+        # format_text()'s generic `check_data.get("status", "UNKNOWN")`
+        # always rendered "metadata: UNKNOWN" even when every sub-field
+        # passed. Doesn't affect the PASS/FAIL gate below (computed
+        # independently from has_title/has_author/has_subject) -- display only.
+        "status": "PASS" if (has_title and has_author and has_subject) else "FAIL",
         "title": "PASS" if has_title else "FAIL",
         "author": "PASS" if has_author else "FAIL",
         "subject": "PASS" if has_subject else "FAIL",
@@ -127,6 +133,35 @@ def check_pdfa(pdf_path: str) -> dict:
     # from each page's /Resources/Font dictionary, deduplicated by indirect
     # object reference. Unrelated to the PDF/A marker fix above, but this
     # check was crashing outright (AttributeError) before the fix.
+    #
+    # XeLaTeX (and therefore every PDF this engine renders) always emits
+    # composite `/Type0` fonts with `/Encoding /Identity-H`, never simple
+    # fonts. A Type0 font dict has NO `/FontDescriptor` key of its own --
+    # the actual font program (`/FontFile`, `/FontFile2`, `/FontFile3`) and
+    # its FontDescriptor live on the *descendant* CIDFontType0/CIDFontType2
+    # dict referenced via `/DescendantFonts` (PDF32000-1:2008 sec 9.7.4).
+    # Looking at `font_obj.get("/FontDescriptor")` directly therefore always
+    # returned None for Type0 fonts, misreporting every genuinely-embedded
+    # font as not embedded (poppler's `pdffonts` correctly shows `emb yes`
+    # for the same fonts). `_font_descriptor()` below resolves the
+    # descendant indirection, and embedding is confirmed by the presence of
+    # an actual font-program stream (`/FontFile*`), not just the descriptor
+    # (a FontDescriptor can exist for a referenced-but-not-embedded font).
+    def _font_descriptor(font_obj):
+        # `DictionaryObject.get()` (unlike its `__getitem__`) does NOT
+        # reliably auto-resolve `IndirectObject` values across pypdf
+        # versions -- explicitly call `.get_object()` on every hop so this
+        # works the same whether the reference was already resolved or not.
+        if font_obj.get("/Subtype") == "/Type0":
+            descendants = font_obj.get("/DescendantFonts")
+            if not descendants:
+                return None
+            descendant = descendants[0].get_object()
+            descriptor = descendant.get("/FontDescriptor")
+        else:
+            descriptor = font_obj.get("/FontDescriptor")
+        return descriptor.get_object() if descriptor is not None else None
+
     all_embedded = True
     font_details = []
     seen_refs: set = set()
@@ -147,8 +182,10 @@ def check_pdfa(pdf_path: str) -> dict:
             if not font_obj:
                 continue
             font_name = font_obj.get("/BaseFont", str(font_key))
-            font_descriptor = font_obj.get("/FontDescriptor")
-            embedded = font_descriptor is not None
+            font_descriptor = _font_descriptor(font_obj)
+            embedded = font_descriptor is not None and any(
+                key in font_descriptor for key in ("/FontFile", "/FontFile2", "/FontFile3")
+            )
             if not embedded:
                 all_embedded = False
             font_details.append(
