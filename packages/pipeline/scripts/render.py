@@ -351,15 +351,30 @@ def build_preamble(theme, pdfa=False, comment="Resume (2 pages)", draft=False, p
     """Build LaTeX preamble with theme settings."""
     t = {**DEFAULT_THEME, **(theme or {})}
     highlight = "true" if t["highlight"] else "false"
+
+    docmetadata_line = ""
     pdfa_block = ""
     if pdfa:
         babel_lang = "french" if lang == "fr" else "english"
+        doc_lang = "fr-FR" if lang == "fr" else "en-US"
+        # TeXLive 2026: the legacy `pdfx` package collides with the now-default
+        # tagpdf / PDF resource management backend ("PDF resource management is
+        # no active!"). The LaTeX-team-supported replacement is
+        # \DocumentMetadata, which MUST be the very first line of the file,
+        # before \documentclass. It activates PDF resource management and
+        # tagging, and drives PDF/A-2b conformance + XMP metadata generation
+        # itself (superseding pdfx). Keys: pdfstandard, pdfversion, lang.
+        # Source: LaTeX2e kernel "PDF standards support"
+        # (pdfmanagement-testphase, folded into latex2e-base) — see LaTeX News
+        # 33-37 and the "Creating PDF/A documents with LaTeX" guide.
+        docmetadata_line = f"\\DocumentMetadata{{pdfstandard=A-2b, pdfversion=1.7, lang={doc_lang}}}\n"
         pdfa_block = f"""
 % PDF/A-2b compliance for ATS systems and accessibility
+% Tagging & PDF resource management are activated above via \\DocumentMetadata
+% (TeXLive 2026+). Do NOT also pass a `pdfa` option to hyperref here -- it is
+% already configured by \\DocumentMetadata and doing so raises
+% "Option `pdfa' has already been used".
 \\usepackage[{babel_lang}]{{babel}}
-\\usepackage[a-2b]{{pdfx}}
-\\usepackage{{tagpdf}}
-\\tagpdfsetup{{tags=true}}
 """
     draft_block = ""
     if draft:
@@ -391,20 +406,31 @@ def build_preamble(theme, pdfa=False, comment="Resume (2 pages)", draft=False, p
   pdfcreator={{scripts/render.py}},
 }}
 """
-    return f"""\
-%!TEX TS-program = xelatex
+    header_comment = f"""%!TEX TS-program = xelatex
 %!TEX encoding = UTF-8 Unicode
 % {name} - {comment}
 % Auto-generated from data/ by scripts/render.py
 % Using Awesome-CV template by posquit0
-% https://github.com/posquit0/Awesome-CV
+% https://github.com/posquit0/Awesome-CV"""
 
+    documentclass_decl = f"\\documentclass[{t['font_size']}, {t['paper']}]{{awesome-cv}}"
 
-%-------------------------------------------------------------------------------
-% CONFIGURATIONS
-%-------------------------------------------------------------------------------
-\\documentclass[{t["font_size"]}, {t["paper"]}]{{awesome-cv}}
+    configurations_banner = (
+        "%-------------------------------------------------------------------------------\n"
+        "% CONFIGURATIONS\n"
+        "%-------------------------------------------------------------------------------\n"
+    )
 
+    if pdfa:
+        # \DocumentMetadata (line 1) must be immediately followed by
+        # \documentclass (line 2) -- nothing, not even comments, may precede
+        # \documentclass once \DocumentMetadata is used (TL2026 requirement).
+        top = docmetadata_line + documentclass_decl + "\n\n" + header_comment + "\n\n\n" + configurations_banner
+    else:
+        top = header_comment + "\n\n\n" + configurations_banner + documentclass_decl + "\n"
+
+    return f"""\
+{top}
 \\geometry{{{t["geometry"]}}}
 {pdfa_block}{draft_block}% Theme color
 \\definecolor{{awesome}}{{HTML}}{{{t["color"]}}}
@@ -948,28 +974,13 @@ def main():
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(output)
 
-    # Generate .xmpdata file for PDF/A metadata when pdfa is enabled
-    if args.pdfa and not is_coverletter:
-        personal = data.get("personal", {})
-        full_name = f"{personal.get('first_name', '')} {personal.get('last_name', '')}".strip()
-        position = personal.get("position", "")
-
-        skill_keywords = []
-        if "skills" in data:
-            for cat in data["skills"][:5]:
-                skill_keywords.extend([item.strip() for item in cat.get("items", "").split(",")])
-        keywords = ", ".join(skill_keywords[:15])
-
-        xmp_lang = "en-US" if args.lang != "fr" else "fr-FR"
-
-        xmpdata_path = out_path.with_suffix(".xmpdata")
-        with open(xmpdata_path, "w", encoding="utf-8") as xf:
-            xf.write(f"\\Title{{{full_name} - CV}}\n")
-            xf.write(f"\\Author{{{full_name}}}\n")
-            xf.write(f"\\Subject{{Resume / CV}}\n")
-            xf.write(f"\\Language{{{xmp_lang}}}\n")
-            xf.write(f"\\Keywords{{{keywords}}}\n")
-        print(f"📄 Generated {xmpdata_path} for PDF/A metadata")
+    # Note: no separate .xmpdata file is generated for PDF/A builds anymore.
+    # TeXLive 2026's \DocumentMetadata{pdfstandard=A-2b, ...} (emitted in the
+    # preamble above) generates the required XMP metadata and output intent
+    # itself, sourced from the \hypersetup{pdftitle=..., pdfauthor=...} values
+    # already present in the rendered .tex. The legacy pdfx package read a
+    # separate <jobname>.xmpdata file; \DocumentMetadata does not, so keeping
+    # that file around would be dead/conflicting metadata.
 
     print(f"✅ Rendered {out_path} from {data_path}")
     return 0

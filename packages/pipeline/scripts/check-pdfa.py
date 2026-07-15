@@ -60,18 +60,52 @@ def check_pdfa(pdf_path: str) -> dict:
     if not (has_title and has_author and has_subject):
         results["status"] = "FAIL"
 
-    # 2. Check for PDF/A conformance markers in metadata
-    pdfa_conformance = info.get("/GTS_PDFXConformance") or info.get("/PDFAXConformance")
-    has_pdfa_marker = bool(pdfa_conformance)
-
-    # Also check if pdfx package metadata is present
+    # 2. Check for PDF/A conformance markers in metadata.
+    #
+    # Legacy (TeXLive <= 2025, `pdfx` package): conformance was surfaced via
+    # Info-dictionary keys such as /GTS_PDFXConformance, /PDFAXConformance,
+    # and /pdfx:* custom properties.
+    #
+    # Modern (TeXLive 2026+, `\DocumentMetadata{pdfstandard=A-2b, ...}`):
+    # conformance is signalled via the /GTS_PDFA1Conformance Info-dictionary
+    # key and, more reliably, via the `pdfaid` XMP namespace
+    # (pdfaid:part / pdfaid:conformance) embedded in the document's XMP
+    # metadata stream. See pypdf's XmpInformation.pdfaid_part /
+    # .pdfaid_conformance (namespace http://www.aiim.org/pdfa/ns/id/).
+    legacy_conformance = (
+        info.get("/GTS_PDFXConformance") or info.get("/PDFAXConformance") or info.get("/GTS_PDFA1Conformance")
+    )
     has_pdfx_metadata = any(key.startswith("/pdfx:") or "pdfx" in key.lower() for key in info)
+
+    xmp_part = None
+    xmp_conformance = None
+    try:
+        xmp = reader.xmp_metadata
+        if xmp is not None:
+            xmp_part = xmp.pdfaid_part
+            xmp_conformance = xmp.pdfaid_conformance
+    except Exception:
+        pass
+    has_xmp_pdfaid = bool(xmp_part or xmp_conformance)
+
+    if xmp_part or xmp_conformance:
+        conformance_str = f"A-{xmp_part or '?'}{(xmp_conformance or '').lower()}"
+    elif legacy_conformance:
+        conformance_str = str(legacy_conformance)
+    else:
+        conformance_str = "not detected"
+
+    has_pdfa_marker = bool(legacy_conformance or has_xmp_pdfaid)
 
     results["checks"]["pdfa_conformance"] = {
         "status": "PASS" if (has_pdfa_marker or has_pdfx_metadata) else "WARN",
-        "conformance": str(pdfa_conformance) if pdfa_conformance else "not detected",
+        "conformance": conformance_str,
         "pdfx_metadata": has_pdfx_metadata,
-        "note": "PDF/A marker requires full xelatex compilation with pdfx package",
+        "xmp_pdfaid": has_xmp_pdfaid,
+        "note": (
+            "PDF/A marker requires full xelatex compilation with "
+            "\\DocumentMetadata (TeXLive 2026+) or the legacy pdfx package"
+        ),
     }
 
     # 3. Check for tagged PDF
@@ -88,15 +122,31 @@ def check_pdfa(pdf_path: str) -> dict:
     }
 
     # 4. Check embedded fonts
-    fonts = reader.get_fonts()
-    font_list = list(fonts) if fonts else []
+    # Note: `PdfReader.get_fonts()` was removed from pypdf's public API (this
+    # code targeted an older pypdf release); fonts are now collected directly
+    # from each page's /Resources/Font dictionary, deduplicated by indirect
+    # object reference. Unrelated to the PDF/A marker fix above, but this
+    # check was crashing outright (AttributeError) before the fix.
     all_embedded = True
     font_details = []
+    seen_refs: set = set()
 
-    for font_ref in font_list[:20]:  # Limit to first 20 for readability
-        font_obj = reader.get_object(font_ref)
-        if font_obj:
-            font_name = font_obj.get("/BaseFont", str(font_ref))
+    for page in reader.pages:
+        resources = page.get("/Resources")
+        font_dict = resources.get("/Font") if resources else None
+        if not font_dict:
+            continue
+        for font_key in font_dict:
+            raw = font_dict.raw_get(font_key)
+            ref_id = (raw.idnum, raw.generation) if hasattr(raw, "idnum") else font_key
+            if ref_id in seen_refs:
+                continue
+            seen_refs.add(ref_id)
+
+            font_obj = font_dict[font_key]
+            if not font_obj:
+                continue
+            font_name = font_obj.get("/BaseFont", str(font_key))
             font_descriptor = font_obj.get("/FontDescriptor")
             embedded = font_descriptor is not None
             if not embedded:
@@ -110,9 +160,9 @@ def check_pdfa(pdf_path: str) -> dict:
 
     results["checks"]["embedded_fonts"] = {
         "status": "PASS" if all_embedded else "FAIL",
-        "total_fonts": len(font_list),
+        "total_fonts": len(seen_refs),
         "all_embedded": all_embedded,
-        "fonts": font_details,
+        "fonts": font_details[:20],  # Limit to first 20 for readability
     }
 
     if not all_embedded:
