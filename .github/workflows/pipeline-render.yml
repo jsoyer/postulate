@@ -110,6 +110,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # xelatex needs to find awesome-cv.cls (and its font/style assets).
+          # Mirror the engine Makefile's TEXINPUTS setup exactly (single
+          # trailing slash + colon -- NOT `//`, which would recursively
+          # search and can wrongly resolve class/demo files):
+          #   TEXINPUTS := $(abspath $(AWESOME_CV_DIR))/:$(TEXINPUTS)
+          # This step's cwd is packages/pipeline (job `defaults.run.working-
+          # directory`), the same directory CV-pdfa.tex/CoverLetter-pdfa.tex
+          # were rendered into, and awesome-cv/ lives right alongside it.
+          export TEXINPUTS="$(pwd)/awesome-cv/:${TEXINPUTS:-}"
           fail=0
           for tex in CV-pdfa.tex CoverLetter-pdfa.tex; do
             [ -f "$tex" ] || continue
