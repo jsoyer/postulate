@@ -1289,7 +1289,7 @@ else ifeq ($(UNAME), Linux)
 	elif grep -qi "fedora\|rhel\|centos\|rocky\|alma" /etc/os-release 2>/dev/null; then \
 		echo "  Fedora/RHEL detected"; \
 		sudo dnf install -y \
-			texlive-xetex texlive-fontawesome texlive-tcolorbox \
+			texlive-xetex texlive-fontawesome6 texlive-enumitem texlive-tcolorbox texlive-accsupp texlive-colorprofiles texlive-sourcesanspro texlive-roboto texlive-babel-french \
 			texlive-collection-fontsrecommended \
 			poppler-utils ImageMagick aspell git make curl; \
 		curl -LsSf https://astral.sh/uv/install.sh | sh; \
