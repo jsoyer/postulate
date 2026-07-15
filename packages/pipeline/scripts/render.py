@@ -362,12 +362,22 @@ def build_preamble(theme, pdfa=False, comment="Resume (2 pages)", draft=False, p
         # no active!"). The LaTeX-team-supported replacement is
         # \DocumentMetadata, which MUST be the very first line of the file,
         # before \documentclass. It activates PDF resource management and
-        # tagging, and drives PDF/A-2b conformance + XMP metadata generation
-        # itself (superseding pdfx). Keys: pdfstandard, pdfversion, lang.
+        # drives PDF/A-2b conformance + XMP metadata generation itself
+        # (superseding pdfx). Keys: pdfstandard, pdfversion, lang, tagging.
+        # `tagging=off`: PDF/A-2b ("basic") does NOT require tagging (only
+        # A-2a/A-2u do). TL2026's default tagging activation is incompatible
+        # with `enumitem`'s `leftmargin`/`noitemsep` keys used throughout
+        # awesome-cv's itemize environments ("Package block Error: Some keys
+        # specified on the itemize environment are unknown"), which corrupts
+        # PDF/A finalization under -interaction=nonstopmode (PDF still
+        # written, but without a valid conformance marker / fully embedded
+        # fonts). Disabling tagging avoids that conflict while keeping full
+        # A-2b conformance (output intent + XMP marker + font embedding).
+        # See latex3/tagging-project#1301.
         # Source: LaTeX2e kernel "PDF standards support"
         # (pdfmanagement-testphase, folded into latex2e-base) — see LaTeX News
         # 33-37 and the "Creating PDF/A documents with LaTeX" guide.
-        docmetadata_line = f"\\DocumentMetadata{{pdfstandard=A-2b, pdfversion=1.7, lang={doc_lang}}}\n"
+        docmetadata_line = f"\\DocumentMetadata{{pdfstandard=A-2b, pdfversion=1.7, lang={doc_lang}, tagging=off}}\n"
         pdfa_block = f"""
 % PDF/A-2b compliance for ATS systems and accessibility
 % Tagging & PDF resource management are activated above via \\DocumentMetadata

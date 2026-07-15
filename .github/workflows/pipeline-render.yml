@@ -40,8 +40,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apt-get update -qq && apt-get install -y -qq python3-pip > /dev/null 2>&1 || true
+          # jq is needed later to parse scripts/check-pdfa.py's --json output;
+          # this job runs inside the texlive/texlive container image, which
+          # does not guarantee jq is preinstalled (unlike the ubuntu-latest host).
+          apt-get update -qq && apt-get install -y -qq python3-pip jq > /dev/null 2>&1 || true
+          command -v jq >/dev/null 2>&1 || (apt-get update -qq && apt-get install -y -qq jq)
           pip3 install -r requirements.txt --break-system-packages || pip3 install -r requirements.txt
+          # requirements-dev.txt brings pypdf, needed below by scripts/check-pdfa.py
+          # to validate PDF/A-2b conformance of the rendered sample.
+          pip3 install -r requirements-dev.txt --break-system-packages || pip3 install -r requirements-dev.txt
 
       - name: Font patch (SourceSansPro -> SourceSans3 if absent)
         shell: bash
@@ -78,6 +85,114 @@ jobs:
             echo "CV.pdf pages: ${pages}"
           fi
 
+      # --- PDF/A-2b conformance validation (TeXLive 2026) ------------------
+      # The plain render above proves the sample compiles; it does NOT prove
+      # PDF/A validity. TL2026's `\DocumentMetadata{pdfstandard=A-2b, ...}`
+      # can silently produce an invalid PDF/A file under
+      # `-interaction=nonstopmode` (LaTeX keeps writing the PDF even after a
+      # fatal package error, e.g. the enumitem/tagging conflict this engine
+      # works around via `tagging=off`). These steps render + compile a
+      # dedicated PDF/A copy of the engine's own sample data and hard-fail
+      # the job if the LaTeX log shows a real error OR the resulting PDF
+      # lacks a valid PDF/A-2b conformance marker / fully embedded fonts.
+      - name: Render sample CV in PDF/A mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/render.py -d data/cv.yml -o CV-pdfa.tex --pdfa
+          if [ -f data/coverletter.yml ]; then
+            python3 scripts/render.py -d data/coverletter.yml -o CoverLetter-pdfa.tex --pdfa
+          fi
+          echo "CV-pdfa.tex head:"
+          head -n1 CV-pdfa.tex
+
+      - name: Compile PDF/A sample (xelatex) -- fail on real LaTeX errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          # xelatex needs to find awesome-cv.cls (and its font/style assets).
+          # Mirror the engine Makefile's TEXINPUTS setup exactly (single
+          # trailing slash + colon -- NOT `//`, which would recursively
+          # search and can wrongly resolve class/demo files):
+          #   TEXINPUTS := $(abspath $(AWESOME_CV_DIR))/:$(TEXINPUTS)
+          # This step's cwd is packages/pipeline (job `defaults.run.working-
+          # directory`), the same directory CV-pdfa.tex/CoverLetter-pdfa.tex
+          # were rendered into, and awesome-cv/ lives right alongside it.
+          export TEXINPUTS="$(pwd)/awesome-cv/:${TEXINPUTS:-}"
+          fail=0
+          for tex in CV-pdfa.tex CoverLetter-pdfa.tex; do
+            [ -f "$tex" ] || continue
+            job="${tex%.tex}"
+            echo "::group::xelatex $tex"
+            # nonstopmode can exit 0 (or a nonzero code TeX itself swallows)
+            # even when a fatal package error occurred and corrupted the
+            # PDF/A finalization -- so we check BOTH the exit code and the
+            # log content, and never trust nonstopmode's exit code alone.
+            if ! xelatex -interaction=nonstopmode -jobname="$job" "$tex"; then
+              echo "::error::xelatex exited non-zero compiling $tex"
+              fail=1
+            fi
+            if [ -f "${job}.log" ] && grep -Eq '! Package block Error|! LaTeX Error' "${job}.log"; then
+              echo "::error::${job}.log contains a fatal LaTeX/package error (PDF/A finalization is not trustworthy under nonstopmode)"
+              grep -E '! Package block Error|! LaTeX Error' "${job}.log"
+              fail=1
+            fi
+            if [ ! -f "${job}.pdf" ]; then
+              echo "::error::${job}.pdf was not produced"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$fail"
+
+      - name: Validate PDF/A-2b conformance (check-pdfa.py)
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=""
+          [ -f CV-pdfa.pdf ] && files="$files CV-pdfa.pdf"
+          [ -f CoverLetter-pdfa.pdf ] && files="$files CoverLetter-pdfa.pdf"
+          if [ -z "$files" ]; then
+            echo "::error::no PDF/A PDFs found to validate"
+            exit 1
+          fi
+
+          # check-pdfa.py's own exit code covers metadata + font-embedding
+          # checks, but NOT the pdfa_conformance check (it reports that as
+          # WARN, not FAIL, for backward compatibility with pre-A-marker
+          # PDFs) -- so we additionally parse its --json output below with
+          # jq and hard-fail if the A-2b conformance marker itself is
+          # missing/invalid, or if any font isn't embedded.
+          echo "::group::check-pdfa.py (text)"
+          python3 scripts/check-pdfa.py $files
+          echo "::endgroup::"
+
+          python3 scripts/check-pdfa.py --json $files > check-pdfa-result.json
+          cat check-pdfa-result.json
+
+          fail=0
+
+          if ! jq -e 'map(.status == "PASS") | all' check-pdfa-result.json > /dev/null; then
+            echo "::error::overall check-pdfa status is not PASS for every rendered PDF/A file"
+            fail=1
+          fi
+
+          if ! jq -e 'map(.checks.pdfa_conformance.status == "PASS") | all' check-pdfa-result.json > /dev/null; then
+            echo "::error::PDF/A-2b conformance marker missing/invalid -- the PDF is NOT a valid PDF/A file"
+            jq -r '.[] | "\(.file): conformance=\(.checks.pdfa_conformance.conformance) status=\(.checks.pdfa_conformance.status)"' check-pdfa-result.json
+            fail=1
+          fi
+
+          if ! jq -e 'map(.checks.embedded_fonts.all_embedded == true) | all' check-pdfa-result.json > /dev/null; then
+            echo "::error::not all fonts are embedded in one or more PDF/A files"
+            fail=1
+          fi
+
+          if [ "$fail" -eq 0 ]; then
+            echo "PDF/A-2b conformance validated for: $files"
+          fi
+          exit "$fail"
+
       - name: Upload sample PDFs
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,6 +201,8 @@ jobs:
           path: |
             packages/pipeline/CV.pdf
             packages/pipeline/CoverLetter.pdf
+            packages/pipeline/CV-pdfa.pdf
+            packages/pipeline/CoverLetter-pdfa.pdf
           if-no-files-found: ignore
           retention-days: 14
 

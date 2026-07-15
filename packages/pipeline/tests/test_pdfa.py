@@ -83,6 +83,7 @@ class TestBuildPreamblePdfa:
         preamble = build_preamble({}, pdfa=True, personal=SAMPLE_CV_DATA["personal"])
         assert "\\DocumentMetadata{" in preamble
         assert "pdfstandard=A-2b" in preamble
+        assert "tagging=off" in preamble
         assert "\\usepackage[a-2b]{pdfx}" not in preamble
 
     def test_pdfa_enabled_documentmetadata_is_first_line(self):
@@ -113,6 +114,21 @@ class TestBuildPreamblePdfa:
         assert "\\tagpdfsetup{tags=true}" not in preamble
         assert "\\DocumentMetadata{" in preamble
 
+    def test_pdfa_enabled_tagging_off(self):
+        """PDF/A-2b ("basic") does not require tagging, and TeXLive 2026's
+        default tagging activation is incompatible with `enumitem`'s
+        `leftmargin`/`noitemsep` keys used throughout awesome-cv itemize
+        environments ("Package block Error: Some keys specified on the
+        itemize environment are unknown"). `tagging=off` is the LaTeX-team
+        supported key to disable tagging while keeping full A-2b conformance
+        (output intent + XMP marker + font embedding). See
+        latex3/tagging-project#1301."""
+        preamble = build_preamble({}, pdfa=True, personal=SAMPLE_CV_DATA["personal"])
+        assert "tagging=off" in preamble
+        idx = preamble.index("\\DocumentMetadata{")
+        line_end = preamble.index("\n", idx)
+        assert "tagging=off" in preamble[idx:line_end]
+
     def test_pdfa_disabled_no_tagpdf(self):
         preamble = build_preamble({}, pdfa=False)
         assert "tagpdf" not in preamble
@@ -134,11 +150,11 @@ class TestRenderCvPdfa:
         (fr-FR / en-US) instead of a pdfx/babel-only concern."""
         fr_output = render_cv(SAMPLE_CV_DATA, pdfa=True, lang="fr")
         assert "\\usepackage[french]{babel}" in fr_output
-        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=fr-FR}" in fr_output
+        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=fr-FR, tagging=off}" in fr_output
 
         en_output = render_cv(SAMPLE_CV_DATA, pdfa=True)
         assert "\\usepackage[english]{babel}" in en_output
-        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=en-US}" in en_output
+        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=en-US, tagging=off}" in en_output
 
     def test_render_cv_pdfa_english(self):
         output = render_cv(SAMPLE_CV_DATA, pdfa=True)
@@ -168,8 +184,10 @@ class TestPdfaMetadataFlow:
         about a sidecar file that no longer exists."""
         output = render_cv(SAMPLE_CV_DATA, pdfa=True)
 
-        # \DocumentMetadata carries the PDF/A standard + version + lang keys.
-        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=en-US}" in output
+        # \DocumentMetadata carries the PDF/A standard + version + lang keys,
+        # plus tagging=off (A-2b needs no tagging; avoids the enumitem/
+        # tagging incompatibility on TL2026 -- latex3/tagging-project#1301).
+        assert "\\DocumentMetadata{pdfstandard=A-2b, pdfversion=1.7, lang=en-US, tagging=off}" in output
 
         # Title/author metadata (formerly duplicated into CV.xmpdata for
         # pdfx to consume) still flows through \hypersetup -- \DocumentMetadata
@@ -179,8 +197,138 @@ class TestPdfaMetadataFlow:
 
 
 # ---------------------------------------------------------------------------
-# check-pdfa.py — import and function tests
+# check-pdfa.py — embedded-fonts detection on Type0/CID composite fonts
 # ---------------------------------------------------------------------------
+#
+# XeLaTeX (and therefore every PDF this engine produces, PDF/A or not)
+# always emits composite `/Type0` fonts with an `/Encoding /Identity-H` and
+# a `/DescendantFonts` array -- never simple fonts. The actual embedded font
+# program (`/FontFile`, `/FontFile2`, or `/FontFile3`) and its
+# `/FontDescriptor` live on the *descendant* CIDFontType0/CIDFontType2
+# dictionary, NOT on the Type0 dict itself (which has no `/FontDescriptor`
+# key at all -- see PDF32000-1:2008 sec 9.7.4). `pdffonts` (poppler) reports
+# these fonts as `emb yes`, but `check-pdfa.py`'s original embedded_fonts
+# check only inspected `font_obj.get("/FontDescriptor")` directly on the
+# top-level font dict, which is always None for Type0 fonts -- misreporting
+# every genuinely-embedded XeLaTeX font as not-embedded.
+
+
+def _build_type0_font_pdf(path: Path, embedded: bool) -> None:
+    """Build a minimal single-page PDF with one `/Type0` composite font,
+    shaped exactly like the fonts XeLaTeX emits (Type0 -> DescendantFonts ->
+    CIDFontType0 -> FontDescriptor -> FontFile3), to reproduce the
+    embedded-fonts detection bug independent of a real TeX toolchain."""
+    from pypdf import PdfWriter
+    from pypdf.generic import ArrayObject, DecodedStreamObject, DictionaryObject, NameObject
+
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=200, height=200)
+
+    font_descriptor = DictionaryObject()
+    font_descriptor[NameObject("/Type")] = NameObject("/FontDescriptor")
+    font_descriptor[NameObject("/FontName")] = NameObject("/ABCDEF+TestFont")
+    if embedded:
+        stream = DecodedStreamObject()
+        stream.set_data(b"%fake CFF font program%")
+        stream[NameObject("/Subtype")] = NameObject("/CIDFontType0C")
+        font_descriptor[NameObject("/FontFile3")] = writer._add_object(stream)
+    fd_ref = writer._add_object(font_descriptor)
+
+    descendant = DictionaryObject()
+    descendant[NameObject("/Type")] = NameObject("/Font")
+    descendant[NameObject("/Subtype")] = NameObject("/CIDFontType0")
+    descendant[NameObject("/BaseFont")] = NameObject("/ABCDEF+TestFont")
+    descendant[NameObject("/FontDescriptor")] = fd_ref
+    descendant_ref = writer._add_object(descendant)
+
+    type0_font = DictionaryObject()
+    type0_font[NameObject("/Type")] = NameObject("/Font")
+    type0_font[NameObject("/Subtype")] = NameObject("/Type0")
+    type0_font[NameObject("/BaseFont")] = NameObject("/ABCDEF+TestFont")
+    type0_font[NameObject("/Encoding")] = NameObject("/Identity-H")
+    type0_font[NameObject("/DescendantFonts")] = ArrayObject([descendant_ref])
+    type0_ref = writer._add_object(type0_font)
+
+    font_dict = DictionaryObject()
+    font_dict[NameObject("/F1")] = type0_ref
+
+    if "/Resources" not in page:
+        page[NameObject("/Resources")] = DictionaryObject()
+    page["/Resources"][NameObject("/Font")] = font_dict
+
+    writer.add_metadata({"/Title": "T", "/Author": "A", "/Subject": "S"})
+
+    with open(path, "wb") as f:
+        writer.write(f)
+
+
+class TestCheckPdfaType0FontEmbedding:
+    def _load_check_pdfa_module(self):
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "check_pdfa",
+            str(Path(__file__).parent.parent / "scripts" / "check-pdfa.py"),
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def test_embedded_type0_font_detected_as_embedded(self, tmp_path):
+        """A Type0 font whose descendant CIDFontType0 has a FontDescriptor
+        with FontFile3 (i.e. genuinely embedded, as poppler's `pdffonts`
+        would report `emb yes`) must be detected as embedded."""
+        mod = self._load_check_pdfa_module()
+        pdf_path = tmp_path / "type0-embedded.pdf"
+        _build_type0_font_pdf(pdf_path, embedded=True)
+
+        result = mod.check_pdfa(str(pdf_path))
+
+        fonts_check = result["checks"]["embedded_fonts"]
+        assert fonts_check["total_fonts"] == 1
+        assert fonts_check["all_embedded"] is True
+        assert fonts_check["status"] == "PASS"
+        assert result["status"] == "PASS"
+
+    def test_non_embedded_type0_font_still_detected_as_not_embedded(self, tmp_path):
+        """A Type0 font whose descendant has no FontFile/FontFile2/FontFile3
+        (genuinely not embedded) must still be flagged as not embedded --
+        the fix must not turn this check into a rubber stamp."""
+        mod = self._load_check_pdfa_module()
+        pdf_path = tmp_path / "type0-not-embedded.pdf"
+        _build_type0_font_pdf(pdf_path, embedded=False)
+
+        result = mod.check_pdfa(str(pdf_path))
+
+        fonts_check = result["checks"]["embedded_fonts"]
+        assert fonts_check["total_fonts"] == 1
+        assert fonts_check["all_embedded"] is False
+        assert fonts_check["status"] == "FAIL"
+        assert result["status"] == "FAIL"
+
+    def test_metadata_check_has_status_key_when_all_fields_present(self, tmp_path):
+        """The `metadata` sub-check dict was missing its own `status` key
+        (unlike every other sub-check), so `format_text()`'s generic
+        `check_data.get("status", "UNKNOWN")` always rendered `metadata:
+        UNKNOWN` even when title/author/subject all individually PASS.
+        This doesn't affect the overall PASS/FAIL gate (which is computed
+        separately from has_title/has_author/has_subject), but the display
+        should reflect PASS when all three sub-fields pass."""
+        mod = self._load_check_pdfa_module()
+        pdf_path = tmp_path / "type0-embedded.pdf"
+        _build_type0_font_pdf(pdf_path, embedded=True)
+
+        result = mod.check_pdfa(str(pdf_path))
+
+        metadata_check = result["checks"]["metadata"]
+        assert metadata_check["title"] == "PASS"
+        assert metadata_check["author"] == "PASS"
+        assert metadata_check["subject"] == "PASS"
+        assert metadata_check["status"] == "PASS"
+
+        output = mod.format_text([result])
+        assert "metadata: UNKNOWN" not in output
+        assert "metadata: PASS" in output
 
 
 class TestCheckPdfa:
