@@ -29,7 +29,7 @@ def tokenize(text):
 
 def extract_bigrams(tokens):
     """Extract two-word phrases."""
-    return [f"{tokens[i]} {tokens[i+1]}" for i in range(len(tokens) - 1)]
+    return [f"{tokens[i]} {tokens[i + 1]}" for i in range(len(tokens) - 1)]
 
 
 def extract_cv_text(cv_path):
@@ -74,9 +74,9 @@ def main():
         return 0
 
     # Extract keywords from each job posting
-    all_keywords = Counter()       # keyword → total count across postings
-    keyword_presence = Counter()   # keyword → number of postings containing it
-    per_posting = {}               # app_name → set of keywords
+    all_keywords = Counter()  # keyword → total count across postings
+    keyword_presence = Counter()  # keyword → number of postings containing it
+    per_posting = {}  # app_name → set of keywords
 
     for job_file in job_files:
         app_name = job_file.parent.name
@@ -109,8 +109,9 @@ def main():
     cv_text = extract_cv_text(cv_path) if cv_path.exists() else ""
 
     # Find trending keywords (appear in 2+ postings)
-    trending = [(kw, count) for kw, count in keyword_presence.most_common()
-                if count >= 2 or (count == 1 and n_postings == 1)]
+    trending = [
+        (kw, count) for kw, count in keyword_presence.most_common() if count >= 2 or (count == 1 and n_postings == 1)
+    ]
 
     # Split into covered vs gap
     covered = [(kw, count) for kw, count in trending if kw in cv_text]

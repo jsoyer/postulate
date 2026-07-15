@@ -33,31 +33,81 @@ from lib.common import REPO_ROOT
 # ---------------------------------------------------------------------------
 
 REMOTE_SIGNALS = {
-    "fully remote": 25, "100% remote": 25, "remote first": 25, "remote-first": 25,
+    "fully remote": 25,
+    "100% remote": 25,
+    "remote first": 25,
+    "remote-first": 25,
     "work from anywhere": 25,
-    "remote": 18, "hybrid": 16, "flexible working": 15, "work from home": 15,
-    "flexible location": 14, "distributed team": 14,
-    "in-office": 4, "on-site": 4, "onsite": 4,
-    "full time on-site": 0, "full-time on site": 0, "fully on-site": 0,
-    "on site only": 0, "100% onsite": 0, "must be based": 2,
+    "remote": 18,
+    "hybrid": 16,
+    "flexible working": 15,
+    "work from home": 15,
+    "flexible location": 14,
+    "distributed team": 14,
+    "in-office": 4,
+    "on-site": 4,
+    "onsite": 4,
+    "full time on-site": 0,
+    "full-time on site": 0,
+    "fully on-site": 0,
+    "on site only": 0,
+    "100% onsite": 0,
+    "must be based": 2,
 }
 
 SIZE_SIGNALS = {
-    "startup":       {"startup", "early stage", "seed", "series a", "series b", "series c",
-                      "pre-ipo", "50 employees", "100 employees"},
-    "mid":           {"scale-up", "scaleup", "series d", "series e", "growth stage",
-                      "500 employees", "1000 employees", "1,000 employees"},
-    "enterprise":    {"fortune 500", "fortune500", "global company", "listed company",
-                      "10,000 employees", "nasdaq", "nyse", "enterprise", "multinational",
-                      "publicly traded", "publicly listed"},
+    "startup": {
+        "startup",
+        "early stage",
+        "seed",
+        "series a",
+        "series b",
+        "series c",
+        "pre-ipo",
+        "50 employees",
+        "100 employees",
+    },
+    "mid": {
+        "scale-up",
+        "scaleup",
+        "series d",
+        "series e",
+        "growth stage",
+        "500 employees",
+        "1000 employees",
+        "1,000 employees",
+    },
+    "enterprise": {
+        "fortune 500",
+        "fortune500",
+        "global company",
+        "listed company",
+        "10,000 employees",
+        "nasdaq",
+        "nyse",
+        "enterprise",
+        "multinational",
+        "publicly traded",
+        "publicly listed",
+    },
 }
 
 CULTURE_SIGNALS = [
-    "equity", "rsu", "stock options", "esop",
-    "unlimited pto", "unlimited vacation", "flexible hours",
-    "learning budget", "education budget", "conference budget",
-    "parental leave", "mental health",
-    "collaborative", "diverse", "inclusion",
+    "equity",
+    "rsu",
+    "stock options",
+    "esop",
+    "unlimited pto",
+    "unlimited vacation",
+    "flexible hours",
+    "learning budget",
+    "education budget",
+    "conference budget",
+    "parental leave",
+    "mental health",
+    "collaborative",
+    "diverse",
+    "inclusion",
 ]
 
 
@@ -80,6 +130,7 @@ def _load_meta(app_dir: Path) -> dict:
 # ---------------------------------------------------------------------------
 # Scoring dimensions
 # ---------------------------------------------------------------------------
+
 
 def _score_remote(job_text: str, prefs: dict) -> tuple:
     """Score remote policy (0-25)."""
@@ -191,6 +242,7 @@ def _check_deal_breakers(job_text: str, prefs: dict) -> list:
 # Report generation
 # ---------------------------------------------------------------------------
 
+
 def _grade(score: int) -> str:
     if score >= 80:
         return "🟢 Excellent fit"
@@ -213,12 +265,12 @@ def score_job(app_dir: Path) -> dict:
 
     job_text = job_path.read_text(encoding="utf-8")
 
-    remote_score,   remote_detail   = _score_remote(job_text, prefs)
+    remote_score, remote_detail = _score_remote(job_text, prefs)
     location_score, location_detail = _score_location(job_text, prefs)
-    size_score,     size_detail     = _score_company_size(job_text, prefs)
+    size_score, size_detail = _score_company_size(job_text, prefs)
     industry_score, industry_detail = _score_industry(job_text, prefs)
-    culture_score,  culture_detail  = _score_culture(job_text)
-    deal_breakers_found             = _check_deal_breakers(job_text, prefs)
+    culture_score, culture_detail = _score_culture(job_text)
+    deal_breakers_found = _check_deal_breakers(job_text, prefs)
 
     raw_total = remote_score + location_score + size_score + industry_score + culture_score
     penalty = len(deal_breakers_found) * 20
@@ -227,11 +279,11 @@ def score_job(app_dir: Path) -> dict:
     return {
         "total": total,
         "dimensions": {
-            "remote":   {"score": remote_score,   "max": 25, "detail": remote_detail},
+            "remote": {"score": remote_score, "max": 25, "detail": remote_detail},
             "location": {"score": location_score, "max": 20, "detail": location_detail},
-            "size":     {"score": size_score,     "max": 20, "detail": size_detail},
+            "size": {"score": size_score, "max": 20, "detail": size_detail},
             "industry": {"score": industry_score, "max": 20, "detail": industry_detail},
-            "culture":  {"score": culture_score,  "max": 15, "detail": culture_detail},
+            "culture": {"score": culture_score, "max": 15, "detail": culture_detail},
         },
         "deal_breakers": deal_breakers_found,
         "penalty": penalty,
@@ -241,10 +293,11 @@ def score_job(app_dir: Path) -> dict:
 
 def save_report(app_dir: Path, meta: dict, result: dict) -> Path:
     from datetime import date
-    company  = meta.get("company", app_dir.name)
+
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "")
-    today    = date.today().isoformat()
-    total    = result["total"]
+    today = date.today().isoformat()
+    total = result["total"]
 
     lines = [
         f"# Job Fit — {company}",
@@ -256,11 +309,11 @@ def save_report(app_dir: Path, meta: dict, result: dict) -> Path:
         "|:----------|:------|:----|:-------|",
     ]
     dim_labels = {
-        "remote":   "🏠 Remote policy",
+        "remote": "🏠 Remote policy",
         "location": "📍 Location",
-        "size":     "🏢 Company size",
+        "size": "🏢 Company size",
         "industry": "🏭 Industry",
-        "culture":  "🌟 Culture/benefits",
+        "culture": "🌟 Culture/benefits",
     }
     for key, label in dim_labels.items():
         d = result["dimensions"][key]
@@ -294,9 +347,7 @@ def save_report(app_dir: Path, meta: dict, result: dict) -> Path:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Score job fit vs your personal preferences"
-    )
+    parser = argparse.ArgumentParser(description="Score job fit vs your personal preferences")
     parser.add_argument("app_dir", help="Application directory")
     parser.add_argument("--json", action="store_true", help="Output JSON")
     args = parser.parse_args()
@@ -310,7 +361,7 @@ def main():
         print(f"❌ No job.txt in {app_dir} — run: make fetch NAME={app_dir.name}")
         sys.exit(1)
 
-    meta   = _load_meta(app_dir)
+    meta = _load_meta(app_dir)
     result = score_job(app_dir)
 
     if "error" in result:
@@ -321,20 +372,20 @@ def main():
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return 0
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "")
-    total    = result["total"]
+    total = result["total"]
 
     print(f"\n🎯 Job Fit — {company} ({position})")
     print("─" * 55)
     print(f"   Overall: {total}/100  {result['grade']}\n")
 
     dim_labels = {
-        "remote":   ("🏠", "Remote policy"),
+        "remote": ("🏠", "Remote policy"),
         "location": ("📍", "Location"),
-        "size":     ("🏢", "Company size"),
+        "size": ("🏢", "Company size"),
         "industry": ("🏭", "Industry"),
-        "culture":  ("🌟", "Culture/benefits"),
+        "culture": ("🌟", "Culture/benefits"),
     }
     for key, (icon, label) in dim_labels.items():
         d = result["dimensions"][key]

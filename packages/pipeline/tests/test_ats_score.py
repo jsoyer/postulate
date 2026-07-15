@@ -14,6 +14,7 @@ ats_score = importlib.import_module("ats-score")
 # tokenize
 # ---------------------------------------------------------------------------
 
+
 class TestTokenize:
     def test_basic_words(self):
         tokens = ats_score.tokenize("python kubernetes docker")
@@ -49,6 +50,7 @@ class TestTokenize:
 # extract_bigrams
 # ---------------------------------------------------------------------------
 
+
 class TestExtractBigrams:
     def test_basic(self):
         bigrams = ats_score.extract_bigrams(["machine", "learning", "model"])
@@ -65,6 +67,7 @@ class TestExtractBigrams:
 # ---------------------------------------------------------------------------
 # detect_sections
 # ---------------------------------------------------------------------------
+
 
 class TestDetectSections:
     def test_required_section(self):
@@ -114,6 +117,7 @@ Nice to have:
 # extract_keywords
 # ---------------------------------------------------------------------------
 
+
 class TestExtractKeywords:
     def test_returns_list(self):
         kws = ats_score.extract_keywords("python python python docker docker kubernetes")
@@ -121,9 +125,7 @@ class TestExtractKeywords:
         assert len(kws) > 0
 
     def test_most_frequent_first(self):
-        kws = ats_score.extract_keywords(
-            "python python python python docker docker kubernetes"
-        )
+        kws = ats_score.extract_keywords("python python python python docker docker kubernetes")
         # "python" should be near the top (bigrams may rank higher)
         assert "python" in kws[:3]
 
@@ -139,6 +141,7 @@ class TestExtractKeywords:
 # ---------------------------------------------------------------------------
 # categorize_keyword
 # ---------------------------------------------------------------------------
+
 
 class TestCategorizeKeyword:
     def test_leadership(self):
@@ -160,6 +163,7 @@ class TestCategorizeKeyword:
 # ---------------------------------------------------------------------------
 # extract_text_from_tex
 # ---------------------------------------------------------------------------
+
 
 class TestExtractTextFromTex:
     def test_strips_latex_commands(self, tmp_path):

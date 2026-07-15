@@ -35,13 +35,13 @@ from lib.common import REPO_ROOT
 # Import helpers from ats-score.py (hyphen in filename → importlib)
 # ---------------------------------------------------------------------------
 
+
 def _import_ats():
-    spec = importlib.util.spec_from_file_location(
-        "ats_score", _SCRIPT_DIR / "ats-score.py"
-    )
+    spec = importlib.util.spec_from_file_location("ats_score", _SCRIPT_DIR / "ats-score.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
 
 _ats = _import_ats()
 tokenize = _ats.tokenize
@@ -51,6 +51,7 @@ extract_bigrams = _ats.extract_bigrams
 # ---------------------------------------------------------------------------
 # Application loading
 # ---------------------------------------------------------------------------
+
 
 def _parse_month(s: str) -> str:
     """Validate YYYY-MM format, raise ValueError if invalid."""
@@ -109,13 +110,15 @@ def _load_applications(since=None) -> list:
         with open(job_path, encoding="utf-8") as f:
             job_text = f.read().lower()
 
-        apps.append({
-            "name": d.name,
-            "company": company,
-            "position": position,
-            "created": str(created),
-            "job_text": job_text,
-        })
+        apps.append(
+            {
+                "name": d.name,
+                "company": company,
+                "position": position,
+                "created": str(created),
+                "job_text": job_text,
+            }
+        )
 
     apps.sort(key=lambda a: a["created"])
     return apps
@@ -182,6 +185,7 @@ def _trend_label(early_freq: float, recent_freq: float):
 # CV text extraction for gap analysis
 # ---------------------------------------------------------------------------
 
+
 def _flatten_yaml_text(obj) -> str:
     """Recursively extract all string values from a YAML object."""
     if isinstance(obj, str):
@@ -237,6 +241,7 @@ def _cv_icon(in_cv: bool) -> str:
 # Core analysis
 # ---------------------------------------------------------------------------
 
+
 def analyse(top_n: int, since=None) -> dict:
     apps = _load_applications(since)
     if not apps:
@@ -257,44 +262,34 @@ def analyse(top_n: int, since=None) -> dict:
         job_count = sum(vec)
         in_cv = _keyword_in_cv(kw, cv_text)
 
-        results.append({
-            "keyword": kw,
-            "frequency": round(overall_freq, 4),
-            "job_count": job_count,
-            "trend": trend,
-            "trend_pct": round(pct, 1),
-            "in_cv": in_cv,
-        })
+        results.append(
+            {
+                "keyword": kw,
+                "frequency": round(overall_freq, 4),
+                "job_count": job_count,
+                "trend": trend,
+                "trend_pct": round(pct, 1),
+                "in_cv": in_cv,
+            }
+        )
 
     results.sort(key=lambda r: (-r["job_count"], -r["frequency"], r["keyword"]))
     top_results = results[:top_n]
 
     missing = [r["keyword"] for r in top_results if not r["in_cv"]]
-    add_recs = [
-        r["keyword"] for r in top_results
-        if r["trend"] == "rising" and not r["in_cv"]
-    ]
-    remove_recs = [
-        r["keyword"] for r in top_results
-        if r["trend"] == "declining" and r["in_cv"]
-    ]
+    add_recs = [r["keyword"] for r in top_results if r["trend"] == "rising" and not r["in_cv"]]
+    remove_recs = [r["keyword"] for r in top_results if r["trend"] == "declining" and r["in_cv"]]
     watch_recs = [r["keyword"] for r in top_results if r["job_count"] == n]
 
     recommendations = []
     if add_recs:
-        recommendations.append(
-            f"Add to your CV: {', '.join(add_recs[:5])} (trending + missing)"
-        )
+        recommendations.append(f"Add to your CV: {', '.join(add_recs[:5])} (trending + missing)")
     if remove_recs:
-        recommendations.append(
-            f"Consider removing: {', '.join(remove_recs[:3])} (declining demand)"
-        )
+        recommendations.append(f"Consider removing: {', '.join(remove_recs[:3])} (declining demand)")
     if watch_recs:
         universal = [w for w in watch_recs if w not in add_recs and w not in remove_recs]
         if universal:
-            recommendations.append(
-                f"Watch: {', '.join(universal[:3])} (required across all applications)"
-            )
+            recommendations.append(f"Watch: {', '.join(universal[:3])} (required across all applications)")
 
     return {
         "period": {"from": apps[0]["created"], "to": apps[-1]["created"]},
@@ -308,6 +303,7 @@ def analyse(top_n: int, since=None) -> dict:
 # ---------------------------------------------------------------------------
 # Terminal output
 # ---------------------------------------------------------------------------
+
 
 def _print_terminal(data: dict) -> None:
     n = data["total_applications"]
@@ -367,6 +363,7 @@ def _print_terminal(data: dict) -> None:
 # Markdown builder
 # ---------------------------------------------------------------------------
 
+
 def _build_markdown(data: dict) -> str:
     n = data["total_applications"]
     period = data["period"]
@@ -388,7 +385,7 @@ def _build_markdown(data: dict) -> str:
         icon = _trend_icon(r["trend"]).strip()
         cv_icon = "✅" if r["in_cv"] else "❌"
         pct = f"{r['trend_pct']:+.0f}%" if r["trend"] != "stable" else "—"
-        freq_pct = f"{r['frequency']*100:.0f}%"
+        freq_pct = f"{r['frequency'] * 100:.0f}%"
         return f"| {r['keyword']} | {freq_pct} | {r['job_count']}/{n} | {icon} | {pct} | {cv_icon} |"
 
     header = "| Keyword | Frequency | Jobs | Trend | Change | In CV |"
@@ -432,26 +429,15 @@ def _build_markdown(data: dict) -> str:
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Keyword Trends — temporal + gap analysis of job posting keywords."
-    )
+    parser = argparse.ArgumentParser(description="Keyword Trends — temporal + gap analysis of job posting keywords.")
+    parser.add_argument("--top", type=int, default=20, metavar="N", help="Show top N keywords (default: 20)")
     parser.add_argument(
-        "--top", type=int, default=20, metavar="N",
-        help="Show top N keywords (default: 20)"
+        "--since", type=str, default=None, metavar="YYYY-MM", help="Only consider applications from this month onwards"
     )
-    parser.add_argument(
-        "--since", type=str, default=None, metavar="YYYY-MM",
-        help="Only consider applications from this month onwards"
-    )
-    parser.add_argument(
-        "--json", action="store_true",
-        help="Output JSON"
-    )
-    parser.add_argument(
-        "--save", action="store_true",
-        help="Save report to keyword-trends.md in repo root"
-    )
+    parser.add_argument("--json", action="store_true", help="Output JSON")
+    parser.add_argument("--save", action="store_true", help="Save report to keyword-trends.md in repo root")
     args = parser.parse_args()
 
     if args.since:

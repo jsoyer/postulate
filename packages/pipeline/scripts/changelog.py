@@ -18,8 +18,7 @@ def get_diff_summary(master_file, app_file):
     """Get a summary of differences between master and application file."""
     try:
         result = subprocess.run(
-            ["diff", "-u", str(master_file), str(app_file)],
-            capture_output=True, text=True, timeout=5
+            ["diff", "-u", str(master_file), str(app_file)], capture_output=True, text=True, timeout=5
         )
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return None
@@ -99,7 +98,9 @@ def main():
         cl_files = list(app_dir.glob("CoverLetter - *.tex"))
 
         cv_diff = get_diff_summary("CV.tex", cv_files[0]) if cv_files and Path("CV.tex").exists() else None
-        cl_diff = get_diff_summary("CoverLetter.tex", cl_files[0]) if cl_files and Path("CoverLetter.tex").exists() else None
+        cl_diff = (
+            get_diff_summary("CoverLetter.tex", cl_files[0]) if cl_files and Path("CoverLetter.tex").exists() else None
+        )
 
         if markdown:
             print(f"## {name}\n")

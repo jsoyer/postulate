@@ -27,7 +27,9 @@ class CVApp(App):  # type: ignore[type-arg]
         client: The async cv-api client instance.
     """
 
-    CSS = CATPPUCCIN_CSS + """
+    CSS = (
+        CATPPUCCIN_CSS
+        + """
     #status-bar {
         dock: bottom;
         height: 1;
@@ -37,6 +39,7 @@ class CVApp(App):  # type: ignore[type-arg]
         height: 1fr;
     }
     """
+    )
 
     TITLE = "CV Manager"
     SUB_TITLE = "cv-tui-py"
@@ -100,9 +103,7 @@ class CVApp(App):  # type: ignore[type-arg]
     async def _on_new_app_submitted(self, result: None) -> None:
         pass
 
-    def on_new_application_dialog_submitted(
-        self, event: NewApplicationDialog.Submitted
-    ) -> None:
+    def on_new_application_dialog_submitted(self, event: NewApplicationDialog.Submitted) -> None:
         self.run_worker(
             self._create_app(event.company, event.position, event.url),
             exclusive=False,

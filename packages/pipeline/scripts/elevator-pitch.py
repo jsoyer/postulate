@@ -30,10 +30,10 @@ from lib.ai import call_ai, KEY_ENV, VALID_PROVIDERS
 from lib.common import load_env, REPO_ROOT
 
 CONTEXT_LABEL = {
-    "recruiter":  "Recruiter / Phone Screen",
+    "recruiter": "Recruiter / Phone Screen",
     "networking": "Networking Event / Conference",
-    "interview":  "Job Interview Opening",
-    "cold-call":  "Cold Outreach / LinkedIn DM",
+    "interview": "Job Interview Opening",
+    "cold-call": "Cold Outreach / LinkedIn DM",
 }
 
 
@@ -100,11 +100,10 @@ Rules:
 
 def main():
     parser = argparse.ArgumentParser(description="Generate elevator pitches using AI")
-    parser.add_argument("app_dir", nargs="?", default="",
-                        help="Application directory (optional)")
-    parser.add_argument("--context", default="networking",
-                        choices=list(CONTEXT_LABEL),
-                        help="Delivery context (default: networking)")
+    parser.add_argument("app_dir", nargs="?", default="", help="Application directory (optional)")
+    parser.add_argument(
+        "--context", default="networking", choices=list(CONTEXT_LABEL), help="Delivery context (default: networking)"
+    )
     parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
@@ -124,8 +123,11 @@ def main():
             app_dir = REPO_ROOT / "applications" / Path(args.app_dir).name
         app_name = app_dir.name if app_dir and app_dir.is_dir() else ""
 
-    cv_src = (app_dir / "cv-tailored.yml" if app_dir and (app_dir / "cv-tailored.yml").exists()
-              else REPO_ROOT / "data" / "cv.yml")
+    cv_src = (
+        app_dir / "cv-tailored.yml"
+        if app_dir and (app_dir / "cv-tailored.yml").exists()
+        else REPO_ROOT / "data" / "cv.yml"
+    )
     cv_data = {}
     if cv_src.exists():
         with open(cv_src, encoding="utf-8") as f:
@@ -142,14 +144,14 @@ def main():
     ach_lines = []
     for w in wins[:5]:
         if isinstance(w, dict):
-            ach_lines.append(f"• {_strip_bold(w.get('title',''))}: {_strip_bold(w.get('text',''))}")
+            ach_lines.append(f"• {_strip_bold(w.get('title', ''))}: {_strip_bold(w.get('text', ''))}")
     achievements = "\n".join(ach_lines) or "(no key_wins found)"
 
     role_context = ""
     if app_dir and app_dir.is_dir() and (app_dir / "meta.yml").exists():
         with open(app_dir / "meta.yml", encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
-        company  = meta.get("company", "")
+        company = meta.get("company", "")
         position = meta.get("position", "")
         if company or position:
             role_context = f"Targeting: {position} at {company}"
@@ -173,6 +175,7 @@ def main():
     raw = call_ai(prompt, args.ai, api_key, temperature=0.6, max_tokens=3000)
 
     from datetime import date
+
     today = date.today().isoformat()
 
     out_lines = [

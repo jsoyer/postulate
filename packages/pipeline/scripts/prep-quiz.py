@@ -26,27 +26,36 @@ from pathlib import Path
 from lib.common import REPO_ROOT
 
 # ANSI colours
-_RESET  = "\033[0m"
-_BOLD   = "\033[1m"
-_DIM    = "\033[2m"
-_GREEN  = "\033[32m"
+_RESET = "\033[0m"
+_BOLD = "\033[1m"
+_DIM = "\033[2m"
+_GREEN = "\033[32m"
 _YELLOW = "\033[33m"
-_RED    = "\033[31m"
-_CYAN   = "\033[36m"
-_BLUE   = "\033[34m"
+_RED = "\033[31m"
+_CYAN = "\033[36m"
+_BLUE = "\033[34m"
 
 CATEGORY_KEYWORDS = {
-    "behavioral": ["behavioral", "behaviour", "situational", "star stories", "star story",
-                   "tell me about", "experience", "background"],
-    "technical":  ["technical", "architecture", "platform", "product", "demo", "use case"],
-    "company":    ["company", "culture", "team", "why us", "strategy", "market"],
-    "to-ask":     ["questions to ask", "ask the interviewer", "questions for", "to ask"],
+    "behavioral": [
+        "behavioral",
+        "behaviour",
+        "situational",
+        "star stories",
+        "star story",
+        "tell me about",
+        "experience",
+        "background",
+    ],
+    "technical": ["technical", "architecture", "platform", "product", "demo", "use case"],
+    "company": ["company", "culture", "team", "why us", "strategy", "market"],
+    "to-ask": ["questions to ask", "ask the interviewer", "questions for", "to ask"],
 }
 
 
 # ---------------------------------------------------------------------------
 # Parsing
 # ---------------------------------------------------------------------------
+
 
 def _classify_section(header: str) -> str:
     h = header.lower()
@@ -61,9 +70,9 @@ def parse_prep_md(path: Path) -> list[dict]:
     if not path.exists():
         return []
 
-    text     = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
     sections = re.split(r"^(#{1,3} .+)$", text, flags=re.MULTILINE)
-    cards    = []
+    cards = []
     category = "general"
 
     i = 0
@@ -81,20 +90,20 @@ def parse_prep_md(path: Path) -> list[dict]:
         lines = [l.strip() for l in part.splitlines() if l.strip()]
 
         # STAR story blocks: bold header + body text
-        star_match = re.findall(
-            r"\*\*(.+?)\*\*[:\s]*(.+?)(?=\*\*|\Z)", part, re.DOTALL
-        )
+        star_match = re.findall(r"\*\*(.+?)\*\*[:\s]*(.+?)(?=\*\*|\Z)", part, re.DOTALL)
         if star_match and category == "behavioral":
             for q, a in star_match:
                 q = q.strip(" :")
                 a = a.strip()
                 if len(q) > 5 and len(a) > 10:
-                    cards.append({
-                        "question": q + "?",
-                        "answer":   a,
-                        "category": category,
-                        "source":   path.parent.name,
-                    })
+                    cards.append(
+                        {
+                            "question": q + "?",
+                            "answer": a,
+                            "category": category,
+                            "source": path.parent.name,
+                        }
+                    )
             i += 1
             continue
 
@@ -113,22 +122,26 @@ def parse_prep_md(path: Path) -> list[dict]:
             if category == "to-ask":
                 if not q.endswith("?"):
                     q += "?"
-                cards.append({
-                    "question": q,
-                    "answer":   "(Your question to the interviewer — no answer needed)",
-                    "category": "to-ask",
-                    "source":   path.parent.name,
-                })
+                cards.append(
+                    {
+                        "question": q,
+                        "answer": "(Your question to the interviewer — no answer needed)",
+                        "category": "to-ask",
+                        "source": path.parent.name,
+                    }
+                )
             else:
                 # Generic flashcard
                 if not q.endswith("?") and not q.endswith("."):
                     q += "?"
-                cards.append({
-                    "question": q,
-                    "answer":   "(Prepare your answer using the STAR method)",
-                    "category": category,
-                    "source":   path.parent.name,
-                })
+                cards.append(
+                    {
+                        "question": q,
+                        "answer": "(Prepare your answer using the STAR method)",
+                        "category": category,
+                        "source": path.parent.name,
+                    }
+                )
 
         i += 1
 
@@ -154,10 +167,10 @@ def collect_cards(apps_dir: Path, name_filter: str = "") -> list[dict]:
 
 CAT_LABEL = {
     "behavioral": f"{_YELLOW}Behavioral{_RESET}",
-    "technical":  f"{_CYAN}Technical{_RESET}",
-    "company":    f"{_BLUE}Company{_RESET}",
-    "to-ask":     f"{_GREEN}To Ask{_RESET}",
-    "general":    f"{_DIM}General{_RESET}",
+    "technical": f"{_CYAN}Technical{_RESET}",
+    "company": f"{_BLUE}Company{_RESET}",
+    "to-ask": f"{_GREEN}To Ask{_RESET}",
+    "general": f"{_DIM}General{_RESET}",
 }
 
 
@@ -173,20 +186,19 @@ def run_quiz(cards: list[dict], shuffle: bool = True) -> None:
     if shuffle:
         cards = random.sample(cards, len(cards))
 
-    total   = len(cards)
+    total = len(cards)
     ratings = []
 
-    print(f"\n{_BOLD}📚 Quiz — {total} cards{_RESET}  "
-          f"{_DIM}(Enter=reveal · 1=Missed · 2=OK · 3=Nailed){_RESET}\n")
+    print(f"\n{_BOLD}📚 Quiz — {total} cards{_RESET}  {_DIM}(Enter=reveal · 1=Missed · 2=OK · 3=Nailed){_RESET}\n")
     print(f"{_DIM}Press Ctrl+C to quit early.{_RESET}\n")
     print("─" * 60)
 
     try:
         for idx, card in enumerate(cards, 1):
-            cat   = card.get("category", "general")
-            src   = card.get("source", "")
-            q     = card["question"]
-            a     = card["answer"]
+            cat = card.get("category", "general")
+            src = card.get("source", "")
+            q = card["question"]
+            a = card["answer"]
 
             cat_label = CAT_LABEL.get(cat, cat)
             print(f"\n{_BOLD}[{idx}/{total}]{_RESET}  {cat_label}  {_DIM}({src}){_RESET}")
@@ -199,9 +211,7 @@ def run_quiz(cards: list[dict], shuffle: bool = True) -> None:
             # Rating
             while True:
                 raw = input(
-                    f"  Rate: {_RED}1=Missed{_RESET}  "
-                    f"{_YELLOW}2=OK{_RESET}  "
-                    f"{_GREEN}3=Nailed{_RESET}  > "
+                    f"  Rate: {_RED}1=Missed{_RESET}  {_YELLOW}2=OK{_RESET}  {_GREEN}3=Nailed{_RESET}  > "
                 ).strip()
                 if raw in ("1", "2", "3"):
                     ratings.append(int(raw))
@@ -219,11 +229,11 @@ def run_quiz(cards: list[dict], shuffle: bool = True) -> None:
     if not ratings:
         return
 
-    done    = len(ratings)
-    missed  = ratings.count(1)
-    ok      = ratings.count(2)
-    nailed  = ratings.count(3)
-    avg     = sum(ratings) / done
+    done = len(ratings)
+    missed = ratings.count(1)
+    ok = ratings.count(2)
+    nailed = ratings.count(3)
+    avg = sum(ratings) / done
 
     print(f"\n{_BOLD}📊 Session Summary{_RESET}  ({done}/{total} cards)\n")
     print(f"   {_RED}Missed  {missed:>3}{_RESET}  {'█' * missed}")
@@ -261,28 +271,19 @@ def list_cards(cards: list[dict]) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Terminal flashcard quiz from interview prep notes"
-    )
+    parser = argparse.ArgumentParser(description="Terminal flashcard quiz from interview prep notes")
+    parser.add_argument("app_dir", nargs="?", default="", help="Application directory (default: all apps)")
     parser.add_argument(
-        "app_dir", nargs="?", default="",
-        help="Application directory (default: all apps)"
-    )
-    parser.add_argument(
-        "--category", "-c",
+        "--category",
+        "-c",
         choices=["behavioral", "technical", "company", "to-ask", "general", "all"],
         default="all",
-        help="Filter by category (default: all)"
+        help="Filter by category (default: all)",
     )
-    parser.add_argument(
-        "--list", "-l", action="store_true",
-        help="List available questions without running quiz"
-    )
-    parser.add_argument(
-        "--no-shuffle", action="store_true",
-        help="Keep original order instead of shuffling"
-    )
+    parser.add_argument("--list", "-l", action="store_true", help="List available questions without running quiz")
+    parser.add_argument("--no-shuffle", action="store_true", help="Keep original order instead of shuffling")
     args = parser.parse_args()
 
     apps_dir = REPO_ROOT / "applications"

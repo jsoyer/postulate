@@ -208,11 +208,9 @@ FORMATS = {
 
 def main():
     parser = argparse.ArgumentParser(description="Export CV data to various formats")
-    parser.add_argument("format", choices=["json", "markdown", "md", "text", "txt"],
-                        help="Output format")
+    parser.add_argument("format", choices=["json", "markdown", "md", "text", "txt"], help="Output format")
     parser.add_argument("-o", "--output", help="Output file (default: stdout)")
-    parser.add_argument("-d", "--data", default="data/cv.yml",
-                        help="YAML data file (default: data/cv.yml)")
+    parser.add_argument("-d", "--data", default="data/cv.yml", help="YAML data file (default: data/cv.yml)")
     args = parser.parse_args()
 
     data_path = Path(args.data)

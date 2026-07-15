@@ -55,20 +55,72 @@ SECTION_PATTERNS = {
 
 # Keyword categories for grouping
 CATEGORY_HINTS = {
-    "Leadership": {"leadership", "management", "manager", "director", "vp",
-                   "executive", "mentor", "hire", "hiring", "coaching",
-                   "people", "culture", "talent", "headcount"},
-    "Sales & GTM": {"sales", "revenue", "pipeline", "quota", "deal", "enterprise",
-                    "meddpicc", "challenger", "selling", "account", "customer",
-                    "upsell", "cross-sell", "arr", "arr-growth", "nrr",
-                    "land-expand", "gtm", "go-to-market"},
-    "Technical": {"engineering", "architecture", "architect", "cloud", "saas",
-                  "api", "platform", "data", "security", "cyber", "ai",
-                  "machine-learning", "infrastructure", "devops", "software"},
-    "Methodology": {"agile", "scrum", "okr", "kpi", "meddpicc",
-                    "value-selling", "poc", "pov", "rfp", "rfi"},
-    "Domain": {"compliance", "governance", "regulation", "gdpr", "dspm",
-               "insider-threat", "identity", "access", "encryption"},
+    "Leadership": {
+        "leadership",
+        "management",
+        "manager",
+        "director",
+        "vp",
+        "executive",
+        "mentor",
+        "hire",
+        "hiring",
+        "coaching",
+        "people",
+        "culture",
+        "talent",
+        "headcount",
+    },
+    "Sales & GTM": {
+        "sales",
+        "revenue",
+        "pipeline",
+        "quota",
+        "deal",
+        "enterprise",
+        "meddpicc",
+        "challenger",
+        "selling",
+        "account",
+        "customer",
+        "upsell",
+        "cross-sell",
+        "arr",
+        "arr-growth",
+        "nrr",
+        "land-expand",
+        "gtm",
+        "go-to-market",
+    },
+    "Technical": {
+        "engineering",
+        "architecture",
+        "architect",
+        "cloud",
+        "saas",
+        "api",
+        "platform",
+        "data",
+        "security",
+        "cyber",
+        "ai",
+        "machine-learning",
+        "infrastructure",
+        "devops",
+        "software",
+    },
+    "Methodology": {"agile", "scrum", "okr", "kpi", "meddpicc", "value-selling", "poc", "pov", "rfp", "rfi"},
+    "Domain": {
+        "compliance",
+        "governance",
+        "regulation",
+        "gdpr",
+        "dspm",
+        "insider-threat",
+        "identity",
+        "access",
+        "encryption",
+    },
 }
 
 
@@ -96,7 +148,7 @@ def tokenize(text):
 
 def extract_bigrams(tokens):
     """Extract meaningful two-word phrases."""
-    return [f"{tokens[i]} {tokens[i+1]}" for i in range(len(tokens) - 1)]
+    return [f"{tokens[i]} {tokens[i + 1]}" for i in range(len(tokens) - 1)]
 
 
 def detect_sections(text):

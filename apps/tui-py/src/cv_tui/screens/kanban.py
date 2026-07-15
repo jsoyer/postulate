@@ -45,14 +45,14 @@ class KanbanScreen(Screen):  # type: ignore[type-arg]
     def compose(self) -> ComposeResult:
         yield Header()
         with ScrollableContainer(), Horizontal(id="kanban-board"):
-                for col in _COLUMNS:
-                    color = _COLUMN_COLORS.get(col, "white")
-                    with Vertical(classes="kanban-column", id=f"col-{col}"):
-                        yield Label(
-                            f"[bold {color}]{col.upper()}[/bold {color}]",
-                            classes="kanban-column-title",
-                        )
-                        yield Static("Loading...", id=f"cards-{col}")
+            for col in _COLUMNS:
+                color = _COLUMN_COLORS.get(col, "white")
+                with Vertical(classes="kanban-column", id=f"col-{col}"):
+                    yield Label(
+                        f"[bold {color}]{col.upper()}[/bold {color}]",
+                        classes="kanban-column-title",
+                    )
+                    yield Static("Loading...", id=f"cards-{col}")
         yield Footer()
 
     def on_mount(self) -> None:

@@ -101,8 +101,7 @@ def main():
     parser = argparse.ArgumentParser(description="Post-interview AI debrief")
     parser.add_argument("app_dir", help="Application directory")
     parser.add_argument("--stage", default="", help="Interview stage")
-    parser.add_argument("--notes", default="",
-                        help='Your interview notes (or omit to type interactively)')
+    parser.add_argument("--notes", default="", help="Your interview notes (or omit to type interactively)")
     parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
@@ -126,7 +125,7 @@ def main():
         with open(app_dir / "meta.yml", encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "the role")
 
     # Detect stage from milestones
@@ -193,7 +192,7 @@ def main():
     raw = call_ai(prompt, args.ai, api_key, max_tokens=3000)
 
     today_str = date.today().isoformat()
-    out_name  = f"debrief-{stage}-{today_str}.md"
+    out_name = f"debrief-{stage}-{today_str}.md"
     lines = [
         f"# Interview Debrief — {company}",
         f"*{position} · Stage: {stage} · {today_str} · AI: {args.ai}*",

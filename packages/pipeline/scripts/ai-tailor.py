@@ -41,7 +41,7 @@ from lib.common import company_from_dirname, setup_logging, REPO_ROOT
 
 # --- Script paths (resolved at import time) ---
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_RENDER_PY  = os.path.join(_SCRIPT_DIR, "render.py")
+_RENDER_PY = os.path.join(_SCRIPT_DIR, "render.py")
 
 # --- Auto-trim prompts ---
 CV_TRIM_PROMPT = """\
@@ -75,6 +75,7 @@ Return ONLY valid YAML with the exact same structure and keys — no markdown fe
 # Atomic file write helper
 # ---------------------------------------------------------------------------
 
+
 def _atomic_write(path: str, content: str) -> None:
     """Write content to path atomically using a temp file + os.replace.
 
@@ -96,14 +97,13 @@ def _atomic_write(path: str, content: str) -> None:
 # HTTP helpers
 # ---------------------------------------------------------------------------
 
+
 def fetch_url_text(url):
     """Fetch URL and extract plain text (simple HTML stripping)."""
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme not in ("http", "https"):
         raise ValueError(f"Unsupported URL scheme: {parsed.scheme!r} (only http/https)")
-    req = urllib.request.Request(url, headers={
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
-    })
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"})
     with urllib.request.urlopen(req, timeout=15) as resp:
         html = resp.read().decode("utf-8", errors="ignore")
     text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL)
@@ -117,12 +117,13 @@ def fetch_url_text(url):
 # YAML helpers
 # ---------------------------------------------------------------------------
 
+
 def fix_yaml_bold(yaml_text):
     """Quote YAML values that start with ** (bold markdown) to prevent parse errors.
     key: **bold text**  →  key: "**bold text**"
     """
     return re.sub(
-        r'^(\s*(?:-\s+)?\w[\w\s-]*:\s)(\*\*.+)$',
+        r"^(\s*(?:-\s+)?\w[\w\s-]*:\s)(\*\*.+)$",
         lambda m: m.group(1) + '"' + m.group(2).replace('"', '\\"') + '"',
         yaml_text,
         flags=re.MULTILINE,
@@ -143,6 +144,7 @@ def extract_yaml_block(text):
 # ---------------------------------------------------------------------------
 # Auto-trim helpers
 # ---------------------------------------------------------------------------
+
 
 def count_pdf_pages(pdf_path):
     """Count pages in a PDF. Returns -1 on failure."""
@@ -184,7 +186,10 @@ def render_and_compile(yml_path, tex_path, app_dir, xelatex):
     try:
         subprocess.run(
             [xelatex, "-interaction=nonstopmode", "-output-directory", app_dir, tex_path],
-            check=True, capture_output=True, env=env, cwd=str(REPO_ROOT),
+            check=True,
+            capture_output=True,
+            env=env,
+            cwd=str(REPO_ROOT),
         )
     except subprocess.CalledProcessError as e:
         log.warning("xelatex failed (check %s manually)", tex_path)
@@ -232,8 +237,10 @@ def trim_to_pages(app_dir, yml_path, tex_path, api_key, provider, page_limit, ma
                 bullets = 5
             target_bullets = max(3, bullets - 2)
             prompt = CV_TRIM_PROMPT.format(
-                pages=pages, bullet_count=bullets,
-                target_bullets=target_bullets, yaml_text=yaml_text,
+                pages=pages,
+                bullet_count=bullets,
+                target_bullets=target_bullets,
+                yaml_text=yaml_text,
             )
 
         model_label = f" ({model})" if model else ""
@@ -262,6 +269,7 @@ def trim_to_pages(app_dir, yml_path, tex_path, api_key, provider, page_limit, ma
 # ---------------------------------------------------------------------------
 # Core tailoring functions
 # ---------------------------------------------------------------------------
+
 
 def tailor_cv(app_dir, job_url, job_text, api_key, provider, cv_data_path="data/cv.yml", model=None, dry_run=False):
     """Tailor the CV using the selected AI provider. Returns YAML, not LaTeX."""
@@ -335,8 +343,9 @@ No markdown fences, no comments, no explanations — just raw YAML.
     return output
 
 
-def generate_cover_letter(app_dir, job_url, job_text, api_key, provider,
-                          cv_data_path="data/cv.yml", model=None, dry_run=False):
+def generate_cover_letter(
+    app_dir, job_url, job_text, api_key, provider, cv_data_path="data/cv.yml", model=None, dry_run=False
+):
     """Generate cover letter YAML using the selected AI provider."""
     with open(cv_data_path, encoding="utf-8") as f:
         cv_yaml = f.read()
@@ -428,6 +437,7 @@ closing_paragraph: >-
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Tailor CV and cover letter using AI (Gemini, Claude, OpenAI, Mistral, Ollama)"
@@ -446,21 +456,23 @@ def main():
     group.add_argument("--cv-only", action="store_true", help="Only tailor CV")
     group.add_argument("--cl-only", action="store_true", help="Only generate cover letter")
     parser.add_argument(
-        "--auto-trim", action="store_true",
+        "--auto-trim",
+        action="store_true",
         help="After tailoring, loop render→compile→trim until PDF fits page limits (CV ≤ 2p, CL ≤ 1p)",
     )
     all_models = [m for ms in PROVIDER_MODELS.values() for m in ms]
     parser.add_argument(
-        "--model", default=None,
+        "--model",
+        default=None,
         help=f"Override default model (e.g. {', '.join(all_models[:4])}…). Leave blank for provider default.",
     )
     parser.add_argument(
-        "--dry-run", "-n", action="store_true",
+        "--dry-run",
+        "-n",
+        action="store_true",
         help="Call the AI provider and show what would be written, but do not write any files or compile",
     )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable debug logging"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable debug logging")
     args = parser.parse_args()
 
     log = setup_logging(args.verbose)

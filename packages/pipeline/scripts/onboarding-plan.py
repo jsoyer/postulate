@@ -156,7 +156,7 @@ def main():
         with open(app_dir / "meta.yml", encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "the role")
 
     cv_src = app_dir / "cv-tailored.yml"
@@ -171,7 +171,7 @@ def main():
     profile = cv_data.get("profile", "")
     candidate_profile = _strip_bold(str(profile))[:400] if profile else ""
 
-    job_excerpt     = _read(app_dir / "job.txt", 2000) or "(no job.txt)"
+    job_excerpt = _read(app_dir / "job.txt", 2000) or "(no job.txt)"
     research_excerpt = _read(app_dir / "company-research.md", 1500) or "(no company-research.md)"
 
     print(f"🗓️  Generating 30/60/90-day onboarding plan — {company}")
@@ -189,6 +189,7 @@ def main():
     raw = call_ai(prompt, args.ai, api_key)
 
     from datetime import date
+
     today = date.today().isoformat()
 
     lines = [

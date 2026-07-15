@@ -356,7 +356,7 @@ class TestReportGetDeadline:
         (app_dir / "meta.yml").write_text("deadline: '2024-03-01'\n")
         # May return datetime, date, or None depending on parsing
         result = report_mod.get_deadline(app_dir)
-        assert result is None or hasattr(result, 'year')
+        assert result is None or hasattr(result, "year")
 
 
 class TestReportCheckFiles:
@@ -443,9 +443,10 @@ class TestStatsGetDeadline:
 
     def test_returns_date_for_valid_meta(self, tmp_path):
         from datetime import date as date_type
+
         app_dir = tmp_path / "app"
         app_dir.mkdir()
         (app_dir / "meta.yml").write_text("deadline: '2024-06-01'\n")
         result = stats_mod.get_deadline(app_dir)
         # May return date, datetime, or None depending on parsing
-        assert result is None or hasattr(result, 'year')
+        assert result is None or hasattr(result, "year")

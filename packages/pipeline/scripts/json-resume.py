@@ -23,9 +23,18 @@ except ImportError:
 from lib.common import REPO_ROOT
 
 MONTH_MAP = {
-    "jan": "01", "feb": "02", "mar": "03", "apr": "04",
-    "may": "05", "jun": "06", "jul": "07", "aug": "08",
-    "sep": "09", "oct": "10", "nov": "11", "dec": "12",
+    "jan": "01",
+    "feb": "02",
+    "mar": "03",
+    "apr": "04",
+    "may": "05",
+    "jun": "06",
+    "jul": "07",
+    "aug": "08",
+    "sep": "09",
+    "oct": "10",
+    "nov": "11",
+    "dec": "12",
 }
 
 
@@ -61,7 +70,7 @@ def _parse_date_range(dates_str: str) -> tuple:
         return s
 
     start = parse_one(parts[0]) if len(parts) > 0 else ""
-    end   = parse_one(parts[1]) if len(parts) > 1 else ""
+    end = parse_one(parts[1]) if len(parts) > 1 else ""
     return start, end
 
 
@@ -74,7 +83,7 @@ def _flatten_items(items) -> list:
         if isinstance(item, str):
             result.append(_strip_bold(item))
         elif isinstance(item, dict):
-            text  = item.get("text", "")
+            text = item.get("text", "")
             label = item.get("label", "")
             if label and text:
                 result.append(_strip_bold(f"{label}: {text}"))
@@ -88,10 +97,10 @@ def _flatten_items(items) -> list:
 def build_basics(personal: dict, profile: str) -> dict:
     p = personal
     basics = {
-        "name":    f"{p.get('first_name', '')} {p.get('last_name', '')}".strip(),
-        "label":   p.get("position", ""),
-        "email":   p.get("email", ""),
-        "phone":   p.get("mobile", "") or p.get("phone", ""),
+        "name": f"{p.get('first_name', '')} {p.get('last_name', '')}".strip(),
+        "label": p.get("position", ""),
+        "email": p.get("email", ""),
+        "phone": p.get("mobile", "") or p.get("phone", ""),
         "summary": _strip_bold(profile or ""),
         "location": {"address": p.get("address", "")},
         "profiles": [],
@@ -99,43 +108,47 @@ def build_basics(personal: dict, profile: str) -> dict:
     if p.get("url") or p.get("website"):
         basics["url"] = p.get("url") or p.get("website", "")
     if p.get("linkedin"):
-        basics["profiles"].append({
-            "network":  "LinkedIn",
-            "username": p["linkedin"],
-            "url":      f"https://www.linkedin.com/in/{p['linkedin']}",
-        })
+        basics["profiles"].append(
+            {
+                "network": "LinkedIn",
+                "username": p["linkedin"],
+                "url": f"https://www.linkedin.com/in/{p['linkedin']}",
+            }
+        )
     if p.get("github"):
-        basics["profiles"].append({
-            "network":  "GitHub",
-            "username": p["github"],
-            "url":      f"https://github.com/{p['github']}",
-        })
+        basics["profiles"].append(
+            {
+                "network": "GitHub",
+                "username": p["github"],
+                "url": f"https://github.com/{p['github']}",
+            }
+        )
     return basics
 
 
 def build_work(experience: list, early_career: list = None) -> list:
     work = []
-    for exp in (experience or []):
+    for exp in experience or []:
         start, end = _parse_date_range(exp.get("dates", ""))
         entry = {
-            "name":       exp.get("company", ""),
-            "position":   exp.get("title", ""),
-            "location":   exp.get("location", ""),
-            "startDate":  start,
-            "endDate":    end,
+            "name": exp.get("company", ""),
+            "position": exp.get("title", ""),
+            "location": exp.get("location", ""),
+            "startDate": start,
+            "endDate": end,
             "highlights": _flatten_items(exp.get("items", [])),
         }
         if exp.get("description"):
             entry["summary"] = _strip_bold(exp["description"])
         work.append(entry)
-    for exp in (early_career or []):
+    for exp in early_career or []:
         start, end = _parse_date_range(exp.get("dates", ""))
         entry = {
-            "name":       exp.get("company", ""),
-            "position":   exp.get("title", ""),
-            "location":   exp.get("location", ""),
-            "startDate":  start,
-            "endDate":    end,
+            "name": exp.get("company", ""),
+            "position": exp.get("title", ""),
+            "location": exp.get("location", ""),
+            "startDate": start,
+            "endDate": end,
             "highlights": _flatten_items(exp.get("items", [])),
         }
         work.append(entry)
@@ -144,15 +157,15 @@ def build_work(experience: list, early_career: list = None) -> list:
 
 def build_education(education: list) -> list:
     result = []
-    for edu in (education or []):
+    for edu in education or []:
         start, end = _parse_date_range(edu.get("dates", ""))
         entry = {
             "institution": edu.get("institution", ""),
-            "area":        edu.get("degree", ""),
-            "studyType":   edu.get("type", ""),
-            "startDate":   start,
-            "endDate":     end,
-            "location":    edu.get("location", ""),
+            "area": edu.get("degree", ""),
+            "studyType": edu.get("type", ""),
+            "startDate": start,
+            "endDate": end,
+            "location": edu.get("location", ""),
         }
         if edu.get("score") or edu.get("gpa"):
             entry["score"] = str(edu.get("score") or edu.get("gpa", ""))
@@ -162,7 +175,7 @@ def build_education(education: list) -> list:
 
 def build_skills(skills: list) -> list:
     result = []
-    for skill in (skills or []):
+    for skill in skills or []:
         items = skill.get("items", "")
         if isinstance(items, str):
             keywords = [k.strip() for k in items.split(",") if k.strip()]
@@ -170,21 +183,23 @@ def build_skills(skills: list) -> list:
             keywords = [_strip_bold(str(k)) for k in items]
         else:
             keywords = []
-        result.append({
-            "name":     skill.get("category", ""),
-            "keywords": keywords,
-        })
+        result.append(
+            {
+                "name": skill.get("category", ""),
+                "keywords": keywords,
+            }
+        )
     return result
 
 
 def build_certificates(certifications: list) -> list:
     result = []
-    for cert in (certifications or []):
+    for cert in certifications or []:
         start, _ = _parse_date_range(cert.get("dates", ""))
         entry = {
-            "name":   cert.get("name", "") or cert.get("title", ""),
+            "name": cert.get("name", "") or cert.get("title", ""),
             "issuer": cert.get("institution", "") or cert.get("issuer", ""),
-            "date":   start,
+            "date": start,
         }
         if cert.get("url"):
             entry["url"] = cert["url"]
@@ -194,12 +209,14 @@ def build_certificates(certifications: list) -> list:
 
 def build_projects(key_wins: list) -> list:
     result = []
-    for win in (key_wins or []):
-        result.append({
-            "name":        win.get("title", ""),
-            "description": _strip_bold(win.get("text", "")),
-            "highlights":  [],
-        })
+    for win in key_wins or []:
+        result.append(
+            {
+                "name": win.get("title", ""),
+                "description": _strip_bold(win.get("text", "")),
+                "highlights": [],
+            }
+        )
     return result
 
 
@@ -208,10 +225,12 @@ def build_languages(languages) -> list:
     if isinstance(languages, list):
         for lang in languages:
             if isinstance(lang, dict):
-                result.append({
-                    "language": lang.get("name", "") or lang.get("language", ""),
-                    "fluency":  lang.get("level", "") or lang.get("fluency", ""),
-                })
+                result.append(
+                    {
+                        "language": lang.get("name", "") or lang.get("language", ""),
+                        "fluency": lang.get("level", "") or lang.get("fluency", ""),
+                    }
+                )
             elif isinstance(lang, str):
                 result.append({"language": lang, "fluency": ""})
     elif isinstance(languages, str):
@@ -225,10 +244,12 @@ def build_interests(interests) -> list:
     if isinstance(interests, list):
         for item in interests:
             if isinstance(item, dict):
-                result.append({
-                    "name":     item.get("name", "") or item.get("category", ""),
-                    "keywords": item.get("keywords", []),
-                })
+                result.append(
+                    {
+                        "name": item.get("name", "") or item.get("category", ""),
+                        "keywords": item.get("keywords", []),
+                    }
+                )
             elif isinstance(item, str):
                 result.append({"name": item, "keywords": []})
     elif isinstance(interests, str):
@@ -246,12 +267,14 @@ def build_awards(awards) -> list:
         result = []
         for a in awards:
             if isinstance(a, dict):
-                result.append({
-                    "title":   a.get("title", ""),
-                    "awarder": a.get("awarder", "") or a.get("organization", ""),
-                    "date":    a.get("date", ""),
-                    "summary": _strip_bold(a.get("summary", "") or a.get("description", "")),
-                })
+                result.append(
+                    {
+                        "title": a.get("title", ""),
+                        "awarder": a.get("awarder", "") or a.get("organization", ""),
+                        "date": a.get("date", ""),
+                        "summary": _strip_bold(a.get("summary", "") or a.get("description", "")),
+                    }
+                )
             elif isinstance(a, str):
                 result.append({"title": _strip_bold(a), "awarder": "", "summary": ""})
         return result
@@ -264,18 +287,18 @@ def convert(data: dict) -> dict:
 
     resume = {
         "$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/v1.0.0/schema.json",
-        "basics":       build_basics(personal, data.get("profile", "")),
-        "work":         build_work(data.get("experience", []), data.get("early_career", [])),
-        "education":    build_education(data.get("education", [])),
-        "skills":       build_skills(data.get("skills", [])),
+        "basics": build_basics(personal, data.get("profile", "")),
+        "work": build_work(data.get("experience", []), data.get("early_career", [])),
+        "education": build_education(data.get("education", [])),
+        "skills": build_skills(data.get("skills", [])),
         "certificates": build_certificates(data.get("certifications", [])),
-        "projects":     build_projects(data.get("key_wins", [])),
-        "languages":    build_languages(data.get("languages", [])),
-        "interests":    build_interests(data.get("interests", [])),
-        "awards":       build_awards(data.get("awards")),
+        "projects": build_projects(data.get("key_wins", [])),
+        "languages": build_languages(data.get("languages", [])),
+        "interests": build_interests(data.get("interests", [])),
+        "awards": build_awards(data.get("awards")),
         "publications": build_awards(data.get("publications")),
         "meta": {
-            "version":   "v1.0.0",
+            "version": "v1.0.0",
             "canonical": "https://raw.githubusercontent.com/jsonresume/resume-schema/v1.0.0/schema.json",
         },
     }
@@ -290,8 +313,8 @@ def convert(data: dict) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="Export cv.yml to JSON Resume v1.0.0")
-    parser.add_argument("-d", "--data",   default="data/cv.yml", help="YAML source file")
-    parser.add_argument("-o", "--output", default="cv.json",      help="Output JSON file")
+    parser.add_argument("-d", "--data", default="data/cv.yml", help="YAML source file")
+    parser.add_argument("-o", "--output", default="cv.json", help="Output JSON file")
     args = parser.parse_args()
 
     data_path = REPO_ROOT / args.data
@@ -313,9 +336,9 @@ def main():
     print(f"✅ Saved to {out_path}")
     print(f"   🔍 Validate at: https://jsonresume.org/schema/")
 
-    name    = resume["basics"]["name"]
-    n_work  = len(resume.get("work", []))
-    n_edu   = len(resume.get("education", []))
+    name = resume["basics"]["name"]
+    n_work = len(resume.get("work", []))
+    n_edu = len(resume.get("education", []))
     n_skill = len(resume.get("skills", []))
     print(f"\n   👤 {name}")
     print(f"   💼 {n_work} work entries")

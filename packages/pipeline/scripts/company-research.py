@@ -200,11 +200,13 @@ def fetch_google_news(company_name: str) -> list:
             if not link.startswith("http"):
                 link = ""
 
-            results.append({
-                "date": date_str,
-                "title": title_el.text.strip(),
-                "url": link,
-            })
+            results.append(
+                {
+                    "date": date_str,
+                    "title": title_el.text.strip(),
+                    "url": link,
+                }
+            )
     except ET.ParseError:
         pass
 
@@ -301,8 +303,7 @@ def update_meta_yml(meta_path: Path, updates: dict) -> None:
     if changed:
         # Write back preserving order (basic yaml.dump)
         with open(meta_path, "w", encoding="utf-8") as f:
-            yaml.dump(existing, f, default_flow_style=False, allow_unicode=True,
-                      sort_keys=False)
+            yaml.dump(existing, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
 
 def main():
@@ -460,9 +461,7 @@ def main():
     if tech_stack:
         meta_updates["tech_stack"] = tech_stack
     if news:
-        meta_updates["recent_news"] = [
-            {k: v for k, v in item.items() if v} for item in news
-        ]
+        meta_updates["recent_news"] = [{k: v for k, v in item.items() if v} for item in news]
 
     if meta_updates and meta_path.exists():
         update_meta_yml(meta_path, meta_updates)

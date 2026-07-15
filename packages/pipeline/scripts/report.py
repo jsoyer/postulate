@@ -85,10 +85,22 @@ def get_pr_status(name):
     branch = f"apply/{name}"
     try:
         result = subprocess.run(
-            ["gh", "pr", "list", "--head", branch, "--state", "all",
-             "--json", "state,url,labels,createdAt",
-             "--jq", 'if length > 0 then .[0] | tojson else "" end'],
-            capture_output=True, text=True, timeout=10
+            [
+                "gh",
+                "pr",
+                "list",
+                "--head",
+                branch,
+                "--state",
+                "all",
+                "--json",
+                "state,url,labels,createdAt",
+                "--jq",
+                'if length > 0 then .[0] | tojson else "" end',
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.stdout.strip():
             pr = json.loads(result.stdout.strip())
@@ -122,15 +134,11 @@ def count_tex_diffs(app_dir):
         return None
     try:
         result = subprocess.run(
-            ["diff", "--brief", "CV.tex", str(cv_files[0])],
-            capture_output=True, text=True, timeout=5
+            ["diff", "--brief", "CV.tex", str(cv_files[0])], capture_output=True, text=True, timeout=5
         )
         if result.returncode == 0:
             return "identical"
-        result = subprocess.run(
-            ["diff", "-u", "CV.tex", str(cv_files[0])],
-            capture_output=True, text=True, timeout=5
-        )
+        result = subprocess.run(["diff", "-u", "CV.tex", str(cv_files[0])], capture_output=True, text=True, timeout=5)
         added = sum(1 for l in result.stdout.splitlines() if l.startswith("+") and not l.startswith("+++"))
         removed = sum(1 for l in result.stdout.splitlines() if l.startswith("-") and not l.startswith("---"))
         return f"+{added}/-{removed}"
@@ -175,8 +183,10 @@ def render_terminal(apps):
 
         if pr:
             stage_icons = {
-                "Draft": "📝 Draft", "Applied": "📤 Applied",
-                "Interview": "🎤 Interview", "Offer": "🎉 Offer",
+                "Draft": "📝 Draft",
+                "Applied": "📤 Applied",
+                "Interview": "🎤 Interview",
+                "Offer": "🎉 Offer",
                 "Rejected": "❌ Rejected",
             }
             stage = pr["stage"]
@@ -248,8 +258,10 @@ def render_markdown(apps):
         yn = lambda v: "✅" if v else "❌"
         tailored = diff if diff and diff != "identical" else ("❌" if diff == "identical" else "—")
 
-        print(f"| {info['name']} | {info['company']} | {info['position']} | "
-              f"{state} | {yn(files['CV'])} | {yn(files['CL'])} | {yn(files['job.txt'])} | {tailored} |")
+        print(
+            f"| {info['name']} | {info['company']} | {info['position']} | "
+            f"{state} | {yn(files['CV'])} | {yn(files['CL'])} | {yn(files['job.txt'])} | {tailored} |"
+        )
 
     # Funnel summary
     print("\n## Funnel\n")
@@ -263,8 +275,7 @@ def render_markdown(apps):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate application report")
-    parser.add_argument("--format", choices=["terminal", "markdown"],
-                        default="terminal", help="Output format")
+    parser.add_argument("--format", choices=["terminal", "markdown"], default="terminal", help="Output format")
     args = parser.parse_args()
 
     apps_dir = REPO_ROOT / "applications"

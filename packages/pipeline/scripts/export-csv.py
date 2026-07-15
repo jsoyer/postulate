@@ -38,12 +38,25 @@ _SCRIPT_DIR = Path(__file__).parent
 from lib.common import REPO_ROOT
 
 FIELDNAMES = [
-    "app_dir", "company", "position", "created", "deadline",
-    "outcome", "response_days",
-    "ats_score", "ats_found", "ats_total",
-    "milestone_count", "last_stage", "days_in_pipeline",
-    "has_job_txt", "has_cv_tailored", "has_coverletter",
-    "has_research", "has_contacts", "has_prep",
+    "app_dir",
+    "company",
+    "position",
+    "created",
+    "deadline",
+    "outcome",
+    "response_days",
+    "ats_score",
+    "ats_found",
+    "ats_total",
+    "milestone_count",
+    "last_stage",
+    "days_in_pipeline",
+    "has_job_txt",
+    "has_cv_tailored",
+    "has_coverletter",
+    "has_research",
+    "has_contacts",
+    "has_prep",
 ]
 
 
@@ -53,7 +66,7 @@ def _parse_date(val) -> datetime | None:
     s = str(val).strip()
     for fmt in ("%Y-%m-%d", "%Y-%m"):
         try:
-            return datetime.strptime(s[:len(fmt)], fmt)
+            return datetime.strptime(s[: len(fmt)], fmt)
         except ValueError:
             continue
     return None
@@ -66,7 +79,10 @@ def _ats_score(app_dir: Path) -> tuple[float, int, int]:
     try:
         r = subprocess.run(
             [sys.executable, str(_SCRIPT_DIR / "ats-score.py"), str(app_dir), "--json"],
-            capture_output=True, text=True, timeout=30, cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=REPO_ROOT,
         )
         if r.stdout.strip():
             data = json.loads(r.stdout)
@@ -99,48 +115,47 @@ def collect(apps_dir: Path, run_ats: bool = True) -> list[dict]:
                 ms = yaml.safe_load(f) or {}
             milestones = ms.get("milestones", [])
 
-        created  = _parse_date(meta.get("created", ""))
+        created = _parse_date(meta.get("created", ""))
         deadline = _parse_date(meta.get("deadline", ""))
-        days     = (datetime.now() - created).days if created else ""
+        days = (datetime.now() - created).days if created else ""
         last_stage = milestones[-1].get("stage", "") if milestones else ""
 
         ats_score, ats_found, ats_total = (0.0, 0, 0)
         if run_ats:
             ats_score, ats_found, ats_total = _ats_score(d)
 
-        rows.append({
-            "app_dir":        d.name,
-            "company":        meta.get("company", ""),
-            "position":       meta.get("position", ""),
-            "created":        created.strftime("%Y-%m-%d") if created else "",
-            "deadline":       deadline.strftime("%Y-%m-%d") if deadline else "",
-            "outcome":        meta.get("outcome", ""),
-            "response_days":  meta.get("response_days", ""),
-            "ats_score":      ats_score if ats_score else "",
-            "ats_found":      ats_found if ats_found else "",
-            "ats_total":      ats_total if ats_total else "",
-            "milestone_count":len(milestones),
-            "last_stage":     last_stage,
-            "days_in_pipeline": days,
-            "has_job_txt":    "yes" if (d / "job.txt").exists() else "",
-            "has_cv_tailored":"yes" if (d / "cv-tailored.yml").exists() else "",
-            "has_coverletter":"yes" if (d / "coverletter.yml").exists() else "",
-            "has_research":   "yes" if (d / "company-research.md").exists() else "",
-            "has_contacts":   "yes" if (d / "contacts.md").exists() else "",
-            "has_prep":       "yes" if (d / "prep.md").exists() else "",
-        })
+        rows.append(
+            {
+                "app_dir": d.name,
+                "company": meta.get("company", ""),
+                "position": meta.get("position", ""),
+                "created": created.strftime("%Y-%m-%d") if created else "",
+                "deadline": deadline.strftime("%Y-%m-%d") if deadline else "",
+                "outcome": meta.get("outcome", ""),
+                "response_days": meta.get("response_days", ""),
+                "ats_score": ats_score if ats_score else "",
+                "ats_found": ats_found if ats_found else "",
+                "ats_total": ats_total if ats_total else "",
+                "milestone_count": len(milestones),
+                "last_stage": last_stage,
+                "days_in_pipeline": days,
+                "has_job_txt": "yes" if (d / "job.txt").exists() else "",
+                "has_cv_tailored": "yes" if (d / "cv-tailored.yml").exists() else "",
+                "has_coverletter": "yes" if (d / "coverletter.yml").exists() else "",
+                "has_research": "yes" if (d / "company-research.md").exists() else "",
+                "has_contacts": "yes" if (d / "contacts.md").exists() else "",
+                "has_prep": "yes" if (d / "prep.md").exists() else "",
+            }
+        )
 
     return rows
 
 
 def main():
     parser = argparse.ArgumentParser(description="Export all application data to CSV")
-    parser.add_argument("--output", "-o", default="",
-                        help="Output file path (default: applications-export.csv)")
-    parser.add_argument("--no-ats", action="store_true",
-                        help="Skip ATS scoring (faster)")
-    parser.add_argument("--json", action="store_true",
-                        help="Output JSON instead of CSV")
+    parser.add_argument("--output", "-o", default="", help="Output file path (default: applications-export.csv)")
+    parser.add_argument("--no-ats", action="store_true", help="Skip ATS scoring (faster)")
+    parser.add_argument("--json", action="store_true", help="Output JSON instead of CSV")
     args = parser.parse_args()
 
     apps_dir = REPO_ROOT / "applications"
@@ -169,7 +184,7 @@ def main():
         writer.writerows(rows)
 
     # Terminal summary
-    total    = len(rows)
+    total = len(rows)
     outcomes = {}
     for r in rows:
         o = r["outcome"] or "pending"

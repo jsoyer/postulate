@@ -33,43 +33,120 @@ from lib.common import REPO_ROOT
 
 # Strong past-tense action verbs
 STRONG_ACTION_VERBS = {
-    "accelerated", "achieved", "aligned", "architected", "automated",
-    "awarded", "built", "championed", "closed", "coached", "consolidated",
-    "coordinated", "created", "cut", "defined", "delivered", "deployed",
-    "designed", "developed", "directed", "drove", "established", "exceeded",
-    "executed", "expanded", "generated", "grew", "guided", "hired",
-    "implemented", "improved", "increased", "initiated", "integrated",
-    "introduced", "launched", "led", "managed", "mentored", "migrated",
-    "negotiated", "onboarded", "optimized", "orchestrated", "oversaw",
-    "partnered", "piloted", "pioneered", "pitched", "presented", "produced",
-    "proposed", "raised", "recruited", "reduced", "redesigned", "reengineered",
-    "restructured", "rolled", "saved", "scaled", "secured", "shaped",
-    "spearheaded", "standardized", "streamlined", "trained", "transformed",
+    "accelerated",
+    "achieved",
+    "aligned",
+    "architected",
+    "automated",
+    "awarded",
+    "built",
+    "championed",
+    "closed",
+    "coached",
+    "consolidated",
+    "coordinated",
+    "created",
+    "cut",
+    "defined",
+    "delivered",
+    "deployed",
+    "designed",
+    "developed",
+    "directed",
+    "drove",
+    "established",
+    "exceeded",
+    "executed",
+    "expanded",
+    "generated",
+    "grew",
+    "guided",
+    "hired",
+    "implemented",
+    "improved",
+    "increased",
+    "initiated",
+    "integrated",
+    "introduced",
+    "launched",
+    "led",
+    "managed",
+    "mentored",
+    "migrated",
+    "negotiated",
+    "onboarded",
+    "optimized",
+    "orchestrated",
+    "oversaw",
+    "partnered",
+    "piloted",
+    "pioneered",
+    "pitched",
+    "presented",
+    "produced",
+    "proposed",
+    "raised",
+    "recruited",
+    "reduced",
+    "redesigned",
+    "reengineered",
+    "restructured",
+    "rolled",
+    "saved",
+    "scaled",
+    "secured",
+    "shaped",
+    "spearheaded",
+    "standardized",
+    "streamlined",
+    "trained",
+    "transformed",
     "won",
 }
 
 # Weak starters that signal passive or vague writing
 WEAK_STARTERS = {
-    "assisted", "contributed", "helped", "involved", "participated",
-    "responsible", "supported", "worked",
+    "assisted",
+    "contributed",
+    "helped",
+    "involved",
+    "participated",
+    "responsible",
+    "supported",
+    "worked",
 }
 
 # Filler / buzzwords to flag
 FILLER_WORDS = [
-    "leveraged", "leveraging", "leverage",
-    "passionate", "passionately",
+    "leveraged",
+    "leveraging",
+    "leverage",
+    "passionate",
+    "passionately",
     "dynamic",
-    "synergy", "synergize", "synergistic",
-    "utilize", "utilized", "utilizing", "utilization",
-    "proactive", "proactively",
-    "innovative", "innovatively",
-    "hardworking", "driven",
-    "results-driven", "result-driven",
+    "synergy",
+    "synergize",
+    "synergistic",
+    "utilize",
+    "utilized",
+    "utilizing",
+    "utilization",
+    "proactive",
+    "proactively",
+    "innovative",
+    "innovatively",
+    "hardworking",
+    "driven",
+    "results-driven",
+    "result-driven",
     "team player",
     "fast-paced",
     "go-getter",
-    "thought leader", "thought leadership",
-    "ninja", "rockstar", "guru",
+    "thought leader",
+    "thought leadership",
+    "ninja",
+    "rockstar",
+    "guru",
 ]
 
 
@@ -126,16 +203,17 @@ def check_action_verbs(bullets: list) -> dict:
         first_word = re.sub(r"[^a-zA-Z]", "", words[0]).lower()
         is_strong = first_word in STRONG_ACTION_VERBS
         is_weak = first_word in WEAK_STARTERS
-        results.append({
-            "bullet": clean[:70] + ("…" if len(clean) > 70 else ""),
-            "first_word": first_word,
-            "is_strong": is_strong,
-            "is_weak": is_weak,
-        })
+        results.append(
+            {
+                "bullet": clean[:70] + ("…" if len(clean) > 70 else ""),
+                "first_word": first_word,
+                "is_strong": is_strong,
+                "is_weak": is_weak,
+            }
+        )
     strong_count = sum(1 for r in results if r["is_strong"])
     weak_bullets = [r["bullet"] for r in results if r["is_weak"]]
-    unclear_bullets = [r["bullet"] for r in results
-                       if not r["is_strong"] and not r["is_weak"] and r["first_word"]]
+    unclear_bullets = [r["bullet"] for r in results if not r["is_strong"] and not r["is_weak"] and r["first_word"]]
     return {
         "strong": strong_count,
         "total": len(results),
@@ -219,7 +297,7 @@ def extract_cl_text(cl_data: dict) -> str:
 def main():
     parser = argparse.ArgumentParser(
         description="Tone Consistency Checker — Analyze CV and Cover Letter for tone coherence. "
-                    "No API key required. Pure local analysis."
+        "No API key required. Pure local analysis."
     )
     parser.add_argument(
         "app_dir",
@@ -344,16 +422,18 @@ def main():
                 "proactive": "(remove — show, don't tell)",
             }
             tip = replacements.get(w, f"remove or replace '{w}'")
-            tips.append(f"Replace \"{w}\" → {tip}")
+            tips.append(f'Replace "{w}" → {tip}')
 
     if passive["rate_pct"] > 15:
         warnings.append(f"High passive voice rate: {passive['rate_pct']:.0f}%")
         tips.append("Rewrite passive constructions in active voice (start with the subject who acted)")
 
     if verb_rate < 70 and verb_analysis["total"] > 0:
-        warnings.append(f"Only {verb_analysis['strong']}/{verb_analysis['total']} bullets start with strong action verbs")
+        warnings.append(
+            f"Only {verb_analysis['strong']}/{verb_analysis['total']} bullets start with strong action verbs"
+        )
         if verb_analysis["weak_bullets"]:
-            tips.append(f"Replace weak starter in: \"{verb_analysis['weak_bullets'][0][:60]}…\"")
+            tips.append(f'Replace weak starter in: "{verb_analysis["weak_bullets"][0][:60]}…"')
 
     if not is_consistent:
         warnings.append(f"Tone inconsistency across sections (σ={std_dev})")
@@ -413,7 +493,9 @@ def main():
     print()
 
     if cl_formality is not None:
-        match_label = f"✅ Good match with CV (Δ={tone_delta:.0f})" if tone_match else f"⚠️  Mismatch with CV (Δ={tone_delta:.0f})"
+        match_label = (
+            f"✅ Good match with CV (Δ={tone_delta:.0f})" if tone_match else f"⚠️  Mismatch with CV (Δ={tone_delta:.0f})"
+        )
         print(f"📨 Cover Letter:  Formality {cl_formality:>5}/100  {match_label}")
         print()
     else:
@@ -429,10 +511,10 @@ def main():
         print(f"💪 Action Verbs:  {strong_v}/{total_v} bullets start with strong verbs {verb_icon}")
         if verb_analysis["weak_bullets"]:
             for b in verb_analysis["weak_bullets"][:3]:
-                print(f"   ⚠️  Weak starter: \"{b}\"")
+                print(f'   ⚠️  Weak starter: "{b}"')
         if verb_analysis["unclear_bullets"] and rate_pct < 70:
             for b in verb_analysis["unclear_bullets"][:2]:
-                print(f"   ❓ Unclear: \"{b}\"")
+                print(f'   ❓ Unclear: "{b}"')
     print()
 
     # Passive voice
@@ -441,7 +523,7 @@ def main():
     print(f"🚫 Passive Voice: {pv['count']}/{pv['total_sentences']} sentences ({pv['rate_pct']:.0f}%) {pv_icon}")
     if pv["rate_pct"] > 15 and pv["examples"]:
         for ex in pv["examples"][:2]:
-            print(f"   ⚠️  Found: \"{ex}\"")
+            print(f'   ⚠️  Found: "{ex}"')
     print()
 
     # Filler words

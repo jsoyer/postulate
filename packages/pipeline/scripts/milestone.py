@@ -33,29 +33,35 @@ except ImportError:
 from lib.common import REPO_ROOT
 
 VALID_STAGES = [
-    "phone-screen", "technical", "panel", "final", "reference-check", "offer",
+    "phone-screen",
+    "technical",
+    "panel",
+    "final",
+    "reference-check",
+    "offer",
 ]
 
 STAGE_EMOJI = {
-    "phone-screen":    "📞",
-    "technical":       "💻",
-    "panel":           "👥",
-    "final":           "🏁",
+    "phone-screen": "📞",
+    "technical": "💻",
+    "panel": "👥",
+    "final": "🏁",
     "reference-check": "📋",
-    "offer":           "🎉",
+    "offer": "🎉",
 }
 
 OUTCOME_EMOJI = {
-    "passed":  "✅",
-    "failed":  "❌",
+    "passed": "✅",
+    "failed": "❌",
     "pending": "⏳",
-    "":        "⏳",
+    "": "⏳",
 }
 
 
 # ---------------------------------------------------------------------------
 # YAML helpers
 # ---------------------------------------------------------------------------
+
 
 def _load_milestones(app_dir: Path) -> list:
     path = app_dir / "milestones.yml"
@@ -71,7 +77,10 @@ def _save_milestones(app_dir: Path, milestones: list) -> None:
     with open(path, "w", encoding="utf-8") as f:
         yaml.dump(
             {"milestones": milestones},
-            f, default_flow_style=False, allow_unicode=True, sort_keys=False,
+            f,
+            default_flow_style=False,
+            allow_unicode=True,
+            sort_keys=False,
         )
 
 
@@ -87,10 +96,11 @@ def _load_meta(app_dir: Path) -> dict:
 # Display helpers
 # ---------------------------------------------------------------------------
 
+
 def _display_timeline(app_dir: Path) -> None:
     milestones = _load_milestones(app_dir)
     meta = _load_meta(app_dir)
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "")
 
     print(f"\n📅 Interview Timeline — {company}")
@@ -103,11 +113,11 @@ def _display_timeline(app_dir: Path) -> None:
         print(f"   Add one: make milestone NAME={app_dir.name} STAGE=phone-screen")
     else:
         for m in milestones:
-            stage   = m.get("stage", "?")
-            dt      = m.get("date", "?")
+            stage = m.get("stage", "?")
+            dt = m.get("date", "?")
             outcome = m.get("outcome", "")
             interviewer = m.get("interviewer", "")
-            notes   = m.get("notes", "")
+            notes = m.get("notes", "")
 
             s_emoji = STAGE_EMOJI.get(stage, "📌")
             o_emoji = OUTCOME_EMOJI.get(outcome, "⏳")
@@ -120,8 +130,10 @@ def _display_timeline(app_dir: Path) -> None:
             if notes:
                 # Wrap notes
                 import textwrap
-                wrapped = textwrap.fill(notes, width=55, initial_indent="      Notes:   ",
-                                        subsequent_indent="               ")
+
+                wrapped = textwrap.fill(
+                    notes, width=55, initial_indent="      Notes:   ", subsequent_indent="               "
+                )
                 print(wrapped)
     print()
 
@@ -151,11 +163,10 @@ def _display_all() -> None:
     print("─" * 85)
 
     for app_dir, milestones, meta in found:
-        company  = meta.get("company", app_dir.name)
-        stages   = [STAGE_EMOJI.get(m.get("stage", ""), "📌") + " " + m.get("stage", "?")
-                    for m in milestones]
-        latest   = milestones[-1] if milestones else {}
-        outcome  = OUTCOME_EMOJI.get(latest.get("outcome", ""), "⏳")
+        company = meta.get("company", app_dir.name)
+        stages = [STAGE_EMOJI.get(m.get("stage", ""), "📌") + " " + m.get("stage", "?") for m in milestones]
+        latest = milestones[-1] if milestones else {}
+        outcome = OUTCOME_EMOJI.get(latest.get("outcome", ""), "⏳")
         latest_stage = latest.get("stage", "")
         print(f"  {app_dir.name:<35}  {' → '.join(s.split()[1] for s in stages):<40}  {outcome} {latest_stage}")
     print()
@@ -165,27 +176,16 @@ def _display_all() -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Log and display interview milestones"
-    )
-    parser.add_argument(
-        "app_dir", nargs="?", default=None,
-        help="Application directory (omit to list all)"
-    )
-    parser.add_argument(
-        "--stage", choices=VALID_STAGES,
-        help=f"Stage to add: {' | '.join(VALID_STAGES)}"
-    )
-    parser.add_argument(
-        "--date", default=None,
-        help="Date (YYYY-MM-DD, default: today)"
-    )
+    parser = argparse.ArgumentParser(description="Log and display interview milestones")
+    parser.add_argument("app_dir", nargs="?", default=None, help="Application directory (omit to list all)")
+    parser.add_argument("--stage", choices=VALID_STAGES, help=f"Stage to add: {' | '.join(VALID_STAGES)}")
+    parser.add_argument("--date", default=None, help="Date (YYYY-MM-DD, default: today)")
     parser.add_argument("--interviewer", default="", help="Interviewer name(s) and title")
-    parser.add_argument("--notes", default="",    help="Notes about the interview")
+    parser.add_argument("--notes", default="", help="Notes about the interview")
     parser.add_argument(
-        "--outcome", choices=["passed", "failed", "pending"], default="pending",
-        help="Outcome (default: pending)"
+        "--outcome", choices=["passed", "failed", "pending"], default="pending", help="Outcome (default: pending)"
     )
     args = parser.parse_args()
 
@@ -207,8 +207,8 @@ def main():
     # Add milestone
     milestone_date = args.date or date.today().isoformat()
     entry = {
-        "stage":   args.stage,
-        "date":    milestone_date,
+        "stage": args.stage,
+        "date": milestone_date,
         "outcome": args.outcome,
     }
     if args.interviewer:
@@ -232,8 +232,8 @@ def main():
     # Show updated timeline
     _display_timeline(app_dir)
 
-    meta     = _load_meta(app_dir)
-    company  = meta.get("company", app_dir.name)
+    meta = _load_meta(app_dir)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "")
 
     # Suggest next steps

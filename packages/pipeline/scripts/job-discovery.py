@@ -55,6 +55,7 @@ DIVIDER = "-" * 65
 # Config loading
 # ---------------------------------------------------------------------------
 
+
 def load_config():
     """Load data/job-discovery.yml."""
     config_path = REPO_ROOT / "data" / "job-discovery.yml"
@@ -68,6 +69,7 @@ def load_config():
 # ---------------------------------------------------------------------------
 # Deduplication
 # ---------------------------------------------------------------------------
+
 
 def load_seen(config):
     """Load the set of already-seen job IDs from the seen_jobs_file."""
@@ -105,6 +107,7 @@ def reset_seen(config):
 # Keyword / location matching
 # ---------------------------------------------------------------------------
 
+
 def matches_keywords(title, keywords):
     """Return True if title contains any of the configured keywords."""
     title_lower = title.lower()
@@ -122,6 +125,7 @@ def matches_location(location, locations):
 # ---------------------------------------------------------------------------
 # Source: Greenhouse
 # ---------------------------------------------------------------------------
+
 
 def fetch_greenhouse(company, config):
     """
@@ -152,14 +156,16 @@ def fetch_greenhouse(company, config):
         if locations and not matches_location(location, locations):
             continue
 
-        results.append({
-            "company": company["name"],
-            "title": title,
-            "location": location,
-            "url": job_url,
-            "source": "greenhouse",
-            "id": f"greenhouse-{greenhouse_id}-{job_id}",
-        })
+        results.append(
+            {
+                "company": company["name"],
+                "title": title,
+                "location": location,
+                "url": job_url,
+                "source": "greenhouse",
+                "id": f"greenhouse-{greenhouse_id}-{job_id}",
+            }
+        )
 
     return results
 
@@ -167,6 +173,7 @@ def fetch_greenhouse(company, config):
 # ---------------------------------------------------------------------------
 # Source: Lever
 # ---------------------------------------------------------------------------
+
 
 def fetch_lever(company, config):
     """
@@ -197,14 +204,16 @@ def fetch_lever(company, config):
         if locations and not matches_location(location, locations):
             continue
 
-        results.append({
-            "company": company["name"],
-            "title": title,
-            "location": location,
-            "url": job_url,
-            "source": "lever",
-            "id": f"lever-{lever_id}-{job_id}",
-        })
+        results.append(
+            {
+                "company": company["name"],
+                "title": title,
+                "location": location,
+                "url": job_url,
+                "source": "lever",
+                "id": f"lever-{lever_id}-{job_id}",
+            }
+        )
 
     return results
 
@@ -212,6 +221,7 @@ def fetch_lever(company, config):
 # ---------------------------------------------------------------------------
 # Source: Ashby
 # ---------------------------------------------------------------------------
+
 
 def fetch_ashby(company, config):
     """
@@ -254,14 +264,16 @@ def fetch_ashby(company, config):
         if locations and not matches_location(location, locations):
             continue
 
-        results.append({
-            "company": company["name"],
-            "title": title,
-            "location": location,
-            "url": job_url,
-            "source": "ashby",
-            "id": f"ashby-{ashby_id}-{job_id}",
-        })
+        results.append(
+            {
+                "company": company["name"],
+                "title": title,
+                "location": location,
+                "url": job_url,
+                "source": "ashby",
+                "id": f"ashby-{ashby_id}-{job_id}",
+            }
+        )
 
     return results
 
@@ -269,6 +281,7 @@ def fetch_ashby(company, config):
 # ---------------------------------------------------------------------------
 # Source: Indeed (disabled — fragile)
 # ---------------------------------------------------------------------------
+
 
 def fetch_indeed(config):
     """
@@ -282,6 +295,7 @@ def fetch_indeed(config):
 # ---------------------------------------------------------------------------
 # Source: SerpAPI
 # ---------------------------------------------------------------------------
+
 
 def fetch_serpapi(config):
     """
@@ -336,14 +350,16 @@ def fetch_serpapi(config):
             if not matches_keywords(title, keywords):
                 continue
 
-            results.append({
-                "company": company_name,
-                "title": title,
-                "location": location,
-                "url": job_url,
-                "source": "serpapi",
-                "id": f"serpapi-{job_id}" if job_id else f"serpapi-{hash(job_url)}",
-            })
+            results.append(
+                {
+                    "company": company_name,
+                    "title": title,
+                    "location": location,
+                    "url": job_url,
+                    "source": "serpapi",
+                    "id": f"serpapi-{job_id}" if job_id else f"serpapi-{hash(job_url)}",
+                }
+            )
 
     return results
 
@@ -351,6 +367,7 @@ def fetch_serpapi(config):
 # ---------------------------------------------------------------------------
 # Discovery orchestration
 # ---------------------------------------------------------------------------
+
 
 def discover_jobs(config, source_filter="all", quiet=False):
     """
@@ -445,6 +462,7 @@ def discover_jobs(config, source_filter="all", quiet=False):
 # Output helpers
 # ---------------------------------------------------------------------------
 
+
 def print_job(index, job):
     """Print a single job entry in human-readable format."""
     print(f"\n  {index}. {job['company']} -- {job['title']}")
@@ -463,6 +481,7 @@ def print_apply_hint(index, job):
 # ---------------------------------------------------------------------------
 # Auto-apply
 # ---------------------------------------------------------------------------
+
 
 def auto_apply(jobs):
     """
@@ -485,7 +504,8 @@ def auto_apply(jobs):
         url = job["url"]
         print(f"\n  Applying: {company} -- {title}")
         cmd = [
-            "make", "apply",
+            "make",
+            "apply",
             f"COMPANY={company}",
             f"POSITION={title}",
             f"URL={url}",
@@ -525,6 +545,7 @@ def auto_apply(jobs):
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main():
     parser = argparse.ArgumentParser(

@@ -38,6 +38,7 @@ REMOVE_TAGS = ["script", "style", "nav", "footer", "header", "aside", "form", "n
 # Fetching
 # ---------------------------------------------------------------------------
 
+
 def fetch_via_jina(url):
     """Fetch via Jina Reader API — handles JS-rendered SPAs. Returns plain text."""
     jina_url = f"https://r.jina.ai/{url}"
@@ -70,6 +71,7 @@ def fetch_url(url):
 # Text extraction
 # ---------------------------------------------------------------------------
 
+
 def extract_text(html):
     """Extract clean text from HTML."""
     soup = BeautifulSoup(html, "html.parser")
@@ -80,8 +82,15 @@ def extract_text(html):
 
     # Try to find job description container
     content = None
-    for selector in ["article", "main", "[class*=job]", "[class*=description]",
-                     "[class*=posting]", "[id*=job]", "[role=main]"]:
+    for selector in [
+        "article",
+        "main",
+        "[class*=job]",
+        "[class*=description]",
+        "[class*=posting]",
+        "[id*=job]",
+        "[role=main]",
+    ]:
         content = soup.select_one(selector)
         if content:
             break
@@ -97,6 +106,7 @@ def extract_text(html):
 # ---------------------------------------------------------------------------
 # Company / position extraction (for --extract mode)
 # ---------------------------------------------------------------------------
+
 
 def _extract_from_url(url):
     """Extract company from well-known ATS URL patterns. Returns (company, '') or ('', '')."""
@@ -143,8 +153,9 @@ def _extract_from_html(html):
 
     # og:title or <title> → parse "Position at Company" / "Company — Position" / "Company | Position"
     og_title = soup.find("meta", property="og:title")
-    title_text = (og_title["content"] if og_title and og_title.get("content")
-                  else soup.title.string if soup.title else "")
+    title_text = (
+        og_title["content"] if og_title and og_title.get("content") else soup.title.string if soup.title else ""
+    )
     title_text = (title_text or "").strip()
 
     if title_text:
@@ -199,6 +210,7 @@ def extract_job_info(url, text, html):
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main():
     parser = argparse.ArgumentParser(

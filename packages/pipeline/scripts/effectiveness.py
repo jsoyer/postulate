@@ -43,7 +43,9 @@ def load_applications():
             try:
                 result = subprocess.run(
                     ["python3", str(WORKDIR / "scripts" / "ats-score.py"), str(d), "--json"],
-                    capture_output=True, text=True, timeout=10
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
                 )
                 if result.returncode in (0, 1):
                     score_data = json.loads(result.stdout)
@@ -81,8 +83,7 @@ def main():
     if with_outcome > 0:
         print("📋 Outcome Breakdown:")
         order = ["interview", "offer", "applied", "rejected", "ghosted", "unknown"]
-        emojis = {"interview": "🎯", "offer": "🏆", "applied": "📬",
-                  "rejected": "❌", "ghosted": "👻", "unknown": "❓"}
+        emojis = {"interview": "🎯", "offer": "🏆", "applied": "📬", "rejected": "❌", "ghosted": "👻", "unknown": "❓"}
         for outcome in order:
             count = outcomes.get(outcome, 0)
             if count > 0:
@@ -112,10 +113,8 @@ def main():
         print()
 
         # Correlation
-        interviewed = [a["ats_score"] for a in scored
-                       if a.get("outcome") in ("interview", "offer")]
-        not_interviewed = [a["ats_score"] for a in scored
-                           if a.get("outcome") in ("rejected", "ghosted")]
+        interviewed = [a["ats_score"] for a in scored if a.get("outcome") in ("interview", "offer")]
+        not_interviewed = [a["ats_score"] for a in scored if a.get("outcome") in ("rejected", "ghosted")]
 
         if interviewed and not_interviewed:
             avg_good = sum(interviewed) / len(interviewed)

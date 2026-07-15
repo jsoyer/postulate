@@ -55,7 +55,7 @@ class ThemeModal(ModalScreen[str]):
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         item_id = event.item.id or ""
         if item_id.startswith("theme-"):
-            self.dismiss(item_id[len("theme-"):])
+            self.dismiss(item_id[len("theme-") :])
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-cancel":

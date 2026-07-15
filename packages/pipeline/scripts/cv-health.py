@@ -29,25 +29,83 @@ except ImportError:
 
 from lib.common import REPO_ROOT, STOP_WORDS
 
-STRONG_VERBS = frozenset({
-    "accelerated", "achieved", "built", "championed", "closed", "coached",
-    "delivered", "designed", "developed", "directed", "drove", "established",
-    "exceeded", "expanded", "generated", "grew", "hired", "implemented",
-    "increased", "launched", "led", "managed", "mentored", "negotiated",
-    "optimized", "orchestrated", "oversaw", "partnered", "pioneered",
-    "recruited", "reduced", "scaled", "secured", "spearheaded", "standardized",
-    "streamlined", "transformed", "won",
-    # Past tense variants of common strong verbs
-    "directing", "scaling", "driving", "leading", "managing", "building",
-    "delivering", "expanding", "growing", "establishing", "partnering",
-    "overseeing", "orchestrating",
-})
+STRONG_VERBS = frozenset(
+    {
+        "accelerated",
+        "achieved",
+        "built",
+        "championed",
+        "closed",
+        "coached",
+        "delivered",
+        "designed",
+        "developed",
+        "directed",
+        "drove",
+        "established",
+        "exceeded",
+        "expanded",
+        "generated",
+        "grew",
+        "hired",
+        "implemented",
+        "increased",
+        "launched",
+        "led",
+        "managed",
+        "mentored",
+        "negotiated",
+        "optimized",
+        "orchestrated",
+        "oversaw",
+        "partnered",
+        "pioneered",
+        "recruited",
+        "reduced",
+        "scaled",
+        "secured",
+        "spearheaded",
+        "standardized",
+        "streamlined",
+        "transformed",
+        "won",
+        # Past tense variants of common strong verbs
+        "directing",
+        "scaling",
+        "driving",
+        "leading",
+        "managing",
+        "building",
+        "delivering",
+        "expanding",
+        "growing",
+        "establishing",
+        "partnering",
+        "overseeing",
+        "orchestrating",
+    }
+)
 
-WEAK_VERBS = frozenset({
-    "helped", "assisted", "worked", "supported", "contributed",
-    "participated", "involved", "responsible", "handled", "did", "made",
-    "was", "were", "utilized", "leveraged", "used",
-})
+WEAK_VERBS = frozenset(
+    {
+        "helped",
+        "assisted",
+        "worked",
+        "supported",
+        "contributed",
+        "participated",
+        "involved",
+        "responsible",
+        "handled",
+        "did",
+        "made",
+        "was",
+        "were",
+        "utilized",
+        "leveraged",
+        "used",
+    }
+)
 
 # Number / metric patterns
 METRIC_RE = re.compile(
@@ -74,7 +132,7 @@ def _flatten_items(items) -> list[str]:
         if isinstance(item, str):
             result.append(_strip_bold(item))
         elif isinstance(item, dict):
-            text  = _strip_bold(item.get("text", ""))
+            text = _strip_bold(item.get("text", ""))
             label = _strip_bold(item.get("label", ""))
             if text:
                 result.append(f"{label}: {text}" if label else text)
@@ -84,6 +142,7 @@ def _flatten_items(items) -> list[str]:
 # ---------------------------------------------------------------------------
 # Scoring functions
 # ---------------------------------------------------------------------------
+
 
 def _check_quantification(bullets: list) -> dict:
     """% of bullets that contain at least one metric."""
@@ -97,7 +156,7 @@ def _check_quantification(bullets: list) -> dict:
     score = min(100, int(rate / 70 * 100))
     return {
         "score": score,
-        "rate":  round(rate, 1),
+        "rate": round(rate, 1),
         "total": len(bullets),
         "with_metrics": with_metrics,
         "detail": f"{with_metrics}/{len(bullets)} bullets contain numbers/metrics ({rate:.0f}%)",
@@ -129,14 +188,14 @@ def _check_action_verbs(bullets: list) -> dict:
         return {"score": 0, "strong": 0, "weak": 0, "neutral": 0}
 
     strong_pct = strong / total * 100
-    weak_pct   = weak   / total * 100
+    weak_pct = weak / total * 100
     score = max(0, min(100, int(strong_pct * 1.2 - weak_pct * 1.5)))
 
     return {
-        "score":        score,
-        "strong":       strong,
-        "weak":         weak,
-        "neutral":      neutral,
+        "score": score,
+        "strong": strong,
+        "weak": weak,
+        "neutral": neutral,
         "weak_examples": list(set(weak_examples))[:5],
         "detail": (
             f"{strong}/{total} strong verbs ({strong_pct:.0f}%), "
@@ -166,14 +225,11 @@ def _check_bullet_length(bullets: list) -> dict:
     score = max(0, int(ideal_pct - too_long * 5))
 
     return {
-        "score":     min(100, score),
+        "score": min(100, score),
         "too_short": too_short,
-        "ideal":     ideal,
-        "too_long":  too_long,
-        "detail": (
-            f"{ideal}/{total} ideal length (6-25 words), "
-            f"{too_short} too short, {too_long} too long"
-        ),
+        "ideal": ideal,
+        "too_long": too_long,
+        "detail": (f"{ideal}/{total} ideal length (6-25 words), {too_short} too short, {too_long} too long"),
     }
 
 
@@ -200,10 +256,10 @@ def _check_profile(profile: str) -> dict:
 
     status = "ideal" if 40 <= word_count <= 80 else ("too short" if word_count < 40 else "too long")
     return {
-        "score":      min(100, score),
-        "words":      word_count,
+        "score": min(100, score),
+        "words": word_count,
         "has_metric": has_metric,
-        "detail":     f"{word_count} words ({status}), {'has' if has_metric else 'no'} metrics",
+        "detail": f"{word_count} words ({status}), {'has' if has_metric else 'no'} metrics",
     }
 
 
@@ -218,12 +274,13 @@ def _check_repetition(bullets: list, profile: str) -> dict:
     score = max(0, 100 - len(overused) * 15)
 
     return {
-        "score":    score,
+        "score": score,
         "overused": overused[:5],
-        "top_10":   counts,
+        "top_10": counts,
         "detail": (
             f"{len(overused)} overused words: {', '.join(f'{w}×{n}' for w, n in overused[:5])}"
-            if overused else "Good word variety"
+            if overused
+            else "Good word variety"
         ),
     }
 
@@ -231,28 +288,27 @@ def _check_repetition(bullets: list, profile: str) -> dict:
 def _check_completeness(data: dict) -> dict:
     """Required sections present and non-empty."""
     required = [
-        ("personal",       "Personal info"),
-        ("profile",        "Profile/summary"),
-        ("skills",         "Skills"),
-        ("key_wins",       "Key achievements"),
-        ("experience",     "Experience"),
-        ("education",      "Education"),
+        ("personal", "Personal info"),
+        ("profile", "Profile/summary"),
+        ("skills", "Skills"),
+        ("key_wins", "Key achievements"),
+        ("experience", "Experience"),
+        ("education", "Education"),
         ("certifications", "Certifications"),
-        ("languages",      "Languages"),
+        ("languages", "Languages"),
     ]
-    present   = [(label, bool(data.get(key))) for key, label in required]
+    present = [(label, bool(data.get(key))) for key, label in required]
     n_present = sum(1 for _, ok in present if ok)
-    score     = int(n_present / len(required) * 100)
-    missing   = [label for label, ok in present if not ok]
+    score = int(n_present / len(required) * 100)
+    missing = [label for label, ok in present if not ok]
 
     return {
-        "score":   score,
+        "score": score,
         "present": n_present,
-        "total":   len(required),
+        "total": len(required),
         "missing": missing,
-        "detail":  (
-            f"{n_present}/{len(required)} sections present"
-            + (f" — missing: {', '.join(missing)}" if missing else "")
+        "detail": (
+            f"{n_present}/{len(required)} sections present" + (f" — missing: {', '.join(missing)}" if missing else "")
         ),
     }
 
@@ -285,6 +341,7 @@ def _check_duplicates(bullets: list) -> dict:
 # Main audit function
 # ---------------------------------------------------------------------------
 
+
 def audit(data: dict) -> dict:
     # Collect all experience bullets
     bullets = []
@@ -293,50 +350,53 @@ def audit(data: dict) -> dict:
 
     profile = _strip_bold(data.get("profile", ""))
 
-    quant   = _check_quantification(bullets)
-    verbs   = _check_action_verbs(bullets)
+    quant = _check_quantification(bullets)
+    verbs = _check_action_verbs(bullets)
     lengths = _check_bullet_length(bullets)
-    prof    = _check_profile(profile)
-    rept    = _check_repetition(bullets, profile)
-    compl   = _check_completeness(data)
-    dupes   = _check_duplicates(bullets)
+    prof = _check_profile(profile)
+    rept = _check_repetition(bullets, profile)
+    compl = _check_completeness(data)
+    dupes = _check_duplicates(bullets)
 
     # Weighted overall score
     weights = {
-        "quantification": (quant["score"],   0.20),
-        "action_verbs":   (verbs["score"],   0.20),
-        "bullet_length":  (lengths["score"], 0.15),
-        "profile":        (prof["score"],    0.15),
-        "repetition":     (rept["score"],    0.10),
-        "completeness":   (compl["score"],   0.10),
-        "duplicates":     (dupes["score"],   0.10),
+        "quantification": (quant["score"], 0.20),
+        "action_verbs": (verbs["score"], 0.20),
+        "bullet_length": (lengths["score"], 0.15),
+        "profile": (prof["score"], 0.15),
+        "repetition": (rept["score"], 0.10),
+        "completeness": (compl["score"], 0.10),
+        "duplicates": (dupes["score"], 0.10),
     }
     overall = int(sum(s * w for s, w in weights.values()))
 
     return {
         "overall": overall,
-        "grade":   (
-            "🟢 Excellent" if overall >= 80 else
-            "🟡 Good"      if overall >= 65 else
-            "🟠 Fair"      if overall >= 50 else
-            "🔴 Needs work"
+        "grade": (
+            "🟢 Excellent"
+            if overall >= 80
+            else "🟡 Good"
+            if overall >= 65
+            else "🟠 Fair"
+            if overall >= 50
+            else "🔴 Needs work"
         ),
-        "bullet_count":    len(bullets),
-        "quantification":  quant,
-        "action_verbs":    verbs,
-        "bullet_length":   lengths,
-        "profile":         prof,
-        "repetition":      rept,
-        "duplicates":      dupes,
-        "completeness":    compl,
+        "bullet_count": len(bullets),
+        "quantification": quant,
+        "action_verbs": verbs,
+        "bullet_length": lengths,
+        "profile": prof,
+        "repetition": rept,
+        "duplicates": dupes,
+        "completeness": compl,
     }
 
 
 def main():
     parser = argparse.ArgumentParser(description="Advanced CV health check")
-    parser.add_argument("-d", "--data",   default="data/cv.yml", help="YAML source file")
-    parser.add_argument("--name",         default="",            help="Check cv-tailored.yml for app")
-    parser.add_argument("--json",         action="store_true",   help="Output JSON")
+    parser.add_argument("-d", "--data", default="data/cv.yml", help="YAML source file")
+    parser.add_argument("--name", default="", help="Check cv-tailored.yml for app")
+    parser.add_argument("--json", action="store_true", help="Output JSON")
     args = parser.parse_args()
 
     if args.name:
@@ -366,12 +426,12 @@ def main():
     print(f"   Analysed {result['bullet_count']} experience bullets\n")
 
     metrics = [
-        ("quantification", "📊", "Quantification",  25),
-        ("action_verbs",   "🚀", "Action verbs",    20),
-        ("bullet_length",  "📏", "Bullet length",   15),
-        ("profile",        "📝", "Profile",         15),
-        ("repetition",     "🔁", "Word variety",    15),
-        ("completeness",   "✅", "Completeness",    10),
+        ("quantification", "📊", "Quantification", 25),
+        ("action_verbs", "🚀", "Action verbs", 20),
+        ("bullet_length", "📏", "Bullet length", 15),
+        ("profile", "📝", "Profile", 15),
+        ("repetition", "🔁", "Word variety", 15),
+        ("completeness", "✅", "Completeness", 10),
     ]
     print(f"   {'Metric':<22}  {'Score':>7}  {'Weight':>7}  Detail")
     print("   " + "─" * 70)

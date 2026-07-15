@@ -49,16 +49,13 @@ def _extract_cv_highlights(cv_data: dict) -> str:
 
     for exp in cv_data.get("experience", [])[:2]:
         if isinstance(exp, dict):
-            parts.append(
-                f"Role: {exp.get('position','')} at {exp.get('company','')} "
-                f"({exp.get('dates','')})"
-            )
+            parts.append(f"Role: {exp.get('position', '')} at {exp.get('company', '')} ({exp.get('dates', '')})")
 
     wins = cv_data.get("key_wins", [])
     win_lines = []
     for w in wins[:4]:
         if isinstance(w, dict):
-            win_lines.append(f"• {_strip_bold(w.get('title',''))}: {_strip_bold(w.get('text',''))}")
+            win_lines.append(f"• {_strip_bold(w.get('title', ''))}: {_strip_bold(w.get('text', ''))}")
     if win_lines:
         parts.append("Key wins:\n" + "\n".join(win_lines))
 
@@ -189,9 +186,9 @@ def main():
         with open(app_dir / "meta.yml", encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "the role")
-    stage    = _detect_current_stage(app_dir)
+    stage = _detect_current_stage(app_dir)
 
     cv_src = app_dir / "cv-tailored.yml"
     if not cv_src.exists():
@@ -201,8 +198,8 @@ def main():
         with open(cv_src, encoding="utf-8") as f:
             cv_data = yaml.safe_load(f) or {}
 
-    cv_highlights   = _extract_cv_highlights(cv_data)
-    job_excerpt     = _read(app_dir / "job.txt", 2000) or "(no job.txt — analysis will be generic)"
+    cv_highlights = _extract_cv_highlights(cv_data)
+    job_excerpt = _read(app_dir / "job.txt", 2000) or "(no job.txt — analysis will be generic)"
     research_excerpt = _read(app_dir / "company-research.md", 1000) or "(no company-research.md)"
 
     print(f"🔍 Analysing blind spots — {company} ({position})")
@@ -224,6 +221,7 @@ def main():
     raw = call_ai(prompt, args.ai, api_key, max_tokens=3000)
 
     from datetime import date
+
     today = date.today().isoformat()
 
     lines = [

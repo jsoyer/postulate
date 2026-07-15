@@ -62,9 +62,7 @@ def analyze_pdf_pages(pdf_path):
     import subprocess
 
     try:
-        result = subprocess.run(
-            ["pdftotext", str(pdf_path), "-"], capture_output=True, text=True
-        )
+        result = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
         if result.returncode == 0:
             text = result.stdout
             pages = text.count("\f") + 1

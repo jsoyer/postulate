@@ -33,11 +33,11 @@ class TestApplyBoardParseDate:
     def test_returns_datetime_or_none_for_date_string(self):
         # Due to s[:len(fmt)] slicing behavior, may return None
         result = applyboard._parse_date("2024-03-15")
-        assert result is None or hasattr(result, 'year')
+        assert result is None or hasattr(result, "year")
 
     def test_returns_datetime_or_none_for_year_month(self):
         result = applyboard._parse_date("2024-03")
-        assert result is None or hasattr(result, 'year')
+        assert result is None or hasattr(result, "year")
 
 
 class TestApplyBoardDaysAgo:
@@ -165,7 +165,7 @@ class TestDeadlineAlertParseDate:
     def test_returns_datetime_or_none_for_date_string(self):
         # Due to s[:len(fmt)] slicing behavior, may return None
         result = deadlinealert._parse_date("2024-06-15")
-        assert result is None or hasattr(result, 'year')
+        assert result is None or hasattr(result, "year")
 
 
 class TestDeadlineAlertAppCreatedDate:
@@ -173,7 +173,7 @@ class TestDeadlineAlertAppCreatedDate:
         meta = {"created": "2024-01-15"}
         # Due to _parse_date bug, may return None
         result = deadlinealert._app_created_date(tmp_path / "2024-01-acme", meta)
-        assert result is None or hasattr(result, 'year')
+        assert result is None or hasattr(result, "year")
 
     def test_returns_none_for_unrecognized_dirname(self, tmp_path):
         app_dir = tmp_path / "unknown-name"
@@ -183,7 +183,7 @@ class TestDeadlineAlertAppCreatedDate:
     def test_returns_result_or_none_for_valid_dirname(self, tmp_path):
         app_dir = tmp_path / "2024-03-acme"
         result = deadlinealert._app_created_date(app_dir, {})
-        assert result is None or hasattr(result, 'year')
+        assert result is None or hasattr(result, "year")
 
 
 class TestDeadlineAlertSendSlack:
@@ -322,9 +322,27 @@ class TestDigestPipelineFunnel:
     def _make_apps(self):
         now = datetime.now()
         return [
-            {"name": "app1", "company": "A", "outcome": "applied", "created": now - timedelta(days=5), "meta_mtime": None},
-            {"name": "app2", "company": "B", "outcome": "interview", "created": now - timedelta(days=10), "meta_mtime": None},
-            {"name": "app3", "company": "C", "outcome": "rejected", "created": now - timedelta(days=20), "meta_mtime": None},
+            {
+                "name": "app1",
+                "company": "A",
+                "outcome": "applied",
+                "created": now - timedelta(days=5),
+                "meta_mtime": None,
+            },
+            {
+                "name": "app2",
+                "company": "B",
+                "outcome": "interview",
+                "created": now - timedelta(days=10),
+                "meta_mtime": None,
+            },
+            {
+                "name": "app3",
+                "company": "C",
+                "outcome": "rejected",
+                "created": now - timedelta(days=20),
+                "meta_mtime": None,
+            },
             {"name": "app4", "company": "D", "outcome": "", "created": now - timedelta(days=1), "meta_mtime": None},
         ]
 
@@ -347,8 +365,20 @@ class TestDigestRecentActivity:
     def test_recent_apps_included(self):
         now = datetime.now()
         apps = [
-            {"name": "recent", "company": "A", "outcome": "applied", "created": now - timedelta(days=2), "meta_mtime": None},
-            {"name": "old", "company": "B", "outcome": "applied", "created": now - timedelta(days=30), "meta_mtime": None},
+            {
+                "name": "recent",
+                "company": "A",
+                "outcome": "applied",
+                "created": now - timedelta(days=2),
+                "meta_mtime": None,
+            },
+            {
+                "name": "old",
+                "company": "B",
+                "outcome": "applied",
+                "created": now - timedelta(days=30),
+                "meta_mtime": None,
+            },
         ]
         section, names = digest_mod._recent_activity(apps, days=7)
         assert "recent" in names
@@ -373,7 +403,13 @@ class TestDigestStaleApplications:
     def test_terminal_outcome_not_stale(self):
         now = datetime.now()
         apps = [
-            {"name": "done", "company": "A", "outcome": "rejected", "created": now - timedelta(days=30), "meta_mtime": None},
+            {
+                "name": "done",
+                "company": "A",
+                "outcome": "rejected",
+                "created": now - timedelta(days=30),
+                "meta_mtime": None,
+            },
         ]
         section, names = digest_mod._stale_applications(apps, days_threshold=14)
         assert "done" not in names

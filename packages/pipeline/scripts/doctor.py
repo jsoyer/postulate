@@ -14,6 +14,7 @@ from lib.common import REPO_ROOT, find_xelatex, load_env
 # OS / distro detection (used for per-tool install hints)
 # ---------------------------------------------------------------------------
 
+
 def _detect_os() -> str:
     """Return a normalised OS tag: 'macos' | 'debian' | 'fedora' | 'arch' | 'windows' | 'unknown'."""
     system = platform.system()
@@ -42,73 +43,73 @@ OS_TAG = _detect_os()
 # Install hint per (tool_name, os_tag) — shown inline next to ❌ findings
 _INSTALL_HINTS: dict[str, dict[str, str]] = {
     "xelatex": {
-        "macos":   "brew install --cask mactex-no-gui  (or: make install-deps)",
-        "debian":  "sudo apt install texlive-xetex texlive-fonts-extra  (or: make install-deps)",
-        "fedora":  "sudo dnf install texlive-xetex  (or: make install-deps)",
-        "arch":    "sudo pacman -S texlive-xetex  (or: make install-deps)",
+        "macos": "brew install --cask mactex-no-gui  (or: make install-deps)",
+        "debian": "sudo apt install texlive-xetex texlive-fonts-extra  (or: make install-deps)",
+        "fedora": "sudo dnf install texlive-xetex  (or: make install-deps)",
+        "arch": "sudo pacman -S texlive-xetex  (or: make install-deps)",
         "windows": "scoop install texlive  (or: make install-deps)",
     },
     "uv": {
-        "macos":   "brew install uv",
-        "debian":  "curl -LsSf https://astral.sh/uv/install.sh | sh",
-        "fedora":  "curl -LsSf https://astral.sh/uv/install.sh | sh",
-        "arch":    "curl -LsSf https://astral.sh/uv/install.sh | sh",
+        "macos": "brew install uv",
+        "debian": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+        "fedora": "curl -LsSf https://astral.sh/uv/install.sh | sh",
+        "arch": "curl -LsSf https://astral.sh/uv/install.sh | sh",
         "windows": "scoop install uv",
     },
     "gh": {
-        "macos":   "brew install gh",
-        "debian":  "sudo apt install gh  (or see: https://cli.github.com)",
-        "fedora":  "sudo dnf install gh",
-        "arch":    "sudo pacman -S github-cli",
+        "macos": "brew install gh",
+        "debian": "sudo apt install gh  (or see: https://cli.github.com)",
+        "fedora": "sudo dnf install gh",
+        "arch": "sudo pacman -S github-cli",
         "windows": "scoop install gh",
     },
     "python3": {
-        "macos":   "brew install python",
-        "debian":  "sudo apt install python3",
-        "fedora":  "sudo dnf install python3",
-        "arch":    "sudo pacman -S python",
+        "macos": "brew install python",
+        "debian": "sudo apt install python3",
+        "fedora": "sudo dnf install python3",
+        "arch": "sudo pacman -S python",
         "windows": "scoop install python",
     },
     "pdfinfo": {
-        "macos":   "brew install poppler",
-        "debian":  "sudo apt install poppler-utils",
-        "fedora":  "sudo dnf install poppler-utils",
-        "arch":    "sudo pacman -S poppler",
+        "macos": "brew install poppler",
+        "debian": "sudo apt install poppler-utils",
+        "fedora": "sudo dnf install poppler-utils",
+        "arch": "sudo pacman -S poppler",
         "windows": "scoop install poppler",
     },
     "convert": {
-        "macos":   "brew install imagemagick",
-        "debian":  "sudo apt install imagemagick",
-        "fedora":  "sudo dnf install ImageMagick",
-        "arch":    "sudo pacman -S imagemagick",
+        "macos": "brew install imagemagick",
+        "debian": "sudo apt install imagemagick",
+        "fedora": "sudo dnf install ImageMagick",
+        "arch": "sudo pacman -S imagemagick",
         "windows": "scoop install imagemagick",
     },
     "aspell": {
-        "macos":   "brew install aspell",
-        "debian":  "sudo apt install aspell aspell-en aspell-fr",
-        "fedora":  "sudo dnf install aspell aspell-en",
-        "arch":    "sudo pacman -S aspell aspell-en",
+        "macos": "brew install aspell",
+        "debian": "sudo apt install aspell aspell-en aspell-fr",
+        "fedora": "sudo dnf install aspell aspell-en",
+        "arch": "sudo pacman -S aspell aspell-en",
         "windows": "scoop install aspell",
     },
     "chktex": {
-        "macos":   "brew install chktex",
-        "debian":  "sudo apt install chktex",
-        "fedora":  "sudo dnf install texlive-chktex",
-        "arch":    "sudo pacman -S texlive-binextra",
+        "macos": "brew install chktex",
+        "debian": "sudo apt install chktex",
+        "fedora": "sudo dnf install texlive-chktex",
+        "arch": "sudo pacman -S texlive-binextra",
         "windows": "tlmgr install chktex",
     },
     "pandoc": {
-        "macos":   "brew install pandoc",
-        "debian":  "sudo apt install pandoc",
-        "fedora":  "sudo dnf install pandoc",
-        "arch":    "sudo pacman -S pandoc",
+        "macos": "brew install pandoc",
+        "debian": "sudo apt install pandoc",
+        "fedora": "sudo dnf install pandoc",
+        "arch": "sudo pacman -S pandoc",
         "windows": "scoop install pandoc",
     },
     "git": {
-        "macos":   "brew install git",
-        "debian":  "sudo apt install git",
-        "fedora":  "sudo dnf install git",
-        "arch":    "sudo pacman -S git",
+        "macos": "brew install git",
+        "debian": "sudo apt install git",
+        "fedora": "sudo dnf install git",
+        "arch": "sudo pacman -S git",
         "windows": "scoop install git",
     },
 }
@@ -117,6 +118,7 @@ _INSTALL_HINTS: dict[str, dict[str, str]] = {
 def _install_hint(cmd: str) -> str:
     hints = _INSTALL_HINTS.get(cmd, {})
     return hints.get(OS_TAG, hints.get("debian", "see: make install-deps"))
+
 
 # ---------------------------------------------------------------------------
 # Tool checks
@@ -143,14 +145,14 @@ OPTIONAL_TOOLS = [
 
 # TeX Live packages verified via kpsewhich
 TEXLIVE_PACKAGES = [
-    ("fontawesome6.sty",  "fontawesome6 (icons)"),
-    ("tcolorbox.sty",     "tcolorbox (section boxes)"),
-    ("fontspec.sty",      "fontspec (XeTeX font loading)"),
-    ("unicode-math.sty",  "unicode-math (math fonts)"),
-    ("enumitem.sty",      "enumitem (list formatting)"),
-    ("ragged2e.sty",      "ragged2e (text alignment)"),
-    ("geometry.sty",      "geometry (page layout)"),
-    ("hyperref.sty",      "hyperref (PDF links)"),
+    ("fontawesome6.sty", "fontawesome6 (icons)"),
+    ("tcolorbox.sty", "tcolorbox (section boxes)"),
+    ("fontspec.sty", "fontspec (XeTeX font loading)"),
+    ("unicode-math.sty", "unicode-math (math fonts)"),
+    ("enumitem.sty", "enumitem (list formatting)"),
+    ("ragged2e.sty", "ragged2e (text alignment)"),
+    ("geometry.sty", "geometry (page layout)"),
+    ("hyperref.sty", "hyperref (PDF links)"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -158,10 +160,10 @@ TEXLIVE_PACKAGES = [
 # ---------------------------------------------------------------------------
 
 REQUIRED_MODULES = [
-    ("yaml",       "PyYAML",          "pip install pyyaml"),
-    ("requests",   "requests",        "pip install requests"),
-    ("bs4",        "Beautiful Soup 4","pip install beautifulsoup4"),
-    ("jsonschema", "jsonschema",      "pip install jsonschema"),
+    ("yaml", "PyYAML", "pip install pyyaml"),
+    ("requests", "requests", "pip install requests"),
+    ("bs4", "Beautiful Soup 4", "pip install beautifulsoup4"),
+    ("jsonschema", "jsonschema", "pip install jsonschema"),
 ]
 
 OPTIONAL_MODULES = [
@@ -216,7 +218,8 @@ def check_texlive_package(sty_file: str) -> bool:
     """Check if a TeX Live package is installed via kpsewhich."""
     result = subprocess.run(
         ["kpsewhich", sty_file],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     return result.returncode == 0 and bool(result.stdout.strip())
 
@@ -248,7 +251,9 @@ def check_submodule_fresh() -> tuple[str, str]:
         # Check git submodule status — '+' prefix means recorded commit != checked out
         result = subprocess.run(
             ["git", "submodule", "status", "awesome-cv"],
-            capture_output=True, text=True, cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
         )
         line = result.stdout.strip()
         if line.startswith("+"):

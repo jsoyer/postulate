@@ -32,6 +32,7 @@ from lib.common import load_env, load_meta, REPO_ROOT
 # Input helpers
 # ---------------------------------------------------------------------------
 
+
 def load_text(path, max_chars=None):
     if not os.path.exists(path):
         return ""
@@ -54,7 +55,7 @@ def extract_key_wins(cv_yml_path, n=3):
         items = []
         for w in wins[:n]:
             title = str(w.get("title", "")).replace("**", "")
-            text  = str(w.get("text",  "")).replace("**", "")[:150]
+            text = str(w.get("text", "")).replace("**", "")[:150]
             items.append(f"  - {title}: {text}")
         return "\n".join(items)
     except Exception:
@@ -65,11 +66,12 @@ def extract_key_wins(cv_yml_path, n=3):
 # Core generation
 # ---------------------------------------------------------------------------
 
+
 def build_prompt(app_dir, offer_amount):
-    meta     = load_meta(app_dir)
-    company  = meta.get("company",  "the company")
+    meta = load_meta(app_dir)
+    company = meta.get("company", "the company")
     position = meta.get("position", "the position")
-    notes    = meta.get("notes", "")
+    notes = meta.get("notes", "")
 
     cv_src = os.path.join(app_dir, "cv-tailored.yml")
     if not os.path.exists(cv_src):
@@ -87,9 +89,9 @@ def build_prompt(app_dir, offer_amount):
     if not offer_amount and notes:
         offer_amount = notes
 
-    job_text  = load_text(os.path.join(app_dir, "job.txt"), max_chars=400)
-    key_wins  = extract_key_wins(os.path.join(app_dir, "cv-tailored.yml"), n=3)
-    research  = load_text(os.path.join(app_dir, "company-research.md"), max_chars=400)
+    job_text = load_text(os.path.join(app_dir, "job.txt"), max_chars=400)
+    key_wins = extract_key_wins(os.path.join(app_dir, "cv-tailored.yml"), n=3)
+    research = load_text(os.path.join(app_dir, "company-research.md"), max_chars=400)
 
     context_lines = []
     if offer_amount:
@@ -142,12 +144,11 @@ Keep the tone confident, data-driven, and collaborative throughout."""
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 def main():
     load_env()
 
-    parser = argparse.ArgumentParser(
-        description="Generate a negotiation script and counter-offer email using AI"
-    )
+    parser = argparse.ArgumentParser(description="Generate a negotiation script and counter-offer email using AI")
     parser.add_argument(
         "app_dir",
         help="Application directory (e.g. applications/2026-02-databricks)",
@@ -168,7 +169,7 @@ def main():
     args = parser.parse_args()
 
     provider = args.provider
-    app_dir  = args.app_dir
+    app_dir = args.app_dir
 
     if not os.path.isdir(app_dir):
         print(f"❌ Directory not found: {app_dir}")
@@ -191,7 +192,7 @@ def main():
     if args.offer:
         print(f"   Offer:       {args.offer}")
     if provider == "ollama":
-        host  = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        host = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
         model = os.environ.get("OLLAMA_MODEL", "llama3")
         print(f"   Host:        {host}  Model: {model}")
     print("   Generating...", flush=True)

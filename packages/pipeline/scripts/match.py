@@ -167,17 +167,11 @@ def score_match(job_keywords, cv_skills):
 
     for skill in cv_skills:
         max_score += 2
-        if any(
-            skill.lower() in kw.lower() or kw.lower() in skill.lower()
-            for kw in job_keywords.keys()
-        ):
+        if any(skill.lower() in kw.lower() or kw.lower() in skill.lower() for kw in job_keywords.keys()):
             score += 2
             matched.append(skill)
         else:
-            if any(
-                skill.lower() in cat or cat in skill.lower()
-                for cat in job_keywords.keys()
-            ):
+            if any(skill.lower() in cat or cat in skill.lower() for cat in job_keywords.keys()):
                 score += 1
                 matched.append(skill + " (partial)")
             else:
@@ -208,9 +202,7 @@ def score_match(job_keywords, cv_skills):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Score master CV against job description"
-    )
+    parser = argparse.ArgumentParser(description="Score master CV against job description")
     parser.add_argument("source", help="Job description text, URL, or file path")
     parser.add_argument("--json", action="store_true", help="Output JSON")
     args = parser.parse_args()

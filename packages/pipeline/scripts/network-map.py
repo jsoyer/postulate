@@ -34,6 +34,7 @@ from lib.common import REPO_ROOT
 # Parsing
 # ---------------------------------------------------------------------------
 
+
 def _load_meta(app_dir: Path) -> dict:
     meta_path = app_dir / "meta.yml"
     if not meta_path.exists():
@@ -47,23 +48,19 @@ def _parse_contacts(contacts_path: Path) -> list[dict]:
     if not contacts_path.exists():
         return []
 
-    text    = contacts_path.read_text(encoding="utf-8")
+    text = contacts_path.read_text(encoding="utf-8")
     contacts = []
-    seen    = set()
+    seen = set()
 
     # Pattern: name — title — email  (from Website section)
-    for m in re.finditer(
-        r"[-•]\s+(.+?)\s+[—–]\s+(.+?)\s+[—–]\s+([\w.+-]+@[\w.-]+)", text
-    ):
+    for m in re.finditer(r"[-•]\s+(.+?)\s+[—–]\s+(.+?)\s+[—–]\s+([\w.+-]+@[\w.-]+)", text):
         name, title, email = m.group(1).strip(), m.group(2).strip(), m.group(3).strip()
         if email not in seen:
             contacts.append({"name": name, "title": title, "email": email, "source": "website"})
             seen.add(email)
 
     # Pattern: table row: | Name | Email | Position | Confidence |
-    for m in re.finditer(
-        r"\|\s*([^|]+?)\s*\|\s*([\w.+-]+@[\w.-]+)\s*\|\s*([^|]+?)\s*\|", text
-    ):
+    for m in re.finditer(r"\|\s*([^|]+?)\s*\|\s*([\w.+-]+@[\w.-]+)\s*\|\s*([^|]+?)\s*\|", text):
         name, email, title = m.group(1).strip(), m.group(2).strip(), m.group(3).strip()
         if email not in seen and name.lower() not in ("name", "---"):
             contacts.append({"name": name, "title": title, "email": email, "source": "hunter"})
@@ -86,8 +83,7 @@ def _parse_contacts(contacts_path: Path) -> list[dict]:
                 break
         else:
             if email not in seen:
-                contacts.append({"name": name, "title": "", "email": email,
-                                 "source": "manual", "primary": True})
+                contacts.append({"name": name, "title": "", "email": email, "source": "manual", "primary": True})
                 seen.add(email)
 
     return contacts
@@ -102,20 +98,22 @@ def collect_network(apps_dir: Path, name_filter: str = "") -> list[dict]:
         if name_filter and name_filter.lower() not in d.name.lower():
             continue
 
-        meta     = _load_meta(d)
-        company  = meta.get("company", d.name)
-        outcome  = meta.get("outcome", "")
+        meta = _load_meta(d)
+        company = meta.get("company", d.name)
+        outcome = meta.get("outcome", "")
         position = meta.get("position", "")
         contacts = _parse_contacts(d / "contacts.md")
 
         if contacts:
-            nodes.append({
-                "app":      d.name,
-                "company":  company,
-                "position": position,
-                "outcome":  outcome,
-                "contacts": contacts,
-            })
+            nodes.append(
+                {
+                    "app": d.name,
+                    "company": company,
+                    "position": position,
+                    "outcome": outcome,
+                    "contacts": contacts,
+                }
+            )
 
     return nodes
 
@@ -125,18 +123,18 @@ def collect_network(apps_dir: Path, name_filter: str = "") -> list[dict]:
 # ---------------------------------------------------------------------------
 
 _SOURCE_ICON = {
-    "hunter":  "🔍",
+    "hunter": "🔍",
     "website": "🌐",
-    "github":  "🐙",
-    "manual":  "✍️",
+    "github": "🐙",
+    "manual": "✍️",
 }
 
 _OUTCOME_COLOR = {
-    "offer":    "#2ecc71",
+    "offer": "#2ecc71",
     "rejected": "#e74c3c",
-    "ghosted":  "#95a5a6",
-    "interview":"#3498db",
-    "":         "#f39c12",
+    "ghosted": "#95a5a6",
+    "interview": "#3498db",
+    "": "#f39c12",
 }
 
 
@@ -163,10 +161,10 @@ def build_mermaid(nodes: list[dict]) -> str:
         cid = company_ids[company]
         for contact in node["contacts"]:
             email = contact.get("email", "")
-            name  = contact.get("name", "?")
+            name = contact.get("name", "?")
             title = contact.get("title", "")
-            icon  = _SOURCE_ICON.get(contact.get("source", ""), "")
-            key   = email or name
+            icon = _SOURCE_ICON.get(contact.get("source", ""), "")
+            key = email or name
 
             if key not in contact_ids:
                 pid = _id("P")
@@ -174,7 +172,7 @@ def build_mermaid(nodes: list[dict]) -> str:
                 label = f"{icon} {name}"
                 if title and title.lower() not in ("github",):
                     label += f"\\n{title[:30]}"
-                lines.append(f"    {pid}([\"{label}\"])")
+                lines.append(f'    {pid}(["{label}"])')
                 lines.append(f"    {cid} --> {pid}")
 
     return "\n".join(lines)
@@ -207,9 +205,9 @@ def build_markdown(nodes: list[dict]) -> str:
     lines += ["## Contacts by Company", ""]
 
     for node in nodes:
-        company  = node["company"]
+        company = node["company"]
         position = node["position"]
-        outcome  = node["outcome"]
+        outcome = node["outcome"]
         contacts = node["contacts"]
 
         outcome_badge = f" · {outcome}" if outcome else ""
@@ -225,14 +223,11 @@ def build_markdown(nodes: list[dict]) -> str:
         lines.append("| Name | Title | Email | Source |")
         lines.append("|------|-------|-------|--------|")
         for c in contacts:
-            icon  = _SOURCE_ICON.get(c.get("source", ""), "")
-            name  = c.get("name", "")
+            icon = _SOURCE_ICON.get(c.get("source", ""), "")
+            name = c.get("name", "")
             if c.get("primary"):
                 name = f"**{name}** ⭐"
-            lines.append(
-                f"| {name} | {c.get('title', '')} | "
-                f"{c.get('email', '')} | {icon} {c.get('source', '')} |"
-            )
+            lines.append(f"| {name} | {c.get('title', '')} | {c.get('email', '')} | {icon} {c.get('source', '')} |")
         lines.append("")
 
     # All emails flat list
@@ -254,9 +249,9 @@ def build_markdown(nodes: list[dict]) -> str:
         for c in all_contacts:
             star = " ⭐" if c.get("primary") else ""
             lines.append(
-                f"- **{c.get('name','')}**{star} — {c.get('title','')} "
-                f"@ {c.get('company','')}  "
-                f"`{c.get('email','')}`"
+                f"- **{c.get('name', '')}**{star} — {c.get('title', '')} "
+                f"@ {c.get('company', '')}  "
+                f"`{c.get('email', '')}`"
             )
         lines.append("")
 
@@ -266,6 +261,7 @@ def build_markdown(nodes: list[dict]) -> str:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main():
     parser = argparse.ArgumentParser(description="Generate network map from contacts")
@@ -302,7 +298,7 @@ def main():
         print(f"\n   🏢 {node['company']} ({len(node['contacts'])} contacts)")
         for c in node["contacts"]:
             star = " ⭐" if c.get("primary") else ""
-            print(f"      • {c.get('name','')}{star} — {c.get('email','')}")
+            print(f"      • {c.get('name', '')}{star} — {c.get('email', '')}")
 
     return 0
 

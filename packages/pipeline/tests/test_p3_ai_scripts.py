@@ -269,9 +269,7 @@ class TestClScoreStructure:
     def test_with_metrics_scores_points(self):
         cl_data = {
             "opening": "Having delivered 150% ARR growth at Acme Corp",
-            "sections": [
-                {"title": "Achievement", "body": "I grew revenue by $10M in 2023"}
-            ],
+            "sections": [{"title": "Achievement", "body": "I grew revenue by $10M in 2023"}],
             "closing_paragraph": "Please schedule a call.",
         }
         cl_text = clscore.extract_cl_text(cl_data)

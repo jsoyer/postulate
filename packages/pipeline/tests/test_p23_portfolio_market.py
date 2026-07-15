@@ -593,7 +593,8 @@ class TestTemplateMarketSearch:
         # Re-implement filter to return results for assertion
         q = query.lower()
         return [
-            t for t in tpls
+            t
+            for t in tpls
             if q in t.get("name", "").lower()
             or q in t.get("description", "").lower()
             or any(q in tag.lower() for tag in t.get("tags", []))

@@ -35,12 +35,12 @@ _SCRIPT_DIR = Path(__file__).parent
 VALID_OUTCOMES = {"applied", "interview", "offer", "rejected", "ghosted"}
 
 OUTCOME_EMOJI = {
-    "offer":    "🎉",
+    "offer": "🎉",
     "rejected": "❌",
-    "ghosted":  "👻",
-    "interview":"🗣️",
-    "applied":  "📤",
-    "":         "📝",
+    "ghosted": "👻",
+    "interview": "🗣️",
+    "applied": "📤",
+    "": "📝",
 }
 
 
@@ -48,22 +48,21 @@ OUTCOME_EMOJI = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _parse_date(val) -> datetime | None:
     if not val:
         return None
     s = str(val).strip()
     for fmt in ("%Y-%m-%d", "%Y-%m"):
         try:
-            return datetime.strptime(s[:len(fmt)], fmt)
+            return datetime.strptime(s[: len(fmt)], fmt)
         except ValueError:
             continue
     return None
 
 
 def _git(args: list[str], cwd: Path = REPO_ROOT, check: bool = False) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["git"] + args, cwd=cwd, capture_output=True, text=True, check=check
-    )
+    return subprocess.run(["git"] + args, cwd=cwd, capture_output=True, text=True, check=check)
 
 
 def _run_ats_score(app_dir: Path) -> dict | None:
@@ -73,9 +72,11 @@ def _run_ats_score(app_dir: Path) -> dict | None:
         return None
     try:
         result = subprocess.run(
-            [sys.executable, str(_SCRIPT_DIR / "ats-score.py"),
-             str(app_dir), "--json"],
-            capture_output=True, text=True, timeout=30, cwd=REPO_ROOT
+            [sys.executable, str(_SCRIPT_DIR / "ats-score.py"), str(app_dir), "--json"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=REPO_ROOT,
         )
         if result.stdout.strip():
             return json.loads(result.stdout)
@@ -88,13 +89,14 @@ def _run_ats_score(app_dir: Path) -> dict | None:
 # Archive summary
 # ---------------------------------------------------------------------------
 
-def build_archive_md(app_dir: Path, meta: dict, ats: dict | None) -> str:
-    company  = meta.get("company", app_dir.name)
-    position = meta.get("position", "")
-    outcome  = meta.get("outcome", "")
-    today    = date.today().isoformat()
 
-    created  = _parse_date(meta.get("created", ""))
+def build_archive_md(app_dir: Path, meta: dict, ats: dict | None) -> str:
+    company = meta.get("company", app_dir.name)
+    position = meta.get("position", "")
+    outcome = meta.get("outcome", "")
+    today = date.today().isoformat()
+
+    created = _parse_date(meta.get("created", ""))
     deadline = _parse_date(meta.get("deadline", ""))
 
     days_elapsed = (datetime.now() - created).days if created else None
@@ -134,8 +136,8 @@ def build_archive_md(app_dir: Path, meta: dict, ats: dict | None) -> str:
             lines.append("|-------|------|-------------|---------|")
             for m in milestones:
                 lines.append(
-                    f"| {m.get('stage','')} | {m.get('date','')} | "
-                    f"{m.get('interviewer','')} | {m.get('outcome','')} |"
+                    f"| {m.get('stage', '')} | {m.get('date', '')} | "
+                    f"{m.get('interviewer', '')} | {m.get('outcome', '')} |"
                 )
             lines.append("")
 
@@ -165,22 +167,22 @@ def build_archive_md(app_dir: Path, meta: dict, ats: dict | None) -> str:
         "|------|-------------|",
     ]
     file_desc = {
-        "meta.yml":          "Application metadata",
-        "job.txt":           "Job description",
-        "job.url":           "Job posting URL",
-        "cv-tailored.yml":   "AI-tailored CV (YAML)",
-        "coverletter.yml":   "AI-generated cover letter (YAML)",
+        "meta.yml": "Application metadata",
+        "job.txt": "Job description",
+        "job.url": "Job posting URL",
+        "cv-tailored.yml": "AI-tailored CV (YAML)",
+        "coverletter.yml": "AI-generated cover letter (YAML)",
         "company-research.md": "Company research notes",
-        "contacts.md":       "Recruiter/HM contacts",
-        "prep.md":           "Interview prep notes",
-        "competitors.md":    "Competitor landscape",
-        "salary-bench.md":   "Salary benchmarking",
+        "contacts.md": "Recruiter/HM contacts",
+        "prep.md": "Interview prep notes",
+        "competitors.md": "Competitor landscape",
+        "salary-bench.md": "Salary benchmarking",
         "linkedin-message.md": "LinkedIn outreach",
         "recruiter-email.md": "Recruiter email",
         "reference-request.md": "Reference request emails",
-        "milestones.yml":    "Interview stage log",
-        "cover-angles.md":   "Cover letter variants",
-        "job-fit.md":        "Personal fit analysis",
+        "milestones.yml": "Interview stage log",
+        "cover-angles.md": "Cover letter variants",
+        "job-fit.md": "Personal fit analysis",
     }
     for f in files:
         desc = file_desc.get(f, "")
@@ -194,27 +196,22 @@ def build_archive_md(app_dir: Path, meta: dict, ats: dict | None) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Archive a completed application with full summary"
-    )
+    parser = argparse.ArgumentParser(description="Archive a completed application with full summary")
     parser.add_argument("app_dir", help="Application directory (in applications/)")
     parser.add_argument(
         "--outcome",
         choices=list(VALID_OUTCOMES),
         default="",
-        help="Final outcome (updates meta.yml if not already set)"
+        help="Final outcome (updates meta.yml if not already set)",
     )
+    parser.add_argument("--no-commit", action="store_true", help="Skip git commit after archiving")
+    parser.add_argument("--no-tag", action="store_true", help="Skip git tag creation")
     parser.add_argument(
-        "--no-commit", action="store_true",
-        help="Skip git commit after archiving"
-    )
-    parser.add_argument(
-        "--no-tag", action="store_true",
-        help="Skip git tag creation"
-    )
-    parser.add_argument(
-        "--dry-run", "-n", action="store_true",
+        "--dry-run",
+        "-n",
+        action="store_true",
         help="Print what would be done without moving files or running git commands",
     )
     args = parser.parse_args()
@@ -246,9 +243,9 @@ def main():
         with open(meta_path, encoding="utf-8") as f:
             meta = yaml.safe_load(f) or {}
 
-    company  = meta.get("company", app_name)
+    company = meta.get("company", app_name)
     position = meta.get("position", "")
-    outcome  = meta.get("outcome", "")
+    outcome = meta.get("outcome", "")
 
     # Update outcome if provided
     if args.outcome and not outcome:
@@ -329,11 +326,14 @@ def main():
             _git(["add", "-A", str(archive_dest), str(archive_root)])
             # Stage the deletion from applications/
             _git(["add", "-u"])
-            r = _git([
-                "commit", "-m",
-                f"archive: {app_name} — {outcome or 'unknown'} {emoji}\n\n"
-                f"Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-            ])
+            r = _git(
+                [
+                    "commit",
+                    "-m",
+                    f"archive: {app_name} — {outcome or 'unknown'} {emoji}\n\n"
+                    f"Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
+                ]
+            )
             if r.returncode == 0:
                 print(f"   ✅ Committed archive")
             else:

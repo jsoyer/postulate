@@ -35,58 +35,224 @@ except ImportError:
 from lib.common import REPO_ROOT
 
 # Common English + French stopwords to filter
-STOPWORDS = frozenset({
-    # articles / determiners
-    "the", "a", "an", "this", "that", "these", "those", "its",
-    "le", "la", "les", "un", "une", "des", "du", "au", "aux",
-    # prepositions
-    "in", "on", "at", "to", "for", "of", "with", "by", "from",
-    "as", "into", "through", "across", "about", "above", "within",
-    "between", "among", "during", "including", "until", "against",
-    "throughout", "despite", "towards", "upon", "concerning",
-    # conjunctions
-    "and", "or", "but", "if", "than", "then", "so", "yet",
-    "both", "either", "neither", "not", "nor",
-    "que", "qui", "dont", "où", "mais", "ou", "donc", "car",
-    # pronouns
-    "you", "we", "they", "our", "your", "their", "its", "all",
-    "each", "every", "both", "few", "more", "most", "other",
-    "such", "same", "own", "just", "now", "here", "how", "what",
-    # common verbs
-    "be", "is", "are", "was", "were", "been", "being",
-    "have", "has", "had", "do", "does", "did",
-    "will", "would", "can", "could", "should", "may", "might",
-    "shall", "must", "need", "get", "make", "take", "use",
-    "work", "help", "provide", "ensure", "support", "manage",
-    "include", "require", "drive", "build", "create", "develop",
-    "define", "lead", "own", "run", "set", "serve", "partner",
-    # common adjectives / adverbs
-    "new", "key", "strong", "high", "large", "small", "great",
-    "good", "best", "top", "first", "main", "full", "real",
-    "able", "well", "also", "often", "highly", "deeply",
-    # common nouns too generic to be useful
-    "role", "team", "company", "business", "position", "job",
-    "year", "time", "way", "day", "part", "level", "type",
-    "areas", "area", "impact", "approach", "experience",
-    "ability", "skills", "knowledge", "understanding", "mindset",
-    "environment", "culture", "world", "people", "person",
-    "candidate", "opportunity", "responsibilities", "requirements",
-    "plus", "based", "across", "who", "they", "their",
-    # misc
-    "etc", "e.g", "i.e", "via", "per", "non",
-})
+STOPWORDS = frozenset(
+    {
+        # articles / determiners
+        "the",
+        "a",
+        "an",
+        "this",
+        "that",
+        "these",
+        "those",
+        "its",
+        "le",
+        "la",
+        "les",
+        "un",
+        "une",
+        "des",
+        "du",
+        "au",
+        "aux",
+        # prepositions
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "as",
+        "into",
+        "through",
+        "across",
+        "about",
+        "above",
+        "within",
+        "between",
+        "among",
+        "during",
+        "including",
+        "until",
+        "against",
+        "throughout",
+        "despite",
+        "towards",
+        "upon",
+        "concerning",
+        # conjunctions
+        "and",
+        "or",
+        "but",
+        "if",
+        "than",
+        "then",
+        "so",
+        "yet",
+        "both",
+        "either",
+        "neither",
+        "not",
+        "nor",
+        "que",
+        "qui",
+        "dont",
+        "où",
+        "mais",
+        "ou",
+        "donc",
+        "car",
+        # pronouns
+        "you",
+        "we",
+        "they",
+        "our",
+        "your",
+        "their",
+        "its",
+        "all",
+        "each",
+        "every",
+        "both",
+        "few",
+        "more",
+        "most",
+        "other",
+        "such",
+        "same",
+        "own",
+        "just",
+        "now",
+        "here",
+        "how",
+        "what",
+        # common verbs
+        "be",
+        "is",
+        "are",
+        "was",
+        "were",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "can",
+        "could",
+        "should",
+        "may",
+        "might",
+        "shall",
+        "must",
+        "need",
+        "get",
+        "make",
+        "take",
+        "use",
+        "work",
+        "help",
+        "provide",
+        "ensure",
+        "support",
+        "manage",
+        "include",
+        "require",
+        "drive",
+        "build",
+        "create",
+        "develop",
+        "define",
+        "lead",
+        "own",
+        "run",
+        "set",
+        "serve",
+        "partner",
+        # common adjectives / adverbs
+        "new",
+        "key",
+        "strong",
+        "high",
+        "large",
+        "small",
+        "great",
+        "good",
+        "best",
+        "top",
+        "first",
+        "main",
+        "full",
+        "real",
+        "able",
+        "well",
+        "also",
+        "often",
+        "highly",
+        "deeply",
+        # common nouns too generic to be useful
+        "role",
+        "team",
+        "company",
+        "business",
+        "position",
+        "job",
+        "year",
+        "time",
+        "way",
+        "day",
+        "part",
+        "level",
+        "type",
+        "areas",
+        "area",
+        "impact",
+        "approach",
+        "experience",
+        "ability",
+        "skills",
+        "knowledge",
+        "understanding",
+        "mindset",
+        "environment",
+        "culture",
+        "world",
+        "people",
+        "person",
+        "candidate",
+        "opportunity",
+        "responsibilities",
+        "requirements",
+        "plus",
+        "based",
+        "across",
+        "who",
+        "they",
+        "their",
+        # misc
+        "etc",
+        "e.g",
+        "i.e",
+        "via",
+        "per",
+        "non",
+    }
+)
 
 MIN_WORD_LEN = 3
 
 
 def tokenize(text: str) -> list[str]:
     """Extract meaningful lowercase tokens from text."""
-    raw = re.findall(r'[a-zA-Z][a-zA-Z0-9+#.-]*', text.lower())
-    return [
-        t.rstrip(".-")
-        for t in raw
-        if len(t) >= MIN_WORD_LEN and t not in STOPWORDS
-    ]
+    raw = re.findall(r"[a-zA-Z][a-zA-Z0-9+#.-]*", text.lower())
+    return [t.rstrip(".-") for t in raw if len(t) >= MIN_WORD_LEN and t not in STOPWORDS]
 
 
 def cv_text(cv_data: dict) -> str:
@@ -141,19 +307,48 @@ def cv_text(cv_data: dict) -> str:
 
 def suggest_section(word: str, cv_data: dict) -> str:
     """Suggest which CV section is best to insert a missing keyword."""
-    skills_text = " ".join(
-        str(sg.get("items", "")) for sg in cv_data.get("skills", [])
-        if isinstance(sg, dict)
-    ).lower()
+    skills_text = " ".join(str(sg.get("items", "")) for sg in cv_data.get("skills", []) if isinstance(sg, dict)).lower()
     profile_text = str(cv_data.get("profile", "")).lower()
 
     # Heuristics
-    tech_indicators = {"api", "cloud", "saas", "sql", "python", "aws", "azure",
-                       "security", "siem", "soar", "xdr", "dlp", "dspm", "sase",
-                       "zero", "trust", "kubernetes", "docker", "terraform"}
-    business_indicators = {"arr", "mrr", "acv", "quota", "pipeline", "forecast",
-                           "meddic", "meddpicc", "spin", "challenger", "crm",
-                           "salesforce", "revenue", "enterprise", "saas"}
+    tech_indicators = {
+        "api",
+        "cloud",
+        "saas",
+        "sql",
+        "python",
+        "aws",
+        "azure",
+        "security",
+        "siem",
+        "soar",
+        "xdr",
+        "dlp",
+        "dspm",
+        "sase",
+        "zero",
+        "trust",
+        "kubernetes",
+        "docker",
+        "terraform",
+    }
+    business_indicators = {
+        "arr",
+        "mrr",
+        "acv",
+        "quota",
+        "pipeline",
+        "forecast",
+        "meddic",
+        "meddpicc",
+        "spin",
+        "challenger",
+        "crm",
+        "salesforce",
+        "revenue",
+        "enterprise",
+        "saas",
+    }
 
     if word in tech_indicators or any(w in word for w in ["tech", "soft", "tool", "platform"]):
         return "Skills"
@@ -192,27 +387,31 @@ def analyze(apps_dir: Path, cv_data: dict, min_count: int) -> dict:
         if count < min_count:
             break
         if word not in cv_words:
-            missing.append({
-                "word": word,
-                "job_count": count,
-                "total_jobs": total_jobs,
-                "pct": round(100 * count / total_jobs),
-                "section": suggest_section(word, cv_data),
-            })
+            missing.append(
+                {
+                    "word": word,
+                    "job_count": count,
+                    "total_jobs": total_jobs,
+                    "pct": round(100 * count / total_jobs),
+                    "section": suggest_section(word, cv_data),
+                }
+            )
 
     # Surplus: CV words rarely (or never) in job postings
     surplus = []
     for word in sorted(cv_words):
         count = job_word_files.get(word, 0)
         if count == 0 and len(word) > 4:
-            surplus.append({
-                "word": word,
-                "job_count": count,
-                "total_jobs": total_jobs,
-            })
+            surplus.append(
+                {
+                    "word": word,
+                    "job_count": count,
+                    "total_jobs": total_jobs,
+                }
+            )
 
     return {
-        "missing": missing[:40],   # cap at 40 for readability
+        "missing": missing[:40],  # cap at 40 for readability
         "surplus": surplus[:20],
         "total_jobs": total_jobs,
         "cv_word_count": len(cv_words),
@@ -221,12 +420,11 @@ def analyze(apps_dir: Path, cv_data: dict, min_count: int) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="CV keyword gap analysis")
-    parser.add_argument("--min-count", type=int, default=2,
-                        help="Min job postings a keyword must appear in (default: 2)")
-    parser.add_argument("--cv", default="",
-                        help="Use cv-tailored.yml from this application name")
-    parser.add_argument("--json", action="store_true",
-                        help="Output JSON instead of formatted table")
+    parser.add_argument(
+        "--min-count", type=int, default=2, help="Min job postings a keyword must appear in (default: 2)"
+    )
+    parser.add_argument("--cv", default="", help="Use cv-tailored.yml from this application name")
+    parser.add_argument("--json", action="store_true", help="Output JSON instead of formatted table")
     args = parser.parse_args()
 
     apps_dir = REPO_ROOT / "applications"
@@ -269,11 +467,11 @@ def main():
     print(f"   CV source: {cv_label}\n")
 
     if missing:
-        print(f"{'─'*68}")
+        print(f"{'─' * 68}")
         print(f"  Keywords MISSING from your CV (present in ≥{args.min_count} job postings)")
-        print(f"{'─'*68}")
+        print(f"{'─' * 68}")
         print(f"  {'Jobs':>6}  {'%':>4}  {'Keyword':<28}  Suggested section")
-        print(f"{'─'*68}")
+        print(f"{'─' * 68}")
         for row in missing[:25]:
             bar = "█" * (row["pct"] // 10)
             print(f"  {row['job_count']:>4}/{total}  {row['pct']:>3}%  {row['word']:<28}  {row['section']}")
@@ -282,9 +480,9 @@ def main():
         print()
 
     if surplus:
-        print(f"{'─'*68}")
+        print(f"{'─' * 68}")
         print(f"  CV keywords NOT FOUND in any job posting (possibly outdated)")
-        print(f"{'─'*68}")
+        print(f"{'─' * 68}")
         words_str = ", ".join(row["word"] for row in surplus[:15])
         print(f"  {words_str}")
         print()
@@ -309,6 +507,7 @@ def main():
 
     # Save markdown
     from datetime import date
+
     today = date.today().isoformat()
     lines = [
         "# CV Keyword Gap Analysis",

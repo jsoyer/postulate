@@ -34,6 +34,7 @@ API_BASE = "https://api.linkedin.com/v2"
 def strip_bold(text):
     """Remove **bold** markers."""
     import re
+
     return re.sub(r"\*\*(.+?)\*\*", r"\1", text)
 
 
@@ -92,12 +93,14 @@ def build_linkedin_profile(cv_data):
 
     # Add early career
     for exp in cv_data.get("early_career", []):
-        positions.append({
-            "title": exp["title"],
-            "company": exp["company"],
-            "location": exp["location"],
-            "dateRange": exp["dates"],
-        })
+        positions.append(
+            {
+                "title": exp["title"],
+                "company": exp["company"],
+                "location": exp["location"],
+                "dateRange": exp["dates"],
+            }
+        )
 
     profile["positions"] = positions
 
@@ -124,11 +127,13 @@ def build_linkedin_profile(cv_data):
     # Certifications
     certifications = []
     for cert in cv_data.get("certifications", []):
-        certifications.append({
-            "name": cert["name"],
-            "authority": cert["institution"],
-            "date": cert["date"],
-        })
+        certifications.append(
+            {
+                "name": cert["name"],
+                "authority": cert["institution"],
+                "date": cert["date"],
+            }
+        )
     profile["certifications"] = certifications
 
     # Languages
@@ -177,12 +182,9 @@ def push_to_linkedin(profile, token):
 def main():
     load_env()
     parser = argparse.ArgumentParser(description="Sync CV data to LinkedIn")
-    parser.add_argument("-d", "--data", default="data/cv.yml",
-                        help="YAML data file (default: data/cv.yml)")
-    parser.add_argument("--push", action="store_true",
-                        help="Actually push to LinkedIn (default: dry-run)")
-    parser.add_argument("--export", action="store_true",
-                        help="Export LinkedIn-ready JSON to stdout")
+    parser.add_argument("-d", "--data", default="data/cv.yml", help="YAML data file (default: data/cv.yml)")
+    parser.add_argument("--push", action="store_true", help="Actually push to LinkedIn (default: dry-run)")
+    parser.add_argument("--export", action="store_true", help="Export LinkedIn-ready JSON to stdout")
     args = parser.parse_args()
 
     data_path = Path(args.data)

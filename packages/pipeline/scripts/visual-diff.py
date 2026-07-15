@@ -20,19 +20,13 @@ from pathlib import Path
 def check_imagemagick():
     """Check if ImageMagick is installed."""
     try:
-        result = subprocess.run(
-            ["magick", "-version"],
-            capture_output=True, text=True, timeout=5
-        )
+        result = subprocess.run(["magick", "-version"], capture_output=True, text=True, timeout=5)
         return result.returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
     # Try legacy command
     try:
-        result = subprocess.run(
-            ["convert", "-version"],
-            capture_output=True, text=True, timeout=5
-        )
+        result = subprocess.run(["convert", "-version"], capture_output=True, text=True, timeout=5)
         return result.returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
@@ -43,18 +37,40 @@ def pdf_to_images(pdf_path, output_dir, prefix, density=150):
     output_pattern = output_dir / f"{prefix}-%d.png"
     try:
         subprocess.run(
-            ["magick", "-density", str(density), str(pdf_path),
-             "-background", "white", "-alpha", "remove",
-             str(output_pattern)],
-            capture_output=True, text=True, timeout=120, check=True
+            [
+                "magick",
+                "-density",
+                str(density),
+                str(pdf_path),
+                "-background",
+                "white",
+                "-alpha",
+                "remove",
+                str(output_pattern),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=True,
         )
     except FileNotFoundError:
         # Try legacy convert command
         subprocess.run(
-            ["convert", "-density", str(density), str(pdf_path),
-             "-background", "white", "-alpha", "remove",
-             str(output_pattern)],
-            capture_output=True, text=True, timeout=120, check=True
+            [
+                "convert",
+                "-density",
+                str(density),
+                str(pdf_path),
+                "-background",
+                "white",
+                "-alpha",
+                "remove",
+                str(output_pattern),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=True,
         )
     # List generated images
     return sorted(output_dir.glob(f"{prefix}-*.png"))
@@ -62,18 +78,15 @@ def pdf_to_images(pdf_path, output_dir, prefix, density=150):
 
 def compare_images(img1, img2, diff_output):
     """Compare two images and generate a diff image."""
+
     # Get dimensions and resize if needed
     def get_size(img):
         try:
             r = subprocess.run(
-                ["magick", "identify", "-format", "%wx%h", str(img)],
-                capture_output=True, text=True, timeout=10
+                ["magick", "identify", "-format", "%wx%h", str(img)], capture_output=True, text=True, timeout=10
             )
         except FileNotFoundError:
-            r = subprocess.run(
-                ["identify", "-format", "%wx%h", str(img)],
-                capture_output=True, text=True, timeout=10
-            )
+            r = subprocess.run(["identify", "-format", "%wx%h", str(img)], capture_output=True, text=True, timeout=10)
         return r.stdout.strip()
 
     size1 = get_size(img1)
@@ -86,26 +99,34 @@ def compare_images(img1, img2, diff_output):
         try:
             subprocess.run(
                 ["magick", str(img2), "-resize", f"{size1}!", str(resized)],
-                capture_output=True, text=True, timeout=30, check=True
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=True,
             )
         except FileNotFoundError:
             subprocess.run(
                 ["convert", str(img2), "-resize", f"{size1}!", str(resized)],
-                capture_output=True, text=True, timeout=30, check=True
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=True,
             )
         actual_img2 = resized
 
     try:
         result = subprocess.run(
-            ["magick", "compare", "-metric", "AE",
-             str(img1), str(actual_img2), str(diff_output)],
-            capture_output=True, text=True, timeout=30
+            ["magick", "compare", "-metric", "AE", str(img1), str(actual_img2), str(diff_output)],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
     except FileNotFoundError:
         result = subprocess.run(
-            ["compare", "-metric", "AE",
-             str(img1), str(actual_img2), str(diff_output)],
-            capture_output=True, text=True, timeout=30
+            ["compare", "-metric", "AE", str(img1), str(actual_img2), str(diff_output)],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
     # AE metric outputs "N (pct)" to stderr, e.g. "48 (2.20694e-05)"
     try:
@@ -119,8 +140,8 @@ def compare_images(img1, img2, diff_output):
 def main():
     parser = argparse.ArgumentParser(
         description="PDF Visual Regression — Pixel-level comparison of two PDF versions. "
-                    "Converts PDF pages to images, then highlights visual differences. "
-                    "Requires: ImageMagick (convert + compare commands).",
+        "Converts PDF pages to images, then highlights visual differences. "
+        "Requires: ImageMagick (convert + compare commands).",
         epilog=(
             "Modes:\n"
             "  One argument:   compare master CV.pdf against the application's CV PDF\n"

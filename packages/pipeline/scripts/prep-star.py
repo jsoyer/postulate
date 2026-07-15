@@ -43,7 +43,7 @@ def _flatten_items(items: list) -> list[str]:
             out.append(_strip_bold(item))
         elif isinstance(item, dict):
             label = item.get("label", "")
-            text  = item.get("text", "")
+            text = item.get("text", "")
             out.append(_strip_bold(f"{label}: {text}" if label else text))
     return out
 
@@ -52,11 +52,11 @@ def extract_achievements(cv_data: dict) -> str:
     lines = []
     for win in cv_data.get("key_wins", []):
         if isinstance(win, dict):
-            lines.append(f"• {_strip_bold(win.get('title',''))}: {_strip_bold(win.get('text',''))}")
+            lines.append(f"• {_strip_bold(win.get('title', ''))}: {_strip_bold(win.get('text', ''))}")
 
     for exp in cv_data.get("experience", [])[:2]:
         company = exp.get("company", "")
-        role    = exp.get("position", "")
+        role = exp.get("position", "")
         for item in _flatten_items(exp.get("items", []))[:4]:
             lines.append(f"• [{role} @ {company}] {item}")
 
@@ -163,7 +163,7 @@ def main():
     job_txt = app_dir / "job.txt"
     job_excerpt = job_txt.read_text(encoding="utf-8")[:1500] if job_txt.exists() else "(no job.txt)"
 
-    company  = meta.get("company", app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "")
 
     print(f"⭐ Generating {args.count} STAR stories — {company}")
@@ -181,12 +181,17 @@ def main():
     raw = call_ai(prompt, args.ai, api_key, max_tokens=5000)
 
     from datetime import date
+
     lines = [
         f"# STAR Stories — {company}",
         f"*{position} · {args.count} stories · {date.today().isoformat()} · AI: {args.ai}*",
         "",
         "> Practice each story aloud — aim for 2 min each. Adjust numbers to match real data.",
-        "", "---", "", raw.strip(), "",
+        "",
+        "---",
+        "",
+        raw.strip(),
+        "",
         "---",
         "## Quick Reference",
         "",

@@ -34,6 +34,7 @@ DIVIDER = "─" * 77
 # Text helpers
 # ---------------------------------------------------------------------------
 
+
 def _strip_bold(text: str) -> str:
     return re.sub(r"\*\*(.+?)\*\*", r"\1", str(text or ""))
 
@@ -44,8 +45,10 @@ def _clean(text: str) -> str:
 
 def _wrap(text: str, width: int = 78, indent: str = "") -> str:
     return textwrap.fill(
-        _clean(text), width=width,
-        initial_indent=indent, subsequent_indent=indent,
+        _clean(text),
+        width=width,
+        initial_indent=indent,
+        subsequent_indent=indent,
     )
 
 
@@ -58,7 +61,7 @@ def _flatten_items(items) -> list:
         if isinstance(item, str):
             result.append(_clean(item))
         elif isinstance(item, dict):
-            text  = _clean(item.get("text", ""))
+            text = _clean(item.get("text", ""))
             label = _clean(item.get("label", ""))
             if label and text:
                 result.append(f"{label}: {text}")
@@ -75,7 +78,7 @@ def _render_list_field(field) -> str:
         parts = []
         for item in field:
             if isinstance(item, dict):
-                n   = item.get("name", "") or item.get("language", "")
+                n = item.get("name", "") or item.get("language", "")
                 lvl = item.get("level", "") or item.get("fluency", "")
                 parts.append(f"{n} ({lvl})" if lvl else n)
             else:
@@ -90,6 +93,7 @@ def _render_list_field(field) -> str:
 # CV plain-text renderer
 # ---------------------------------------------------------------------------
 
+
 def render_cv(data: dict) -> str:
     p = data.get("personal", {})
     lines = []
@@ -97,11 +101,15 @@ def render_cv(data: dict) -> str:
     # Header
     name = f"{p.get('first_name', '')} {p.get('last_name', '')}".strip().upper()
     position = _clean(p.get("position", ""))
-    contact_parts = [x for x in [
-        p.get("address", ""),
-        p.get("email", ""),
-        p.get("mobile", "") or p.get("phone", ""),
-    ] if x]
+    contact_parts = [
+        x
+        for x in [
+            p.get("address", ""),
+            p.get("email", ""),
+            p.get("mobile", "") or p.get("phone", ""),
+        ]
+        if x
+    ]
     if p.get("linkedin"):
         contact_parts.append(f"linkedin.com/in/{p['linkedin']}")
 
@@ -122,7 +130,7 @@ def render_cv(data: dict) -> str:
     if skills:
         lines += ["SKILLS", DIVIDER]
         for skill in skills:
-            cat   = _clean(skill.get("category", ""))
+            cat = _clean(skill.get("category", ""))
             items = skill.get("items", "")
             if isinstance(items, str):
                 items_str = _clean(items)
@@ -131,9 +139,10 @@ def render_cv(data: dict) -> str:
             else:
                 items_str = ""
             if cat and items_str:
-                prefix  = f"{cat}: "
+                prefix = f"{cat}: "
                 wrapped = textwrap.fill(
-                    items_str, width=78,
+                    items_str,
+                    width=78,
                     initial_indent=prefix,
                     subsequent_indent=" " * len(prefix),
                 )
@@ -146,11 +155,9 @@ def render_cv(data: dict) -> str:
         lines += ["KEY ACHIEVEMENTS", DIVIDER]
         for win in key_wins:
             title = _clean(win.get("title", ""))
-            text  = _clean(win.get("text", ""))
+            text = _clean(win.get("text", ""))
             if title and text:
-                wrapped = textwrap.fill(
-                    f"• {title}: {text}", width=78, subsequent_indent="  "
-                )
+                wrapped = textwrap.fill(f"• {title}: {text}", width=78, subsequent_indent="  ")
             elif title:
                 wrapped = f"• {title}"
             else:
@@ -163,10 +170,10 @@ def render_cv(data: dict) -> str:
     if experience:
         lines += ["PROFESSIONAL EXPERIENCE", DIVIDER]
         for exp in experience:
-            title    = _clean(exp.get("title", ""))
-            company  = _clean(exp.get("company", ""))
+            title = _clean(exp.get("title", ""))
+            company = _clean(exp.get("company", ""))
             location = _clean(exp.get("location", ""))
-            dates    = _clean(exp.get("dates", ""))
+            dates = _clean(exp.get("dates", ""))
             header_parts = [x for x in [title, company, location, dates] if x]
             lines.append(" | ".join(header_parts))
             for item in _flatten_items(exp.get("items", [])):
@@ -178,10 +185,10 @@ def render_cv(data: dict) -> str:
     if early_career:
         lines += ["EARLY CAREER", DIVIDER]
         for exp in early_career:
-            title    = _clean(exp.get("title", ""))
-            company  = _clean(exp.get("company", ""))
+            title = _clean(exp.get("title", ""))
+            company = _clean(exp.get("company", ""))
             location = _clean(exp.get("location", ""))
-            dates    = _clean(exp.get("dates", ""))
+            dates = _clean(exp.get("dates", ""))
             header_parts = [x for x in [title, company, location, dates] if x]
             lines.append(" | ".join(header_parts))
             for item in _flatten_items(exp.get("items", [])):
@@ -193,10 +200,10 @@ def render_cv(data: dict) -> str:
     if education:
         lines += ["EDUCATION", DIVIDER]
         for edu in education:
-            degree      = _clean(edu.get("degree", ""))
+            degree = _clean(edu.get("degree", ""))
             institution = _clean(edu.get("institution", ""))
-            location    = _clean(edu.get("location", ""))
-            dates       = _clean(edu.get("dates", ""))
+            location = _clean(edu.get("location", ""))
+            dates = _clean(edu.get("dates", ""))
             header_parts = [x for x in [degree, institution, location, dates] if x]
             lines.append(" | ".join(header_parts))
             if edu.get("description"):
@@ -208,9 +215,9 @@ def render_cv(data: dict) -> str:
     if certifications:
         lines += ["CERTIFICATIONS", DIVIDER]
         for cert in certifications:
-            cert_name   = _clean(cert.get("name", "") or cert.get("title", ""))
+            cert_name = _clean(cert.get("name", "") or cert.get("title", ""))
             institution = _clean(cert.get("institution", "") or cert.get("issuer", ""))
-            dates       = _clean(cert.get("dates", ""))
+            dates = _clean(cert.get("dates", ""))
             parts = [cert_name]
             if institution:
                 parts.append(institution)
@@ -221,7 +228,7 @@ def render_cv(data: dict) -> str:
 
     # Awards & Publications
     awards = data.get("awards", "")
-    pubs   = data.get("publications", "")
+    pubs = data.get("publications", "")
     if awards or pubs:
         lines += ["AWARDS & PUBLICATIONS", DIVIDER]
         if awards:
@@ -232,7 +239,7 @@ def render_cv(data: dict) -> str:
 
     # Languages & Interests
     lang_str = _render_list_field(data.get("languages", []))
-    int_str  = _render_list_field(data.get("interests", []))
+    int_str = _render_list_field(data.get("interests", []))
     if lang_str or int_str:
         lines += ["LANGUAGES & INTERESTS", DIVIDER]
         if lang_str:
@@ -248,17 +255,22 @@ def render_cv(data: dict) -> str:
 # Cover letter plain-text renderer
 # ---------------------------------------------------------------------------
 
+
 def render_coverletter(cl_data: dict, personal: dict) -> str:
     p = personal
     lines = []
 
     # Sender header
     name = f"{p.get('first_name', '')} {p.get('last_name', '')}".strip()
-    contact_parts = [x for x in [
-        p.get("address", ""),
-        p.get("email", ""),
-        p.get("mobile", "") or p.get("phone", ""),
-    ] if x]
+    contact_parts = [
+        x
+        for x in [
+            p.get("address", ""),
+            p.get("email", ""),
+            p.get("mobile", "") or p.get("phone", ""),
+        ]
+        if x
+    ]
     lines.append(name)
     if contact_parts:
         lines.append(" | ".join(contact_parts))
@@ -292,7 +304,7 @@ def render_coverletter(cl_data: dict, personal: dict) -> str:
     for section in cl_data.get("sections", []):
         if isinstance(section, dict):
             sec_title = _clean(section.get("title", ""))
-            content   = _clean(section.get("content", ""))
+            content = _clean(section.get("content", ""))
             if sec_title:
                 lines += [sec_title.upper(), ""]
             if content:
@@ -316,22 +328,14 @@ def render_coverletter(cl_data: dict, personal: dict) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Export CV (and Cover Letter) as ATS-safe plain text"
-    )
+    parser = argparse.ArgumentParser(description="Export CV (and Cover Letter) as ATS-safe plain text")
     parser.add_argument(
-        "app_dir", nargs="?", default=None,
-        help="Application directory (omit for master CV from data/cv.yml)"
+        "app_dir", nargs="?", default=None, help="Application directory (omit for master CV from data/cv.yml)"
     )
-    parser.add_argument(
-        "--no-cl", action="store_true",
-        help="Skip Cover Letter export even if coverletter.yml exists"
-    )
-    parser.add_argument(
-        "-o", "--output", default=None,
-        help="Output file path (default: auto-detected)"
-    )
+    parser.add_argument("--no-cl", action="store_true", help="Skip Cover Letter export even if coverletter.yml exists")
+    parser.add_argument("-o", "--output", default=None, help="Output file path (default: auto-detected)")
     args = parser.parse_args()
 
     # Determine source and output paths
@@ -348,9 +352,9 @@ def main():
 
         cv_out_path = Path(args.output) if args.output else app_dir / "CV.txt"
     else:
-        app_dir      = None
+        app_dir = None
         cv_data_path = REPO_ROOT / "data" / "cv.yml"
-        cv_out_path  = Path(args.output) if args.output else REPO_ROOT / "CV.txt"
+        cv_out_path = Path(args.output) if args.output else REPO_ROOT / "CV.txt"
 
     # Load and render CV
     if not cv_data_path.exists():

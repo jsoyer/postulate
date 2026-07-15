@@ -27,50 +27,50 @@ from lib.common import REPO_ROOT, require_yaml
 yaml = require_yaml()
 
 # ANSI colours
-_RESET  = "\033[0m"
-_BOLD   = "\033[1m"
-_DIM    = "\033[2m"
-_BLACK  = "\033[30m"
-_RED    = "\033[31m"
-_GREEN  = "\033[32m"
+_RESET = "\033[0m"
+_BOLD = "\033[1m"
+_DIM = "\033[2m"
+_BLACK = "\033[30m"
+_RED = "\033[31m"
+_GREEN = "\033[32m"
 _YELLOW = "\033[33m"
-_WHITE  = "\033[37m"
-_BG_BLUE   = "\033[44m"
-_BG_CYAN   = "\033[46m"
-_BG_GREEN  = "\033[42m"
-_BG_RED    = "\033[41m"
+_WHITE = "\033[37m"
+_BG_BLUE = "\033[44m"
+_BG_CYAN = "\033[46m"
+_BG_GREEN = "\033[42m"
+_BG_RED = "\033[41m"
 _BG_YELLOW = "\033[43m"
-_BG_GREY   = "\033[100m"
+_BG_GREY = "\033[100m"
 
 # Stage definitions: key → (label, emoji, header colour)
 STAGES = {
-    "applied":       ("Applied",      "📤", _BG_BLUE   + _WHITE),
-    "phone-screen":  ("Phone Screen", "📞", _BG_CYAN   + _BLACK),
-    "interview":     ("Interview",    "🗣️",  _BG_YELLOW + _BLACK),
-    "final":         ("Final Round",  "🎯", _BG_YELLOW + _BLACK),
-    "offer":         ("Offer",        "🎉", _BG_GREEN  + _BLACK),
-    "rejected":      ("Rejected",     "❌", _BG_RED    + _WHITE),
-    "ghosted":       ("Ghosted",      "👻", _BG_GREY   + _WHITE),
+    "applied": ("Applied", "📤", _BG_BLUE + _WHITE),
+    "phone-screen": ("Phone Screen", "📞", _BG_CYAN + _BLACK),
+    "interview": ("Interview", "🗣️", _BG_YELLOW + _BLACK),
+    "final": ("Final Round", "🎯", _BG_YELLOW + _BLACK),
+    "offer": ("Offer", "🎉", _BG_GREEN + _BLACK),
+    "rejected": ("Rejected", "❌", _BG_RED + _WHITE),
+    "ghosted": ("Ghosted", "👻", _BG_GREY + _WHITE),
 }
 
 STAGE_ORDER = ["applied", "phone-screen", "interview", "final", "offer", "rejected", "ghosted"]
 
 # Map meta.yml outcome values → stage keys
 OUTCOME_TO_STAGE = {
-    "offer":    "offer",
+    "offer": "offer",
     "rejected": "rejected",
-    "ghosted":  "ghosted",
-    "interview":"interview",
+    "ghosted": "ghosted",
+    "interview": "interview",
 }
 
 # Map milestones.yml stage values → board stage
 MILESTONE_TO_STAGE = {
-    "phone-screen":    "phone-screen",
-    "technical":       "interview",
-    "panel":           "interview",
-    "final":           "final",
+    "phone-screen": "phone-screen",
+    "technical": "interview",
+    "panel": "interview",
+    "final": "final",
     "reference-check": "final",
-    "offer":           "offer",
+    "offer": "offer",
 }
 
 
@@ -78,13 +78,14 @@ MILESTONE_TO_STAGE = {
 # Data collection
 # ---------------------------------------------------------------------------
 
+
 def _parse_date(val) -> datetime | None:
     if not val:
         return None
     s = str(val).strip()
     for fmt in ("%Y-%m-%d", "%Y-%m"):
         try:
-            return datetime.strptime(s[:len(fmt)], fmt)
+            return datetime.strptime(s[: len(fmt)], fmt)
         except ValueError:
             continue
     return None
@@ -135,24 +136,26 @@ def collect_apps(apps_dir: Path) -> list[dict]:
                 ms_data = yaml.safe_load(f) or {}
             milestones = ms_data.get("milestones", [])
 
-        company  = meta.get("company", d.name)
+        company = meta.get("company", d.name)
         position = meta.get("position", "")
-        created  = _parse_date(meta.get("created", ""))
+        created = _parse_date(meta.get("created", ""))
         deadline = _parse_date(meta.get("deadline", ""))
-        stage    = _app_stage(meta, milestones)
-        days     = _days_ago(created)
+        stage = _app_stage(meta, milestones)
+        days = _days_ago(created)
 
-        apps.append({
-            "dir":       d.name,
-            "company":   company,
-            "position":  position,
-            "stage":     stage,
-            "days":      days,
-            "created":   created.isoformat()[:10] if created else "",
-            "deadline":  deadline.isoformat()[:10] if deadline else "",
-            "outcome":   meta.get("outcome", ""),
-            "milestones": len(milestones),
-        })
+        apps.append(
+            {
+                "dir": d.name,
+                "company": company,
+                "position": position,
+                "stage": stage,
+                "days": days,
+                "created": created.isoformat()[:10] if created else "",
+                "deadline": deadline.isoformat()[:10] if deadline else "",
+                "outcome": meta.get("outcome", ""),
+                "milestones": len(milestones),
+            }
+        )
 
     return apps
 
@@ -165,7 +168,7 @@ CARD_WIDTH = 26  # chars per card (+ 2 padding)
 
 
 def _truncate(s: str, n: int) -> str:
-    return s[:n - 1] + "…" if len(s) > n else s
+    return s[: n - 1] + "…" if len(s) > n else s
 
 
 def _days_badge(days: int) -> str:
@@ -190,24 +193,17 @@ def render_board(apps: list[dict], stage_filter: str = "") -> None:
             by_stage["applied"].append(app)
 
     # Filter
-    active_stages = (
-        [stage_filter] if stage_filter in STAGES
-        else STAGE_ORDER
-    )
+    active_stages = [stage_filter] if stage_filter in STAGES else STAGE_ORDER
 
     # Remove empty terminal stages when showing all
     if not stage_filter:
-        active_stages = [
-            s for s in STAGE_ORDER
-            if by_stage[s] or s in ("applied", "phone-screen", "interview")
-        ]
+        active_stages = [s for s in STAGE_ORDER if by_stage[s] or s in ("applied", "phone-screen", "interview")]
 
     term_width = shutil.get_terminal_size((120, 40)).columns
 
     # Header
     print()
-    print(f"{_BOLD}📋 Application Board{_RESET}  "
-          f"{_DIM}{today} · {total} applications{_RESET}")
+    print(f"{_BOLD}📋 Application Board{_RESET}  {_DIM}{today} · {total} applications{_RESET}")
     print()
 
     # Stage summary bar
@@ -245,14 +241,21 @@ def render_board(apps: list[dict], stage_filter: str = "") -> None:
             cards = by_stage[s]
             if row < len(cards):
                 app = cards[row]
-                company  = _truncate(app["company"], col_w - 8)
-                days_b   = _days_badge(app["days"])
-                dl       = f" ⏰" if app["deadline"] else ""
-                ms       = f" 📍{app['milestones']}" if app["milestones"] else ""
+                company = _truncate(app["company"], col_w - 8)
+                days_b = _days_badge(app["days"])
+                dl = f" ⏰" if app["deadline"] else ""
+                ms = f" 📍{app['milestones']}" if app["milestones"] else ""
                 # line 1: company
                 line += f" {_BOLD}{company:<{col_w - 8}}{_RESET}{days_b}{dl}{ms}"
                 # pad to col_w
-                raw_len = 1 + len(company) + len(str(app["days"])) + 1 + (2 if app["deadline"] else 0) + (3 if app["milestones"] else 0)
+                raw_len = (
+                    1
+                    + len(company)
+                    + len(str(app["days"]))
+                    + 1
+                    + (2 if app["deadline"] else 0)
+                    + (3 if app["milestones"] else 0)
+                )
                 pad = max(0, col_w - raw_len)
                 line += " " * pad + " "
             else:
@@ -284,8 +287,7 @@ def render_stacked(apps: list[dict], stage_filter: str = "") -> None:
         s = app["stage"]
         by_stage.get(s, by_stage["applied"]).append(app)
 
-    active = ([stage_filter] if stage_filter else
-              [s for s in STAGE_ORDER if by_stage[s]])
+    active = [stage_filter] if stage_filter else [s for s in STAGE_ORDER if by_stage[s]]
 
     print(f"\n📋 Application Board — {today}  ({len(apps)} total)\n")
     for s in active:
@@ -307,20 +309,11 @@ def render_stacked(apps: list[dict], stage_filter: str = "") -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Terminal Kanban board for job applications"
-    )
-    parser.add_argument(
-        "--stage",
-        choices=STAGE_ORDER,
-        default="",
-        help="Filter to one stage"
-    )
-    parser.add_argument(
-        "--json", action="store_true",
-        help="Output raw data as JSON"
-    )
+    parser = argparse.ArgumentParser(description="Terminal Kanban board for job applications")
+    parser.add_argument("--stage", choices=STAGE_ORDER, default="", help="Filter to one stage")
+    parser.add_argument("--json", action="store_true", help="Output raw data as JSON")
     args = parser.parse_args()
 
     apps_dir = REPO_ROOT / "applications"

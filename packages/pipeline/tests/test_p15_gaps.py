@@ -49,12 +49,8 @@ MINIMAL_CV = {
             "items": ["Built scalable systems"],
         }
     ],
-    "early_career": [
-        {"title": "Dev", "company": "Beta", "location": "Lyon", "dates": "2015 -- 2020"}
-    ],
-    "education": [
-        {"degree": "MSc CS", "school": "École Poly", "location": "Paris", "dates": "2010 -- 2015"}
-    ],
+    "early_career": [{"title": "Dev", "company": "Beta", "location": "Lyon", "dates": "2015 -- 2020"}],
+    "education": [{"degree": "MSc CS", "school": "École Poly", "location": "Paris", "dates": "2010 -- 2015"}],
     "certifications": [{"name": "AWS SAA", "institution": "Amazon", "date": "2022"}],
     "awards": "Best speaker 2021",
     "publications": "Paper on ML",
@@ -78,8 +74,7 @@ class TestAtsTextMain:
         data_dir.mkdir()
         (data_dir / "cv.yml").write_text(yaml.dump(MINIMAL_CV))
         out_path = tmp_path / "CV.txt"
-        with patch.object(ats_text, "REPO_ROOT", tmp_path), \
-             patch("sys.argv", ["ats-text.py", "-o", str(out_path)]):
+        with patch.object(ats_text, "REPO_ROOT", tmp_path), patch("sys.argv", ["ats-text.py", "-o", str(out_path)]):
             rc = ats_text.main()
         assert rc == 0
         assert out_path.exists()
@@ -92,8 +87,10 @@ class TestAtsTextMain:
         app_dir = tmp_path / "applications" / "2026-01-acme"
         app_dir.mkdir(parents=True)
         out_path = app_dir / "CV.txt"
-        with patch.object(ats_text, "REPO_ROOT", tmp_path), \
-             patch("sys.argv", ["ats-text.py", str(app_dir), "--no-cl", "-o", str(out_path)]):
+        with (
+            patch.object(ats_text, "REPO_ROOT", tmp_path),
+            patch("sys.argv", ["ats-text.py", str(app_dir), "--no-cl", "-o", str(out_path)]),
+        ):
             rc = ats_text.main()
         assert rc == 0
         assert out_path.exists()
@@ -106,8 +103,10 @@ class TestAtsTextMain:
         app_dir.mkdir(parents=True)
         (app_dir / "coverletter.yml").write_text(yaml.dump(MINIMAL_CL))
         out_path = app_dir / "CV.txt"
-        with patch.object(ats_text, "REPO_ROOT", tmp_path), \
-             patch("sys.argv", ["ats-text.py", str(app_dir), "-o", str(out_path)]):
+        with (
+            patch.object(ats_text, "REPO_ROOT", tmp_path),
+            patch("sys.argv", ["ats-text.py", str(app_dir), "-o", str(out_path)]),
+        ):
             rc = ats_text.main()
         assert rc == 0
         cl_out = app_dir / "CoverLetter.txt"
@@ -124,8 +123,10 @@ class TestAtsTextMain:
         tailored["personal"]["first_name"] = "Tailored"
         (app_dir / "cv-tailored.yml").write_text(yaml.dump(tailored))
         out_path = app_dir / "CV.txt"
-        with patch.object(ats_text, "REPO_ROOT", tmp_path), \
-             patch("sys.argv", ["ats-text.py", str(app_dir), "--no-cl", "-o", str(out_path)]):
+        with (
+            patch.object(ats_text, "REPO_ROOT", tmp_path),
+            patch("sys.argv", ["ats-text.py", str(app_dir), "--no-cl", "-o", str(out_path)]),
+        ):
             rc = ats_text.main()
         assert rc == 0
         assert "TAILORED" in out_path.read_text()
@@ -166,12 +167,8 @@ SAMPLE_DATA = {
             "items": [{"label": "Leadership", "text": "Led team of 20"}],
         }
     ],
-    "early_career": [
-        {"title": "Dev", "company": "Beta", "location": "LA", "dates": "2015 -- 2020"}
-    ],
-    "education": [
-        {"degree": "BS CS", "school": "MIT", "location": "Boston", "dates": "2011 -- 2015"}
-    ],
+    "early_career": [{"title": "Dev", "company": "Beta", "location": "LA", "dates": "2015 -- 2020"}],
+    "education": [{"degree": "BS CS", "school": "MIT", "location": "Boston", "dates": "2011 -- 2015"}],
     "certifications": [{"name": "PMP", "institution": "PMI", "date": "2021"}],
     "awards": "Top performer 2022",
     "publications": "None",
@@ -260,9 +257,7 @@ class TestEffectivenessLoadApplications:
     def test_loads_meta_fields(self, tmp_path):
         app_dir = tmp_path / "applications" / "2026-01-acme"
         app_dir.mkdir(parents=True)
-        (app_dir / "meta.yml").write_text(
-            "company: Acme\nposition: VP\noutcome: interview\n"
-        )
+        (app_dir / "meta.yml").write_text("company: Acme\nposition: VP\noutcome: interview\n")
         with patch.object(eff_mod, "WORKDIR", tmp_path):
             apps = eff_mod.load_applications()
         assert len(apps) == 1
@@ -274,9 +269,10 @@ class TestEffectivenessLoadApplications:
         app_dir.mkdir(parents=True)
         (app_dir / "meta.yml").write_text("company: Scored\noutcome: offer\n")
         (app_dir / "job.txt").write_text("python cloud saas")
-        fake_result = MagicMock(returncode=0, stdout=json.dumps({"score": 85.0, "found_count": 10, "total_keywords": 12}))
-        with patch.object(eff_mod, "WORKDIR", tmp_path), \
-             patch("subprocess.run", return_value=fake_result):
+        fake_result = MagicMock(
+            returncode=0, stdout=json.dumps({"score": 85.0, "found_count": 10, "total_keywords": 12})
+        )
+        with patch.object(eff_mod, "WORKDIR", tmp_path), patch("subprocess.run", return_value=fake_result):
             apps = eff_mod.load_applications()
         assert apps[0].get("ats_score") == 85.0
 
@@ -286,8 +282,11 @@ class TestEffectivenessLoadApplications:
         (app_dir / "meta.yml").write_text("company: Fail\noutcome: \n")
         (app_dir / "job.txt").write_text("some job")
         import subprocess
-        with patch.object(eff_mod, "WORKDIR", tmp_path), \
-             patch("subprocess.run", side_effect=FileNotFoundError("not found")):
+
+        with (
+            patch.object(eff_mod, "WORKDIR", tmp_path),
+            patch("subprocess.run", side_effect=FileNotFoundError("not found")),
+        ):
             apps = eff_mod.load_applications()
         assert "ats_score" not in apps[0]
 
@@ -303,9 +302,7 @@ class TestEffectivenessMain:
     def test_with_apps_prints_report(self, tmp_path, capsys):
         app_dir = tmp_path / "applications" / "2026-01-acme"
         app_dir.mkdir(parents=True)
-        (app_dir / "meta.yml").write_text(
-            "company: Acme\nposition: VP\noutcome: interview\n"
-        )
+        (app_dir / "meta.yml").write_text("company: Acme\nposition: VP\noutcome: interview\n")
         with patch.object(eff_mod, "WORKDIR", tmp_path):
             rc = eff_mod.main()
         assert rc == 0
@@ -340,17 +337,14 @@ class TestEffectivenessMain:
             (d / "meta.yml").write_text(f"company: {name}\noutcome: {outcome}\n")
             (d / "job.txt").write_text("python cloud")
         fake_result = MagicMock(returncode=0, stdout=json.dumps({"score": 85.0, "found_count": 5, "total_keywords": 6}))
-        with patch.object(eff_mod, "WORKDIR", tmp_path), \
-             patch("subprocess.run", return_value=fake_result):
+        with patch.object(eff_mod, "WORKDIR", tmp_path), patch("subprocess.run", return_value=fake_result):
             rc = eff_mod.main()
         assert rc == 0
 
     def test_response_days_printed(self, tmp_path, capsys):
         app_dir = tmp_path / "applications" / "2026-01-acme"
         app_dir.mkdir(parents=True)
-        (app_dir / "meta.yml").write_text(
-            "company: Acme\noutcome: interview\nresponse_days: 7\n"
-        )
+        (app_dir / "meta.yml").write_text("company: Acme\noutcome: interview\nresponse_days: 7\n")
         with patch.object(eff_mod, "WORKDIR", tmp_path):
             rc = eff_mod.main()
         assert rc == 0
@@ -515,7 +509,9 @@ class TestSaveContacts:
         assert "Acme Corp" in content
 
     def test_hunter_contacts_in_table(self, tmp_path):
-        hunter = [{"name": "Jane", "email": "j@acme.com", "position": "Recruiter", "confidence": 85, "source": "hunter"}]
+        hunter = [
+            {"name": "Jane", "email": "j@acme.com", "position": "Recruiter", "confidence": 85, "source": "hunter"}
+        ]
         contacts_mod.save_contacts(tmp_path, "Acme", "acme.com", hunter, [], [])
         content = (tmp_path / "contacts.md").read_text()
         assert "j@acme.com" in content
@@ -528,7 +524,16 @@ class TestSaveContacts:
         assert "hr@acme.com" in content
 
     def test_github_contacts_listed(self, tmp_path):
-        github = [{"name": "Dev", "email": "dev@a.com", "handle": "devuser", "confidence": 30, "source": "github", "position": ""}]
+        github = [
+            {
+                "name": "Dev",
+                "email": "dev@a.com",
+                "handle": "devuser",
+                "confidence": 30,
+                "source": "github",
+                "position": "",
+            }
+        ]
         contacts_mod.save_contacts(tmp_path, "Acme", "acme.com", [], [], github)
         content = (tmp_path / "contacts.md").read_text()
         assert "devuser" in content
@@ -539,7 +544,9 @@ class TestSaveContacts:
         assert "No contacts found" in content or "LinkedIn" in content
 
     def test_suggested_contact_when_primary(self, tmp_path):
-        hunter = [{"name": "Jane HR", "email": "j@acme.com", "position": "Talent", "confidence": 90, "source": "hunter"}]
+        hunter = [
+            {"name": "Jane HR", "email": "j@acme.com", "position": "Talent", "confidence": 90, "source": "hunter"}
+        ]
         contacts_mod.save_contacts(tmp_path, "Acme", "acme.com", hunter, [], [])
         content = (tmp_path / "contacts.md").read_text()
         assert "Primary contact" in content or "j@acme.com" in content
@@ -554,11 +561,18 @@ class TestSearchHunterMocked:
         payload = {
             "data": {
                 "emails": [
-                    {"first_name": "Jane", "last_name": "Doe", "value": "jane@acme.com", "position": "Recruiter", "confidence": 85}
+                    {
+                        "first_name": "Jane",
+                        "last_name": "Doe",
+                        "value": "jane@acme.com",
+                        "position": "Recruiter",
+                        "confidence": 85,
+                    }
                 ]
             }
         }
         import urllib.request
+
         mock_resp = MagicMock()
         mock_resp.read.return_value = json.dumps(payload).encode()
         mock_resp.__enter__ = lambda s: s
@@ -571,12 +585,14 @@ class TestSearchHunterMocked:
 
     def test_handles_http_error(self):
         import urllib.error
+
         with patch("urllib.request.urlopen", side_effect=urllib.error.HTTPError(None, 401, "Unauthorized", {}, None)):
             result = contacts_mod.search_hunter("acme.com", "bad-key")
         assert result == []
 
     def test_handles_rate_limit(self):
         import urllib.error
+
         with patch("urllib.request.urlopen", side_effect=urllib.error.HTTPError(None, 429, "Too Many", {}, None)):
             result = contacts_mod.search_hunter("acme.com", "key")
         assert result == []
@@ -595,21 +611,24 @@ class TestSearchGithubMocked:
         profile_resp = MagicMock()
         profile_resp.status_code = 200
         profile_resp.json.return_value = {"email": "jane@acme.com", "name": "Jane Doe", "bio": "Recruiter"}
-        with patch.object(contacts_mod, "HAS_REQUESTS", True), \
-             patch("requests.get", side_effect=[search_resp, profile_resp]):
+        with (
+            patch.object(contacts_mod, "HAS_REQUESTS", True),
+            patch("requests.get", side_effect=[search_resp, profile_resp]),
+        ):
             result = contacts_mod.search_github("Acme")
         assert len(result) == 1
         assert result[0]["email"] == "jane@acme.com"
 
     def test_returns_empty_on_403(self):
         resp = MagicMock(status_code=403)
-        with patch.object(contacts_mod, "HAS_REQUESTS", True), \
-             patch("requests.get", return_value=resp):
+        with patch.object(contacts_mod, "HAS_REQUESTS", True), patch("requests.get", return_value=resp):
             result = contacts_mod.search_github("Acme")
         assert result == []
 
     def test_handles_exception(self):
-        with patch.object(contacts_mod, "HAS_REQUESTS", True), \
-             patch("requests.get", side_effect=Exception("network error")):
+        with (
+            patch.object(contacts_mod, "HAS_REQUESTS", True),
+            patch("requests.get", side_effect=Exception("network error")),
+        ):
             result = contacts_mod.search_github("Acme")
         assert result == []

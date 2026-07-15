@@ -38,6 +38,7 @@ except ImportError:
 
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -53,7 +54,7 @@ def _parse_date(date_str) -> datetime | None:
     s = str(date_str).strip()
     for fmt in ("%Y-%m-%d", "%Y-%m"):
         try:
-            return datetime.strptime(s[:len(fmt)], fmt)
+            return datetime.strptime(s[: len(fmt)], fmt)
         except ValueError:
             continue
     return None
@@ -96,25 +97,11 @@ def _send_discord(text: str, webhook: str, dry_run: bool) -> bool:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Cron-friendly deadline and stale-application alert"
-    )
-    parser.add_argument(
-        "--days", type=int, default=3,
-        help="Alert if deadline within N days (default: 3)"
-    )
-    parser.add_argument(
-        "--stale", type=int, default=14,
-        help="Alert if application stale > N days (default: 14)"
-    )
-    parser.add_argument(
-        "--dry-run", action="store_true",
-        help="Print alerts without sending to webhooks"
-    )
-    parser.add_argument(
-        "--quiet", action="store_true",
-        help="Suppress terminal output if no alerts (for cron)"
-    )
+    parser = argparse.ArgumentParser(description="Cron-friendly deadline and stale-application alert")
+    parser.add_argument("--days", type=int, default=3, help="Alert if deadline within N days (default: 3)")
+    parser.add_argument("--stale", type=int, default=14, help="Alert if application stale > N days (default: 14)")
+    parser.add_argument("--dry-run", action="store_true", help="Print alerts without sending to webhooks")
+    parser.add_argument("--quiet", action="store_true", help="Suppress terminal output if no alerts (for cron)")
     args = parser.parse_args()
 
     load_env()
@@ -124,16 +111,16 @@ def main():
         return 0
 
     now = datetime.now()
-    dl_cutoff    = now + timedelta(days=args.days)
+    dl_cutoff = now + timedelta(days=args.days)
     stale_cutoff = now - timedelta(days=args.stale)
 
     deadline_alerts = []
-    stale_alerts    = []
+    stale_alerts = []
 
     for d in sorted(apps_dir.iterdir()):
         if not d.is_dir():
             continue
-        meta    = load_meta(d)
+        meta = load_meta(d)
         company = meta.get("company", d.name)
         outcome = meta.get("outcome", "")
 
@@ -141,24 +128,28 @@ def main():
         dl = _parse_date(meta.get("deadline", ""))
         if dl and now <= dl <= dl_cutoff:
             days_left = (dl - now).days
-            deadline_alerts.append({
-                "name":      d.name,
-                "company":   company,
-                "deadline":  dl.strftime("%Y-%m-%d"),
-                "days_left": days_left,
-            })
+            deadline_alerts.append(
+                {
+                    "name": d.name,
+                    "company": company,
+                    "deadline": dl.strftime("%Y-%m-%d"),
+                    "days_left": days_left,
+                }
+            )
 
         # Stale check
         if outcome not in TERMINAL_OUTCOMES:
             created = _app_created_date(d, meta)
             if created and created <= stale_cutoff:
                 days_elapsed = (now - created).days
-                stale_alerts.append({
-                    "name":         d.name,
-                    "company":      company,
-                    "days_elapsed": days_elapsed,
-                    "outcome":      outcome,
-                })
+                stale_alerts.append(
+                    {
+                        "name": d.name,
+                        "company": company,
+                        "days_elapsed": days_elapsed,
+                        "outcome": outcome,
+                    }
+                )
 
     if not deadline_alerts and not stale_alerts:
         if not args.quiet:
@@ -180,10 +171,7 @@ def main():
     if stale_alerts:
         lines.append(f"\n⏳ *Stale applications (>{args.stale}d, no response):*")
         for a in stale_alerts[:5]:
-            lines.append(
-                f"  • {a['company']} ({a['days_elapsed']}d)  "
-                f"`make follow-up NAME={a['name']}`"
-            )
+            lines.append(f"  • {a['company']} ({a['days_elapsed']}d)  `make follow-up NAME={a['name']}`")
         if len(stale_alerts) > 5:
             lines.append(f"  … and {len(stale_alerts) - 5} more")
 
@@ -199,7 +187,7 @@ def main():
             print(f"⏳ {len(stale_alerts)} stale application(s)")
 
     # Send to webhooks
-    slack_webhook   = os.environ.get("SLACK_WEBHOOK_URL", "")
+    slack_webhook = os.environ.get("SLACK_WEBHOOK_URL", "")
     discord_webhook = os.environ.get("DISCORD_WEBHOOK_URL", "")
     sent = False
 

@@ -152,6 +152,7 @@ class TestLoadEnv:
     def test_does_not_crash_without_env_file(self, tmp_path, monkeypatch):
         # Point REPO_ROOT at a temp dir that has no .env file.
         import lib.common as common_mod
+
         monkeypatch.setattr(common_mod, "REPO_ROOT", tmp_path)
         # Should return None silently.
         result = load_env()
@@ -159,8 +160,9 @@ class TestLoadEnv:
 
     def test_loads_key_value_pairs(self, tmp_path, monkeypatch):
         env_file = tmp_path / ".env"
-        env_file.write_text('TEST_KEY_XYZ=hello_world\n# comment\nANOTHER=42\n')
+        env_file.write_text("TEST_KEY_XYZ=hello_world\n# comment\nANOTHER=42\n")
         import lib.common as common_mod
+
         monkeypatch.setattr(common_mod, "REPO_ROOT", tmp_path)
         # Ensure keys are absent before calling.
         monkeypatch.delenv("TEST_KEY_XYZ", raising=False)
@@ -173,6 +175,7 @@ class TestLoadEnv:
         env_file = tmp_path / ".env"
         env_file.write_text("PRESET_VAR=from_file\n")
         import lib.common as common_mod
+
         monkeypatch.setattr(common_mod, "REPO_ROOT", tmp_path)
         monkeypatch.setenv("PRESET_VAR", "already_set")
         load_env()
@@ -183,6 +186,7 @@ class TestLoadEnv:
         env_file = tmp_path / ".env"
         env_file.write_text('QUOTED_VAR="quoted_value"\n')
         import lib.common as common_mod
+
         monkeypatch.setattr(common_mod, "REPO_ROOT", tmp_path)
         monkeypatch.delenv("QUOTED_VAR", raising=False)
         load_env()

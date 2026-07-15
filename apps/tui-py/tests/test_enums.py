@@ -58,15 +58,11 @@ class TestPipelineOrder:
 
     def test_applied_before_interview(self) -> None:
         order = ApplicationStatus.pipeline_order()
-        assert order.index(ApplicationStatus.APPLIED) < order.index(
-            ApplicationStatus.INTERVIEW
-        )
+        assert order.index(ApplicationStatus.APPLIED) < order.index(ApplicationStatus.INTERVIEW)
 
     def test_interview_before_offer(self) -> None:
         order = ApplicationStatus.pipeline_order()
-        assert order.index(ApplicationStatus.INTERVIEW) < order.index(
-            ApplicationStatus.OFFER
-        )
+        assert order.index(ApplicationStatus.INTERVIEW) < order.index(ApplicationStatus.OFFER)
 
 
 class TestKanbanColumns:

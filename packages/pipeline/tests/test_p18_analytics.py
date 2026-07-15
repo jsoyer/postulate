@@ -20,6 +20,7 @@ import yaml
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _load(name: str):
     path = Path(__file__).parent.parent / "scripts"
     sys.path.insert(0, str(path))
@@ -64,11 +65,13 @@ def _make_app(tmp_path: Path, name: str, meta: dict) -> Path:
 # _record_ats_history (ats-score.py)
 # ---------------------------------------------------------------------------
 
+
 class TestRecordAtsHistory:
     def _import_record(self):
         path = Path(__file__).parent.parent / "scripts"
         sys.path.insert(0, str(path))
         import importlib.util
+
         spec = importlib.util.spec_from_file_location("ats_score", path / "ats-score.py")
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -88,9 +91,10 @@ class TestRecordAtsHistory:
 
     def test_appends_to_existing_history(self, tmp_path):
         record = self._import_record()
-        meta = {"company": "Test", "ats_history": [
-            {"date": "2026-01-01T00:00:00Z", "score": 60.0, "found": 19, "total": 32}
-        ]}
+        meta = {
+            "company": "Test",
+            "ats_history": [{"date": "2026-01-01T00:00:00Z", "score": 60.0, "found": 19, "total": 32}],
+        }
         meta_path = tmp_path / "meta.yml"
         meta_path.write_text(yaml.dump(meta), encoding="utf-8")
         record(str(tmp_path), 75.0, 24, 32)
@@ -116,6 +120,7 @@ class TestRecordAtsHistory:
 # ---------------------------------------------------------------------------
 # ats-history.py
 # ---------------------------------------------------------------------------
+
 
 class TestLoadHistory:
     def test_empty_dir_returns_empty_list(self, tmp_path):
@@ -195,10 +200,22 @@ class TestPrintHistory:
     def test_filter_by_app_name(self, capsys, tmp_path):
         mod = _load("ats-history")
         records = [
-            {"name": "2026-02-acme", "company": "Acme", "position": "Eng", "outcome": "applied",
-             "provider": "gemini", "history": [{"date": "2026-01-01T00:00:00Z", "score": 60.0, "found": 19, "total": 32}]},
-            {"name": "2026-03-beta", "company": "Beta", "position": "Eng", "outcome": "applied",
-             "provider": "claude", "history": [{"date": "2026-02-01T00:00:00Z", "score": 55.0, "found": 18, "total": 33}]},
+            {
+                "name": "2026-02-acme",
+                "company": "Acme",
+                "position": "Eng",
+                "outcome": "applied",
+                "provider": "gemini",
+                "history": [{"date": "2026-01-01T00:00:00Z", "score": 60.0, "found": 19, "total": 32}],
+            },
+            {
+                "name": "2026-03-beta",
+                "company": "Beta",
+                "position": "Eng",
+                "outcome": "applied",
+                "provider": "claude",
+                "history": [{"date": "2026-02-01T00:00:00Z", "score": 55.0, "found": 18, "total": 33}],
+            },
         ]
         mod.print_history(records, app_filter="acme")
         out = capsys.readouterr().out
@@ -240,6 +257,7 @@ class TestAtsHistoryMain:
 # ---------------------------------------------------------------------------
 # funnel-analytics.py
 # ---------------------------------------------------------------------------
+
 
 class TestStageLevel:
     def test_applied_is_zero(self):
@@ -341,12 +359,30 @@ class TestPrintReport:
     def test_shows_funnel_stages(self, capsys, tmp_path):
         mod = _load("funnel-analytics")
         records = [
-            {"name": "app1", "company": "A", "position": "Eng", "outcome": "interview",
-             "stage_level": 2, "provider": "gemini", "theme": "", "ats_score": 72.0,
-             "response_days": 5, "ats_history_count": 2},
-            {"name": "app2", "company": "B", "position": "Eng", "outcome": "rejected",
-             "stage_level": -1, "provider": "claude", "theme": "", "ats_score": 55.0,
-             "response_days": None, "ats_history_count": 1},
+            {
+                "name": "app1",
+                "company": "A",
+                "position": "Eng",
+                "outcome": "interview",
+                "stage_level": 2,
+                "provider": "gemini",
+                "theme": "",
+                "ats_score": 72.0,
+                "response_days": 5,
+                "ats_history_count": 2,
+            },
+            {
+                "name": "app2",
+                "company": "B",
+                "position": "Eng",
+                "outcome": "rejected",
+                "stage_level": -1,
+                "provider": "claude",
+                "theme": "",
+                "ats_score": 55.0,
+                "response_days": None,
+                "ats_history_count": 1,
+            },
         ]
         mod.print_report(records)
         out = capsys.readouterr().out
@@ -357,12 +393,19 @@ class TestPrintReport:
         mod = _load("funnel-analytics")
         # Need >=3 scored records for Pearson
         records = [
-            {"name": f"app{i}", "company": "X", "position": "E", "outcome": o,
-             "stage_level": s, "provider": "gemini", "theme": "", "ats_score": a,
-             "response_days": None, "ats_history_count": 1}
-            for i, (o, s, a) in enumerate([
-                ("interview", 2, 75.0), ("rejected", -1, 50.0), ("offer", 4, 88.0)
-            ])
+            {
+                "name": f"app{i}",
+                "company": "X",
+                "position": "E",
+                "outcome": o,
+                "stage_level": s,
+                "provider": "gemini",
+                "theme": "",
+                "ats_score": a,
+                "response_days": None,
+                "ats_history_count": 1,
+            }
+            for i, (o, s, a) in enumerate([("interview", 2, 75.0), ("rejected", -1, 50.0), ("offer", 4, 88.0)])
         ]
         mod.print_report(records)
         out = capsys.readouterr().out

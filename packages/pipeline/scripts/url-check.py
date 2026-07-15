@@ -20,12 +20,14 @@ from pathlib import Path
 
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
 
 try:
     import yaml
+
     HAS_YAML = True
 except ImportError:
     HAS_YAML = False
@@ -73,6 +75,7 @@ DEAD_REDIRECT_PATTERNS = [
 # Core check
 # ---------------------------------------------------------------------------
 
+
 def load_meta(app_dir: Path) -> dict:
     # Soft fallback: lib.common.load_meta calls require_yaml() which hard-exits
     # when PyYAML is missing. Guard here so URL checking still works without it.
@@ -118,8 +121,7 @@ def check_url(original_url: str) -> dict:
         orig_parsed = urllib.parse.urlparse(original_url)
         final_parsed = urllib.parse.urlparse(final_url)
         was_redirected = orig_parsed.netloc != final_parsed.netloc or (
-            orig_parsed.path != final_parsed.path and
-            final_url.rstrip("/") != original_url.rstrip("/")
+            orig_parsed.path != final_parsed.path and final_url.rstrip("/") != original_url.rstrip("/")
         )
 
         if was_redirected:
@@ -175,10 +177,10 @@ def check_url(original_url: str) -> dict:
 # ---------------------------------------------------------------------------
 
 STATUS_ICON = {
-    "live":       "✅",
-    "closed":     "❌",
+    "live": "✅",
+    "closed": "❌",
     "redirected": "⚠️ ",
-    "error":      "🔴",
+    "error": "🔴",
 }
 
 
@@ -205,11 +207,13 @@ def run(name_filter: str = "", json_mode: bool = False) -> int:
         url = job_url_path.read_text(encoding="utf-8").strip()
         if url:
             meta = load_meta(d)
-            targets.append({
-                "name": d.name,
-                "company": meta.get("company", d.name),
-                "url": url,
-            })
+            targets.append(
+                {
+                    "name": d.name,
+                    "company": meta.get("company", d.name),
+                    "url": url,
+                }
+            )
 
     if not targets:
         if name_filter:
@@ -264,17 +268,9 @@ def run(name_filter: str = "", json_mode: bool = False) -> int:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Check if job posting URLs are still live"
-    )
-    parser.add_argument(
-        "--name", default="", metavar="APP_NAME",
-        help="Check a single application only"
-    )
-    parser.add_argument(
-        "--json", action="store_true",
-        help="Output JSON results"
-    )
+    parser = argparse.ArgumentParser(description="Check if job posting URLs are still live")
+    parser.add_argument("--name", default="", metavar="APP_NAME", help="Check a single application only")
+    parser.add_argument("--json", action="store_true", help="Output JSON results")
     args = parser.parse_args()
     sys.exit(run(name_filter=args.name, json_mode=args.json))
 

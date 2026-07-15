@@ -28,10 +28,22 @@ def get_pr_info(name):
     branch = f"apply/{name}"
     try:
         result = subprocess.run(
-            ["gh", "pr", "list", "--head", branch, "--state", "all",
-             "--json", "state,labels,createdAt,mergedAt,closedAt",
-             "--jq", 'if length > 0 then .[0] | tojson else "" end'],
-            capture_output=True, text=True, timeout=10
+            [
+                "gh",
+                "pr",
+                "list",
+                "--head",
+                branch,
+                "--state",
+                "all",
+                "--json",
+                "state,labels,createdAt,mergedAt,closedAt",
+                "--jq",
+                'if length > 0 then .[0] | tojson else "" end',
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         if result.stdout.strip():
             return json.loads(result.stdout.strip())
@@ -60,8 +72,7 @@ def get_ats_score(app_dir):
         return None
     try:
         result = subprocess.run(
-            ["python3", "scripts/ats-score.py", str(app_dir), "--json"],
-            capture_output=True, text=True, timeout=15
+            ["python3", "scripts/ats-score.py", str(app_dir), "--json"], capture_output=True, text=True, timeout=15
         )
         if result.returncode in (0, 1) and result.stdout.strip():
             data = json.loads(result.stdout.strip())
@@ -78,6 +89,7 @@ def get_deadline(app_dir):
         return None
     try:
         import yaml
+
         with open(meta_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         dl = data.get("deadline")
@@ -103,7 +115,7 @@ def parse_date(date_str):
 def main():
     parser = argparse.ArgumentParser(
         description="Application Statistics & Metrics Dashboard. "
-                    "Tracks conversion rates, ATS scores, timelines, and trends."
+        "Tracks conversion rates, ATS scores, timelines, and trends."
     )
     parser.add_argument(
         "--json",
@@ -174,10 +186,7 @@ def main():
             "avg_days_to_apply": round(avg_timeline, 1),
             "interview_rate_pct": round(interview_rate, 1),
             "offer_rate_pct": round(offer_rate, 1),
-            "upcoming_deadlines": [
-                {"name": n, "deadline": str(d), "days_left": dl}
-                for n, d, dl in deadlines_upcoming
-            ],
+            "upcoming_deadlines": [{"name": n, "deadline": str(d), "days_left": dl} for n, d, dl in deadlines_upcoming],
         }
         print(json.dumps(result, indent=2))
         return 0
@@ -206,7 +215,9 @@ def main():
     if timelines:
         print(f"   Avg days to finalize:   {avg_timeline:.1f} days")
     if applied:
-        print(f"   Interview rate:         {interview_rate:.0f}% ({funnel.get('Interview', 0) + funnel.get('Offer', 0)}/{applied})")
+        print(
+            f"   Interview rate:         {interview_rate:.0f}% ({funnel.get('Interview', 0) + funnel.get('Offer', 0)}/{applied})"
+        )
         print(f"   Offer rate:             {offer_rate:.0f}% ({funnel.get('Offer', 0)}/{applied})")
     print()
 

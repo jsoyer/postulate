@@ -15,6 +15,7 @@ ai_tailor = importlib.import_module("ai-tailor")
 # extract_yaml_block
 # ---------------------------------------------------------------------------
 
+
 class TestExtractYamlBlock:
     def test_plain_yaml(self):
         text = "personal:\n  name: Jane Doe\nprofile: test"
@@ -45,6 +46,7 @@ class TestExtractYamlBlock:
 # fix_yaml_bold
 # ---------------------------------------------------------------------------
 
+
 class TestFixYamlBold:
     def test_quotes_bold_value(self):
         text = "title: **Bold Title**"
@@ -65,6 +67,7 @@ class TestFixYamlBold:
 # ---------------------------------------------------------------------------
 # _atomic_write
 # ---------------------------------------------------------------------------
+
 
 class TestAtomicWrite:
     def test_writes_content(self, tmp_path):
@@ -101,6 +104,7 @@ class TestAtomicWrite:
 # count_pdf_pages
 # ---------------------------------------------------------------------------
 
+
 class TestCountPdfPages:
     def test_missing_file(self):
         assert ai_tailor.count_pdf_pages("/nonexistent/file.pdf") == -1
@@ -115,6 +119,7 @@ class TestCountPdfPages:
 # ---------------------------------------------------------------------------
 # fetch_url_text
 # ---------------------------------------------------------------------------
+
 
 class TestFetchUrlText:
     def test_rejects_non_http(self):
@@ -149,6 +154,7 @@ class TestFetchUrlText:
 # tailor_cv (mocked AI)
 # ---------------------------------------------------------------------------
 
+
 class TestTailorCv:
     def test_dry_run_no_file_written(self, tmp_path):
         app_dir = str(tmp_path)
@@ -158,8 +164,12 @@ class TestTailorCv:
         mock_yaml = "personal:\n  first_name: Jane\n  last_name: Doe\nprofile: tailored"
         with patch.object(ai_tailor, "call_ai", return_value=mock_yaml):
             result = ai_tailor.tailor_cv(
-                app_dir, "https://example.com", "job text",
-                "fake-key", "gemini", cv_data_path=str(cv_path),
+                app_dir,
+                "https://example.com",
+                "job text",
+                "fake-key",
+                "gemini",
+                cv_data_path=str(cv_path),
                 dry_run=True,
             )
 
@@ -174,8 +184,12 @@ class TestTailorCv:
         mock_yaml = "personal:\n  first_name: Jane\n  last_name: Doe\nprofile: tailored"
         with patch.object(ai_tailor, "call_ai", return_value=mock_yaml):
             result = ai_tailor.tailor_cv(
-                app_dir, "https://example.com", "job text",
-                "fake-key", "gemini", cv_data_path=str(cv_path),
+                app_dir,
+                "https://example.com",
+                "job text",
+                "fake-key",
+                "gemini",
+                cv_data_path=str(cv_path),
             )
 
         assert result is not None
@@ -188,8 +202,12 @@ class TestTailorCv:
 
         with patch.object(ai_tailor, "call_ai", return_value="not: valid: yaml: ["):
             result = ai_tailor.tailor_cv(
-                app_dir, "https://example.com", "job text",
-                "fake-key", "gemini", cv_data_path=str(cv_path),
+                app_dir,
+                "https://example.com",
+                "job text",
+                "fake-key",
+                "gemini",
+                cv_data_path=str(cv_path),
             )
 
         assert result is None
@@ -199,6 +217,7 @@ class TestTailorCv:
 # generate_cover_letter (mocked AI)
 # ---------------------------------------------------------------------------
 
+
 class TestGenerateCoverLetter:
     def test_writes_file_on_success(self, tmp_path):
         app_dir = tmp_path / "2026-03-acme"
@@ -207,13 +226,16 @@ class TestGenerateCoverLetter:
         cv_path.write_text("personal:\n  first_name: Jane\n  last_name: Doe\n")
 
         mock_yaml = (
-            "recipient:\n  name: Hiring Manager\n  company: Acme\n"
-            "sections:\n  - title: About Me\n    content: Hello\n"
+            "recipient:\n  name: Hiring Manager\n  company: Acme\nsections:\n  - title: About Me\n    content: Hello\n"
         )
         with patch.object(ai_tailor, "call_ai", return_value=mock_yaml):
             result = ai_tailor.generate_cover_letter(
-                str(app_dir), "https://example.com", "job text",
-                "fake-key", "gemini", cv_data_path=str(cv_path),
+                str(app_dir),
+                "https://example.com",
+                "job text",
+                "fake-key",
+                "gemini",
+                cv_data_path=str(cv_path),
             )
 
         assert result is not None
@@ -228,8 +250,12 @@ class TestGenerateCoverLetter:
         mock_yaml = "sections:\n  - title: Test\n    content: Hello\n"
         with patch.object(ai_tailor, "call_ai", return_value=mock_yaml):
             result = ai_tailor.generate_cover_letter(
-                str(app_dir), "https://example.com", "job text",
-                "fake-key", "gemini", cv_data_path=str(cv_path),
+                str(app_dir),
+                "https://example.com",
+                "job text",
+                "fake-key",
+                "gemini",
+                cv_data_path=str(cv_path),
                 dry_run=True,
             )
 

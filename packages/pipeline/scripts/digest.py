@@ -41,6 +41,7 @@ except ImportError:
 
 try:
     import requests
+
     HAS_REQUESTS = True
 except ImportError:
     HAS_REQUESTS = False
@@ -52,12 +53,12 @@ _SCRIPT_DIR = Path(__file__).parent
 TERMINAL_OUTCOMES = {"offer", "rejected", "ghosted"}
 
 OUTCOME_EMOJI = {
-    "applied":   "📤",
+    "applied": "📤",
     "interview": "🗣️",
-    "offer":     "🎉",
-    "rejected":  "❌",
-    "ghosted":   "👻",
-    "":          "📝",
+    "offer": "🎉",
+    "rejected": "❌",
+    "ghosted": "👻",
+    "": "📝",
 }
 
 
@@ -65,13 +66,14 @@ OUTCOME_EMOJI = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _parse_date(date_str) -> datetime | None:
     if not date_str:
         return None
     s = str(date_str).strip()
     for fmt in ("%Y-%m-%d", "%Y-%m"):
         try:
-            return datetime.strptime(s[:len(fmt)], fmt)
+            return datetime.strptime(s[: len(fmt)], fmt)
         except ValueError:
             continue
     return None
@@ -93,7 +95,10 @@ def _get_ats_score(app_dir: Path) -> float | None:
     try:
         result = subprocess.run(
             [sys.executable, str(_SCRIPT_DIR / "ats-score.py"), str(app_dir), "--json"],
-            capture_output=True, text=True, timeout=30, cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=REPO_ROOT,
         )
         data = json.loads(result.stdout)
         return data.get("score")
@@ -105,6 +110,7 @@ def _get_ats_score(app_dir: Path) -> float | None:
 # Data collection
 # ---------------------------------------------------------------------------
 
+
 def collect_apps() -> list:
     apps_dir = REPO_ROOT / "applications"
     if not apps_dir.exists():
@@ -115,23 +121,25 @@ def collect_apps() -> list:
             continue
         meta = load_meta(d)
         meta_path = d / "meta.yml"
-        apps.append({
-            "name": d.name,
-            "company": meta.get("company", d.name),
-            "position": meta.get("position", ""),
-            "outcome": meta.get("outcome", ""),
-            "deadline": _parse_date(meta.get("deadline", "")),
-            "created": _app_created_date(d, meta),
-            "meta_mtime": datetime.fromtimestamp(meta_path.stat().st_mtime)
-                          if meta_path.exists() else None,
-            "has_job_txt": (d / "job.txt").exists(),
-        })
+        apps.append(
+            {
+                "name": d.name,
+                "company": meta.get("company", d.name),
+                "position": meta.get("position", ""),
+                "outcome": meta.get("outcome", ""),
+                "deadline": _parse_date(meta.get("deadline", "")),
+                "created": _app_created_date(d, meta),
+                "meta_mtime": datetime.fromtimestamp(meta_path.stat().st_mtime) if meta_path.exists() else None,
+                "has_job_txt": (d / "job.txt").exists(),
+            }
+        )
     return apps
 
 
 # ---------------------------------------------------------------------------
 # Sections
 # ---------------------------------------------------------------------------
+
 
 def _pipeline_funnel(apps: list) -> tuple:
     counts = {}
@@ -157,8 +165,7 @@ def _pipeline_funnel(apps: list) -> tuple:
         "## Pipeline Funnel\n\n"
         f"*Total: {total} application{'s' if total != 1 else ''}*\n\n"
         "| Stage        | N   | Bar |\n"
-        "|:-------------|:----|:----|\n"
-        + "\n".join(rows) + "\n"
+        "|:-------------|:----|:----|\n" + "\n".join(rows) + "\n"
     )
     return section, data
 
@@ -266,8 +273,7 @@ def _ats_summary(apps: list) -> tuple:
         "## ATS Score Summary\n\n"
         f"*{len(scores)} scored · Avg: {avg:.1f}% · Best: {best[1]:.1f}% · Worst: {worst[1]:.1f}%*\n\n"
         "| Application | Company | Score | Grade |\n"
-        "|:------------|:--------|:------|:------|\n"
-        + "\n".join(rows) + "\n"
+        "|:------------|:--------|:------|:------|\n" + "\n".join(rows) + "\n"
     )
     data = {
         "avg": round(avg, 1),
@@ -287,9 +293,7 @@ def _action_items(stale_names: list, deadline_names: list, apps: list) -> str:
         items.append(f"- [ ] ⚠️ Deadline approaching — **{name}** — `make app NAME={name}`")
     for a in apps:
         if a["outcome"] == "interview":
-            items.append(
-                f"- [ ] Interview stage — **{a['name']}** — `make thankyou NAME={a['name']}`"
-            )
+            items.append(f"- [ ] Interview stage — **{a['name']}** — `make thankyou NAME={a['name']}`")
     if not items:
         lines.append("*No pending action items. 🎉*\n")
     else:
@@ -301,6 +305,7 @@ def _action_items(stale_names: list, deadline_names: list, apps: list) -> str:
 # ---------------------------------------------------------------------------
 # Webhook sending
 # ---------------------------------------------------------------------------
+
 
 def _send_slack(text: str, webhook: str) -> bool:
     if not HAS_REQUESTS:
@@ -361,13 +366,11 @@ def _send_webhooks(apps: list, stale_names: list, deadline_names: list, no_send:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
     parser = argparse.ArgumentParser(description="Generate weekly pipeline digest")
     parser.add_argument("--no-send", action="store_true", help="Skip Slack/Discord sending")
-    parser.add_argument(
-        "--days", type=int, default=14,
-        help="Stale threshold in days (default: 14)"
-    )
+    parser.add_argument("--days", type=int, default=14, help="Stale threshold in days (default: 14)")
     parser.add_argument("--json", action="store_true", help="Output JSON data")
     args = parser.parse_args()
 
@@ -381,12 +384,12 @@ def main():
     today = datetime.now().strftime("%Y-%m-%d")
     print(f"📬 Generating digest — {len(apps)} application{'s' if len(apps) != 1 else ''}...")
 
-    funnel_section, funnel_data   = _pipeline_funnel(apps)
-    recent_section, recent_names  = _recent_activity(apps, days=7)
-    stale_section, stale_names    = _stale_applications(apps, days_threshold=args.days)
-    deadline_section, dl_names    = _upcoming_deadlines(apps, days=14)
-    ats_section, ats_data         = _ats_summary(apps)
-    action_section                = _action_items(stale_names, dl_names, apps)
+    funnel_section, funnel_data = _pipeline_funnel(apps)
+    recent_section, recent_names = _recent_activity(apps, days=7)
+    stale_section, stale_names = _stale_applications(apps, days_threshold=args.days)
+    deadline_section, dl_names = _upcoming_deadlines(apps, days=14)
+    ats_section, ats_data = _ats_summary(apps)
+    action_section = _action_items(stale_names, dl_names, apps)
 
     header = (
         f"# CV Pipeline Digest\n\n"
@@ -395,11 +398,16 @@ def main():
     )
     content = (
         header
-        + funnel_section + "\n"
-        + recent_section + "\n"
-        + stale_section + "\n"
-        + deadline_section + "\n"
-        + ats_section + "\n"
+        + funnel_section
+        + "\n"
+        + recent_section
+        + "\n"
+        + stale_section
+        + "\n"
+        + deadline_section
+        + "\n"
+        + ats_section
+        + "\n"
         + action_section
     )
 

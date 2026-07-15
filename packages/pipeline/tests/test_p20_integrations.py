@@ -32,6 +32,7 @@ def _load(name: str):
 # notify.py — Slack Block Kit
 # ---------------------------------------------------------------------------
 
+
 class TestSlackBlocks:
     def test_returns_dict_with_text(self):
         mod = _load("notify")
@@ -83,6 +84,7 @@ class TestSlackBlocks:
 # ---------------------------------------------------------------------------
 # notion-twoway.py
 # ---------------------------------------------------------------------------
+
 
 class TestNotionGetText:
     def test_title_property(self):
@@ -138,9 +140,7 @@ class TestLoadApps:
     def test_loads_apps_with_meta(self, tmp_path):
         app_dir = tmp_path / "2026-02-acme"
         app_dir.mkdir()
-        (app_dir / "meta.yml").write_text(
-            yaml.dump({"company": "Acme", "outcome": "interview"}), encoding="utf-8"
-        )
+        (app_dir / "meta.yml").write_text(yaml.dump({"company": "Acme", "outcome": "interview"}), encoding="utf-8")
         mod = _load("notion-twoway")
         result = mod._load_apps(tmp_path)
         assert "2026-02-acme" in result
@@ -163,16 +163,18 @@ class TestDoPull:
 
         # Mock Notion client returning Interview status
         mock_client = MagicMock()
-        mock_client.query_db.return_value = [{
-            "id": "page-1",
-            "properties": {
-                "Company": {"type": "title", "title": [{"plain_text": "Acme"}]},
-                "Position": {"type": "rich_text", "rich_text": [{"plain_text": "SRE"}]},
-                "Branch": {"type": "rich_text", "rich_text": [{"plain_text": "apply/2026-02-acme"}]},
-                "Status": {"type": "select", "select": {"name": "Interview"}},
-                "PR": {"type": "url", "url": ""},
-            },
-        }]
+        mock_client.query_db.return_value = [
+            {
+                "id": "page-1",
+                "properties": {
+                    "Company": {"type": "title", "title": [{"plain_text": "Acme"}]},
+                    "Position": {"type": "rich_text", "rich_text": [{"plain_text": "SRE"}]},
+                    "Branch": {"type": "rich_text", "rich_text": [{"plain_text": "apply/2026-02-acme"}]},
+                    "Status": {"type": "select", "select": {"name": "Interview"}},
+                    "PR": {"type": "url", "url": ""},
+                },
+            }
+        ]
 
         apps = mod._load_apps(tmp_path)
         mod.do_pull(mock_client, apps, dry_run=False)
@@ -189,16 +191,18 @@ class TestDoPull:
         (app_dir / "meta.yml").write_text(yaml.dump(meta), encoding="utf-8")
 
         mock_client = MagicMock()
-        mock_client.query_db.return_value = [{
-            "id": "page-1",
-            "properties": {
-                "Company": {"type": "title", "title": [{"plain_text": "Acme"}]},
-                "Position": {"type": "rich_text", "rich_text": []},
-                "Branch": {"type": "rich_text", "rich_text": [{"plain_text": "apply/2026-02-acme"}]},
-                "Status": {"type": "select", "select": {"name": "Offer"}},
-                "PR": {"type": "url", "url": ""},
-            },
-        }]
+        mock_client.query_db.return_value = [
+            {
+                "id": "page-1",
+                "properties": {
+                    "Company": {"type": "title", "title": [{"plain_text": "Acme"}]},
+                    "Position": {"type": "rich_text", "rich_text": []},
+                    "Branch": {"type": "rich_text", "rich_text": [{"plain_text": "apply/2026-02-acme"}]},
+                    "Status": {"type": "select", "select": {"name": "Offer"}},
+                    "PR": {"type": "url", "url": ""},
+                },
+            }
+        ]
 
         apps = mod._load_apps(tmp_path)
         mod.do_pull(mock_client, apps, dry_run=True)
@@ -215,16 +219,18 @@ class TestDoPull:
         (app_dir / "meta.yml").write_text(yaml.dump(meta), encoding="utf-8")
 
         mock_client = MagicMock()
-        mock_client.query_db.return_value = [{
-            "id": "page-1",
-            "properties": {
-                "Company": {"type": "title", "title": [{"plain_text": "Acme"}]},
-                "Position": {"type": "rich_text", "rich_text": []},
-                "Branch": {"type": "rich_text", "rich_text": [{"plain_text": "apply/2026-02-acme"}]},
-                "Status": {"type": "select", "select": {"name": "Interview"}},
-                "PR": {"type": "url", "url": ""},
-            },
-        }]
+        mock_client.query_db.return_value = [
+            {
+                "id": "page-1",
+                "properties": {
+                    "Company": {"type": "title", "title": [{"plain_text": "Acme"}]},
+                    "Position": {"type": "rich_text", "rich_text": []},
+                    "Branch": {"type": "rich_text", "rich_text": [{"plain_text": "apply/2026-02-acme"}]},
+                    "Status": {"type": "select", "select": {"name": "Interview"}},
+                    "PR": {"type": "url", "url": ""},
+                },
+            }
+        ]
 
         apps = mod._load_apps(tmp_path)
         rc = mod.do_pull(mock_client, apps, dry_run=False)
@@ -240,16 +246,18 @@ class TestDoPush:
         (app_dir / "meta.yml").write_text(yaml.dump(meta), encoding="utf-8")
 
         mock_client = MagicMock()
-        mock_client.query_db.return_value = [{
-            "id": "page-1",
-            "properties": {
-                "Company": {"type": "title", "title": [{"plain_text": "Acme"}]},
-                "Position": {"type": "rich_text", "rich_text": []},
-                "Branch": {"type": "rich_text", "rich_text": []},
-                "Status": {"type": "select", "select": {"name": "Applied"}},
-                "PR": {"type": "url", "url": ""},
-            },
-        }]
+        mock_client.query_db.return_value = [
+            {
+                "id": "page-1",
+                "properties": {
+                    "Company": {"type": "title", "title": [{"plain_text": "Acme"}]},
+                    "Position": {"type": "rich_text", "rich_text": []},
+                    "Branch": {"type": "rich_text", "rich_text": []},
+                    "Status": {"type": "select", "select": {"name": "Applied"}},
+                    "PR": {"type": "url", "url": ""},
+                },
+            }
+        ]
 
         apps = mod._load_apps(tmp_path)
         rc = mod.do_push(mock_client, apps, dry_run=False)
@@ -290,6 +298,7 @@ class TestDoPush:
 # job-boards.py
 # ---------------------------------------------------------------------------
 
+
 class TestJobBoardsGreenhouse:
     def test_fetch_greenhouse_returns_list(self):
         mod = _load("job-boards")
@@ -320,6 +329,7 @@ class TestJobBoardsGreenhouse:
         mock_resp = MagicMock()
         mock_resp.status_code = 404
         import requests as req_lib
+
         err = req_lib.HTTPError(response=mock_resp)
         with patch("requests.get", side_effect=err):
             jobs = mod.fetch_greenhouse("nonexistent-company")
@@ -353,6 +363,7 @@ class TestJobBoardsLever:
         mock_resp = MagicMock()
         mock_resp.status_code = 404
         import requests as req_lib
+
         err = req_lib.HTTPError(response=mock_resp)
         with patch("requests.get", side_effect=err):
             jobs = mod.fetch_lever("nonexistent")
@@ -458,6 +469,7 @@ class TestCreateApplication:
 # ---------------------------------------------------------------------------
 # cv-api.py
 # ---------------------------------------------------------------------------
+
 
 class TestCvApiHelpers:
     def test_slugify_basic(self):

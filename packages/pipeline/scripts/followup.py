@@ -42,12 +42,23 @@ def _pr_merged_date(app_name: str):
     """
     try:
         result = subprocess.run(
-            ["gh", "pr", "list",
-             "--head", f"apply/{app_name}",
-             "--state", "merged",
-             "--json", "mergedAt",
-             "--jq", ".[0].mergedAt"],
-            capture_output=True, text=True, timeout=15, cwd=REPO_ROOT,
+            [
+                "gh",
+                "pr",
+                "list",
+                "--head",
+                f"apply/{app_name}",
+                "--state",
+                "merged",
+                "--json",
+                "mergedAt",
+                "--jq",
+                ".[0].mergedAt",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            cwd=REPO_ROOT,
         )
         merged_at = result.stdout.strip()
         if merged_at and merged_at != "null":
@@ -74,12 +85,13 @@ def _application_date(app_dir: Path, meta: dict) -> datetime | None:
         created_str = str(created)
         for fmt in ("%Y-%m-%d", "%Y-%m"):
             try:
-                return datetime.strptime(created_str[:len(fmt)], fmt[:len(created_str)])
+                return datetime.strptime(created_str[: len(fmt)], fmt[: len(created_str)])
             except ValueError:
                 continue
 
     # 3. Folder name prefix
     import re
+
     m = re.match(r"(\d{4}-\d{2})", app_dir.name)
     if m:
         try:
@@ -110,6 +122,7 @@ def _is_stale(app_dir: Path, meta: dict, days_threshold: int) -> tuple:
 # Template generation
 # ---------------------------------------------------------------------------
 
+
 def _load_candidate_name(app_dir: Path) -> str:
     cv_src = app_dir / "cv-tailored.yml"
     if not cv_src.exists():
@@ -126,9 +139,9 @@ def _load_candidate_name(app_dir: Path) -> str:
 
 def _generate_template(app_dir: Path, meta: dict, days_elapsed: int, applied_date: datetime) -> str:
     candidate_name = _load_candidate_name(app_dir)
-    company  = meta.get("company",  app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "the position")
-    outcome  = meta.get("outcome",  "")
+    outcome = meta.get("outcome", "")
 
     stage_note = ""
     if outcome == "interview":
@@ -165,7 +178,7 @@ Best regards,
 def _generate_single(app_dir: Path) -> str:
     candidate_name = _load_candidate_name(app_dir)
     meta = load_meta(app_dir)
-    company  = meta.get("company",  app_dir.name)
+    company = meta.get("company", app_dir.name)
     position = meta.get("position", "the position")
     applied_date = _application_date(app_dir, meta)
     days_elapsed = (datetime.now() - applied_date).days if applied_date else 0
@@ -211,20 +224,14 @@ Best regards,
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Generate follow-up email templates for stale applications"
-    )
+    parser = argparse.ArgumentParser(description="Generate follow-up email templates for stale applications")
+    parser.add_argument("--days", type=int, default=14, help="Days threshold for stale applications (default: 14)")
     parser.add_argument(
-        "--days", type=int, default=14,
-        help="Days threshold for stale applications (default: 14)"
-    )
-    parser.add_argument(
-        "--name", type=str, default="",
-        metavar="APP_NAME",
-        help="Generate follow-up for a specific application only"
+        "--name", type=str, default="", metavar="APP_NAME", help="Generate follow-up for a specific application only"
     )
     args = parser.parse_args()
 

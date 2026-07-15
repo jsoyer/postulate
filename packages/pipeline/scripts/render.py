@@ -260,25 +260,17 @@ def render_coverletter(cl_data, personal, theme=None, pdfa=False, draft=False, l
     )
 
     # Personal information
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tPERSONAL INFORMATION")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_header(personal))
     sections.append("")
     sections.append("")
 
     # Letter information
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tLETTER INFORMATION")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     r = cl_data["recipient"]
     sections.append("\\recipient")
     sections.append(f"  {{{process_text(r['name'])}}}")
@@ -291,31 +283,23 @@ def render_coverletter(cl_data, personal, theme=None, pdfa=False, draft=False, l
     sections.append("")
 
     # Begin document
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("\\begin{document}")
     sections.append("")
     sections.append("\\makecvheader[R]")
     sections.append("")
     sections.append("\\makecvfooter")
     sections.append("  {\\today}")
-    sections.append(
-        f"  {{{personal['first_name']} {personal['last_name']}~~~·~~~Cover Letter}}"
-    )
+    sections.append(f"  {{{personal['first_name']} {personal['last_name']}~~~·~~~Cover Letter}}")
     sections.append("  {}")
     sections.append("")
     sections.append("\\makelettertitle")
     sections.append("")
 
     # Letter content
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tLETTER CONTENT")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("\\begin{cvletter}")
     sections.append("")
 
@@ -333,9 +317,7 @@ def render_coverletter(cl_data, personal, theme=None, pdfa=False, draft=False, l
     sections.append("")
 
     # Closing
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("\\makeletterclosing")
     sections.append("")
     sections.append("\\end{document}")
@@ -365,9 +347,7 @@ DEFAULT_CL_THEME = {
 }
 
 
-def build_preamble(
-    theme, pdfa=False, comment="Resume (2 pages)", draft=False, personal=None, lang=None
-):
+def build_preamble(theme, pdfa=False, comment="Resume (2 pages)", draft=False, personal=None, lang=None):
     """Build LaTeX preamble with theme settings."""
     t = {**DEFAULT_THEME, **(theme or {})}
     highlight = "true" if t["highlight"] else "false"
@@ -398,9 +378,7 @@ def build_preamble(
         if "skills" in personal:
             skill_keywords = []
             for cat in personal["skills"][:5]:
-                skill_keywords.extend(
-                    [item.strip() for item in cat.get("items", "").split(",")]
-                )
+                skill_keywords.extend([item.strip() for item in cat.get("items", "").split(",")])
             keywords = ", ".join(skill_keywords[:15])
         position = personal.get("position", "")
         metadata_block = f"""\
@@ -448,12 +426,7 @@ def _build_footer(personal: dict | None = None) -> str:
         name = f"{personal.get('first_name', '')} {personal.get('last_name', '')}".strip()
     else:
         name = ""
-    return (
-        "\\makecvfooter\n"
-        "  {\\today}\n"
-        f"  {{{name}~~~·~~~Résumé}}\n"
-        "  {\\thepage}\n"
-    )
+    return f"\\makecvfooter\n  {{\\today}}\n  {{{name}~~~·~~~Résumé}}\n  {{\\thepage}}\n"
 
 
 def render_cv(data, theme=None, pdfa=False, draft=False, lang=None):
@@ -461,26 +434,18 @@ def render_cv(data, theme=None, pdfa=False, draft=False, lang=None):
     sections = []
 
     # Preamble
-    sections.append(
-        build_preamble(theme, pdfa=pdfa, draft=draft, personal=data.get("personal"), lang=lang)
-    )
+    sections.append(build_preamble(theme, pdfa=pdfa, draft=draft, personal=data.get("personal"), lang=lang))
 
     # Personal information
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tPERSONAL INFORMATION")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_header(data["personal"]))
     sections.append("")
     sections.append("")
 
     # Begin document
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("\\begin{document}")
     sections.append("")
     sections.append("% Print the header with above personal information")
@@ -491,118 +456,80 @@ def render_cv(data, theme=None, pdfa=False, draft=False, lang=None):
     sections.append("")
 
     # Profile
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tPROFILE")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_profile(data["profile"]))
     sections.append("")
     sections.append("")
 
     # Skills
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tSTRATEGIC SKILLS PORTFOLIO")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_skills(data["skills"]))
     sections.append("")
     sections.append("")
 
     # Key Wins
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tSTRATEGIC KEY WINS & BUSINESS IMPACT")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_key_wins(data["key_wins"]))
     sections.append("")
     sections.append("")
 
     # Work Experience
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tWORK EXPERIENCE")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_experience(data["experience"]))
     sections.append("")
     sections.append("\\newpage")
     sections.append("")
 
     # Early Career
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tEARLY CAREER")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_early_career(data["early_career"]))
     sections.append("")
     sections.append("")
 
     # Education
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tEDUCATION")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_education(data["education"]))
     sections.append("")
     sections.append("")
 
     # Certifications
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tCONTINUING EDUCATION")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_certifications(data["certifications"]))
     sections.append("")
     sections.append("")
 
     # Awards & Publications
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tAWARDS & PUBLICATIONS")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_awards_publications(data["awards"], data["publications"]))
     sections.append("")
     sections.append("")
 
     # Languages & Interests
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tLANGUAGES & INTERESTS")
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_languages_interests(data["languages"], data["interests"]))
     sections.append("")
     sections.append("")
 
     # End document
-    sections.append(
-        "%-------------------------------------------------------------------------------"
-    )
+    sections.append("%-------------------------------------------------------------------------------")
     sections.append("\\end{document}")
     sections.append("")
 
@@ -855,35 +782,23 @@ def render_cv_deedy(data: dict) -> str:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Render CV.tex or CoverLetter.tex from YAML data"
-    )
-    parser.add_argument(
-        "-o", "--output", help="Output .tex file (auto-detected if omitted)"
-    )
+    parser = argparse.ArgumentParser(description="Render CV.tex or CoverLetter.tex from YAML data")
+    parser.add_argument("-o", "--output", help="Output .tex file (auto-detected if omitted)")
     parser.add_argument(
         "-d",
         "--data",
         default="data/cv.yml",
         help="YAML data file (default: data/cv.yml)",
     )
-    parser.add_argument(
-        "-l", "--lang", help="Language code (e.g., fr). Loads data/{stem}-{lang}.yml"
-    )
-    parser.add_argument(
-        "-t", "--theme", help="Theme YAML file (overrides color, font size, etc.)"
-    )
-    parser.add_argument(
-        "--pdfa", action="store_true", help="Enable PDF/A compliance (for ATS systems)"
-    )
+    parser.add_argument("-l", "--lang", help="Language code (e.g., fr). Loads data/{stem}-{lang}.yml")
+    parser.add_argument("-t", "--theme", help="Theme YAML file (overrides color, font size, etc.)")
+    parser.add_argument("--pdfa", action="store_true", help="Enable PDF/A compliance (for ATS systems)")
     parser.add_argument("--draft", action="store_true", help="Add DRAFT watermark")
     parser.add_argument(
         "--cv-data",
         help="CV YAML for personal info (cover letter mode, default: data/cv.yml)",
     )
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Enable debug logging"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Enable debug logging")
     parser.add_argument(
         "--template",
         default="awesome-cv",
@@ -1042,9 +957,7 @@ def main():
         skill_keywords = []
         if "skills" in data:
             for cat in data["skills"][:5]:
-                skill_keywords.extend(
-                    [item.strip() for item in cat.get("items", "").split(",")]
-                )
+                skill_keywords.extend([item.strip() for item in cat.get("items", "").split(",")])
         keywords = ", ".join(skill_keywords[:15])
 
         xmp_lang = "en-US" if args.lang != "fr" else "fr-FR"
