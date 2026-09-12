@@ -7,6 +7,8 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
@@ -250,6 +252,7 @@ def test_deposit_pdfs_copies_into_drive_tree(tmp_path: Path, monkeypatch) -> Non
     assert any(str(dest) in c or c.endswith("CV-Acme-SE.pdf") for c in copied)
 
 def test_server_registers_expected_tools() -> None:
+    pytest.importorskip("mcp")
     from cv_mcp.server import mcp
 
     names = {t.name for t in mcp._tool_manager.list_tools()}

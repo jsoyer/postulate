@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 
 import pytest
+
+pytest.importorskip("starlette")
 from starlette.applications import Starlette
 from starlette.middleware import Middleware
 from starlette.responses import PlainTextResponse

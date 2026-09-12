@@ -471,6 +471,7 @@ def _run_make(repo: CvRepo, args: list[str], timeout: int) -> dict[str, Any]:
 
 def _start_engine(repo: CvRepo, name: str, ai: str, model: str | None) -> dict[str, Any]:
     """Kick tailor+build in the background. Cloudflare/Grok Bot cannot wait 3 min."""
+    log_path = repo.apps / name / "engine.log"
     extra = _contract_args(repo)
     tailor = ["make", "tailor", f"NAME={name}", f"AI={ai}"]
     if model:
