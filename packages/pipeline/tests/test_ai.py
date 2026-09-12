@@ -28,9 +28,19 @@ class TestValidProviders:
         assert isinstance(VALID_PROVIDERS, set)
 
     def test_contains_expected_providers(self):
-        assert VALID_PROVIDERS == {"gemini", "claude", "openai", "mistral", "ollama"}
+        assert VALID_PROVIDERS == {
+            "gemini",
+            "claude",
+            "openai",
+            "chatgpt",
+            "mistral",
+            "ollama",
+            "grok",
+            "cursor",
+            "codex",
+            "opencode",
+        }
 
-    def test_all_providers_have_key_env_entry(self):
         for provider in VALID_PROVIDERS:
             assert provider in KEY_ENV
 
@@ -90,20 +100,39 @@ class TestCallAiDispatcher:
             call_ai("prompt", "nonexistent_provider")
 
     def test_gemini_without_api_key_raises_value_error(self):
-        with pytest.raises(ValueError, match="gemini requires an API key"):
-            call_ai("prompt", "gemini", api_key=None)
+        with patch("lib.ai_cli.cli_available", return_value=False):
+            with pytest.raises(ValueError, match="gemini requires an API key"):
+                call_ai("prompt", "gemini", api_key=None)
 
     def test_claude_without_api_key_raises_value_error(self):
-        with pytest.raises(ValueError, match="claude requires an API key"):
-            call_ai("prompt", "claude", api_key=None)
+        with patch("lib.ai_cli.cli_available", return_value=False):
+            with pytest.raises(ValueError, match="claude requires an API key"):
+                call_ai("prompt", "claude", api_key=None)
 
-    def test_openai_does_not_raise_without_api_key(self):
-        # openai/mistral are allowed to proceed without an API key at the dispatcher
-        # level (the HTTP call itself would fail). We just check no ValueError is raised.
-        mock_resp = _make_mock_response({"choices": [{"message": {"content": "ok"}}]})
-        with patch("urllib.request.urlopen", return_value=mock_resp):
-            result = call_ai("prompt", "openai", api_key=None)
-        assert result == "ok"
+    def test_openai_without_key_uses_cli_when_available(self):
+        with patch("lib.ai_cli.cli_available", return_value=True), patch(
+            "lib.ai_cli.call_cli", return_value="from-cli"
+        ):
+            assert call_ai("prompt", "openai", api_key=None) == "from-cli"
+
+    def test_gemini_without_key_uses_cli_when_available(self):
+        with patch("lib.ai_cli.cli_available", return_value=True), patch(
+            "lib.ai_cli.call_cli", return_value="from-cli"
+        ):
+            assert call_ai("prompt", "gemini", api_key=None) == "from-cli"
+
+    def test_opencode_uses_http_when_url_set(self, monkeypatch):
+        monkeypatch.setenv("OPENCODE_URL", "http://127.0.0.1:4096")
+        with patch("lib.opencode_api.call_opencode_http", return_value="via-http"):
+            assert call_ai("prompt", "opencode", model="openai/gpt-5.4") == "via-http"
+
+    def test_opencode_uses_cli_without_url(self, monkeypatch):
+        monkeypatch.delenv("OPENCODE_URL", raising=False)
+        with patch("lib.ai_cli.cli_available", return_value=True), patch(
+            "lib.ai_cli.call_cli", return_value="via-cli"
+        ):
+            assert call_ai("prompt", "opencode", model="openai/gpt-5.4-mini") == "via-cli"
+
 
 
 # ---------------------------------------------------------------------------

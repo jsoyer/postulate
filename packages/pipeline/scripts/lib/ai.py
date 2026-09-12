@@ -1,4 +1,4 @@
-"""Shared AI provider module -- call LLMs via Gemini, Claude, OpenAI, Mistral, or Ollama.
+"""Shared AI provider module -- logged-in subscription CLIs first, else API keys.
 
 Usage::
 
@@ -6,6 +6,8 @@ Usage::
 
     text = call_ai(prompt, "gemini", api_key)
     text = call_ai(prompt, "claude", api_key, model="claude-opus-4-6", temperature=0.7)
+    text = call_ai(prompt, "grok")  # grok CLI OAuth
+    text = call_ai(prompt, "chatgpt")  # Codex CLI (ChatGPT subscription)
 """
 
 from __future__ import annotations
@@ -48,22 +50,45 @@ MISTRAL_MODEL = "mistral-large-latest"
 MISTRAL_FALLBACK = "mistral-small-latest"
 MISTRAL_ENDPOINT = "https://api.mistral.ai/v1/chat/completions"
 
-VALID_PROVIDERS: set[str] = {"gemini", "claude", "openai", "mistral", "ollama"}
+GROK_MODEL = "grok-4"
+GROK_ENDPOINT = "https://api.x.ai/v1/chat/completions"
+VALID_PROVIDERS: set[str] = {
+    "gemini",
+    "claude",
+    "openai",
+    "chatgpt",
+    "mistral",
+    "ollama",
+    "grok",
+    "cursor",
+    "codex",
+    "opencode",
+}
 
 PROVIDER_MODELS: dict[str, list[str]] = {
     "gemini": ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro"],
     "claude": ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"],
     "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "o1-mini"],
+    "chatgpt": ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "o1-mini"],
     "mistral": ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest"],
     "ollama": [],
+    "grok": ["grok-4"],
+    "cursor": [],
+    "codex": [],
+    "opencode": ["openai/gpt-5.4"],
 }
 
 KEY_ENV: dict[str, str | None] = {
     "gemini": "GEMINI_API_KEY",
     "claude": "ANTHROPIC_API_KEY",
     "openai": "OPENAI_API_KEY",
+    "chatgpt": "OPENAI_API_KEY",
     "mistral": "MISTRAL_API_KEY",
     "ollama": None,
+    "grok": "XAI_API_KEY",
+    "cursor": None,
+    "codex": None,
+    "opencode": None,
 }
 
 # ---------------------------------------------------------------------------
@@ -344,61 +369,92 @@ def call_ai(
     temperature: float = 0.4,
     max_tokens: int = 4096,
 ) -> str:
-    """Dispatch to the appropriate AI provider.
+    """Dispatch to subscription CLI if logged in, else API key.
 
-    Parameters
-    ----------
-    prompt : str
-    provider : str  -- one of VALID_PROVIDERS
-    api_key : str | None
-    model : str | None -- override the default model for the provider
-    temperature : float
-    max_tokens : int
+    Set AI_PREFER_API=1 to force the key path when both exist.
     """
-    if provider in ("gemini", "claude") and not api_key:
-        key_name = KEY_ENV.get(provider, "API_KEY")
-        raise ValueError(f"{provider} requires an API key (set {key_name})")
+    from lib.ai_cli import call_cli, canonical_provider, cli_available, cli_spec_for
 
-    if provider == "gemini":
-        assert api_key is not None  # guarded above
-        return call_gemini(
-            prompt,
-            api_key,
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-    if provider == "claude":
-        assert api_key is not None  # guarded above
-        return call_claude(
-            prompt,
-            api_key,
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-    if provider == "openai":
-        primary = model or OPENAI_MODEL
-        models = (primary, primary) if model else (OPENAI_MODEL, OPENAI_FALLBACK)
-        return call_openai_compat(
-            prompt,
-            OPENAI_ENDPOINT,
-            api_key,
-            models,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
-    if provider == "mistral":
-        primary = model or MISTRAL_MODEL
-        models = (primary, primary) if model else (MISTRAL_MODEL, MISTRAL_FALLBACK)
-        return call_openai_compat(
-            prompt,
-            MISTRAL_ENDPOINT,
-            api_key,
-            models,
-            temperature=temperature,
-            max_tokens=max_tokens,
-        )
+    provider = canonical_provider(provider)
+    if provider not in VALID_PROVIDERS:
+        raise ValueError(f"Unknown provider: '{provider}'. Valid: {sorted(VALID_PROVIDERS)}")
     if provider == "ollama":
         return call_ollama(prompt, temperature=temperature)
-    raise ValueError(f"Unknown provider: '{provider}'. Valid: {sorted(VALID_PROVIDERS)}")
+
+    if provider == "opencode":
+        from lib.opencode_api import call_opencode_http
+
+        chosen = model or os.environ.get("OPENCODE_MODEL")
+        url = os.environ.get("OPENCODE_URL")
+        if url:
+            return call_opencode_http(prompt, model=chosen, base_url=url)
+        if cli_available("opencode"):
+            return call_cli("opencode", prompt, model=chosen)
+        raise ValueError(
+            "opencode requires OPENCODE_URL (opencode serve) or `opencode` on PATH. "
+            "Choose a model with MODEL=openai/gpt-5.4"
+        )
+
+    prefer_api = os.environ.get("AI_PREFER_API", "").strip().lower() in {"1", "true", "yes"}
+    if not prefer_api and cli_available(provider):
+        return call_cli(provider, prompt, model=model)
+
+    if api_key:
+        if provider == "gemini":
+            return call_gemini(
+                prompt,
+                api_key,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        if provider == "claude":
+            return call_claude(
+                prompt,
+                api_key,
+                model=model,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        if provider == "openai":
+            primary = model or OPENAI_MODEL
+            models = (primary, primary) if model else (OPENAI_MODEL, OPENAI_FALLBACK)
+            return call_openai_compat(
+                prompt,
+                OPENAI_ENDPOINT,
+                api_key,
+                models,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        if provider == "mistral":
+            primary = model or MISTRAL_MODEL
+            models = (primary, primary) if model else (MISTRAL_MODEL, MISTRAL_FALLBACK)
+            return call_openai_compat(
+                prompt,
+                MISTRAL_ENDPOINT,
+                api_key,
+                models,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        if provider == "grok":
+            primary = model or GROK_MODEL
+            return call_openai_compat(
+                prompt,
+                GROK_ENDPOINT,
+                api_key,
+                (primary, primary),
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+    if cli_available(provider):
+        return call_cli(provider, prompt, model=model)
+
+    key_name = KEY_ENV.get(provider)
+    spec = cli_spec_for(provider)
+    cli_hint = f" or log in with `{spec.binary}`" if spec else ""
+    if key_name:
+        raise ValueError(f"{provider} requires an API key (set {key_name}){cli_hint}")
+    raise ValueError(f"{provider} requires a logged-in CLI{cli_hint}")
