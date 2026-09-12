@@ -60,6 +60,10 @@ def test_call_cli_runs_in_isolation() -> None:
     assert cmd[0] == "/opt/grok"
     assert "--prompt-file" in cmd
     assert "--max-turns" in cmd
+    assert "--reasoning-effort" in cmd
+    assert cmd[cmd.index("--reasoning-effort") + 1] == "high"
+    assert "-m" in cmd
+    assert cmd[cmd.index("-m") + 1] == "grok-4.6"
     assert seen["cwd"]
     assert not Path(str(seen["cwd"])).exists()  # cleaned up
 
