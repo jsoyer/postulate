@@ -21,14 +21,14 @@
        beautify migrate \
        market-list market-search market-install market-installed \
        portfolio portfolio-fr \
-       pdfa check-pdfa
+       pdfa check-pdfa mcp mcp-http drive
 
 # Auto-load .env if present (for GEMINI_API_KEY)
 -include .env
 # Only export variables that child processes actually need (not all .env secrets)
 export TEXINPUTS
-export GEMINI_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY MISTRAL_API_KEY
-export OLLAMA_HOST OLLAMA_MODEL
+export GEMINI_API_KEY ANTHROPIC_API_KEY OPENAI_API_KEY MISTRAL_API_KEY XAI_API_KEY
+export OLLAMA_HOST OLLAMA_MODEL OPENCODE_URL OPENCODE_MODEL
 export SLACK_WEBHOOK_URL DISCORD_WEBHOOK_URL
 export TELEGRAM_BOT_TOKEN TELEGRAM_CHAT_ID
 export LINKEDIN_ACCESS_TOKEN
@@ -52,6 +52,9 @@ DATA_DIR       ?= data
 APP_DIR        ?= applications
 AWESOME_CV_DIR ?= awesome-cv
 OUT_DIR        ?= .
+TRACKER_DIR    ?= $(OUT_DIR)/tracker
+DRIVE_DIR      ?=
+export DATA_DIR APP_DIR AWESOME_CV_DIR OUT_DIR TRACKER_DIR DRIVE_DIR MCP_TOKEN RCLONE_REMOTE
 
 # Debug logging: DEBUG=1 → verbose LOG_LEVEL=DEBUG across all Python scripts.
 # Generic lift from the CV consumer's per-target hack; default off, retro-compatible.
@@ -159,9 +162,10 @@ app: ensure-tex-deps
 	@CV_TEX=$$(ls "$(APP_DIR)/$(NAME)/CV "*.tex 2>/dev/null | head -1); \
 	if [ -f "$(APP_DIR)/$(NAME)/cv-tailored.yml" ]; then \
 		echo "📄 Rendering tailored CV from YAML..."; \
-		if [ -n "$$CV_TEX" ]; then \
-			$(PYTHON) scripts/render.py -d "$(APP_DIR)/$(NAME)/cv-tailored.yml" -o "$$CV_TEX"; \
+		if [ -z "$$CV_TEX" ]; then \
+			CV_TEX="$(APP_DIR)/$(NAME)/CV.tex"; \
 		fi; \
+		$(PYTHON) scripts/render.py -d "$(APP_DIR)/$(NAME)/cv-tailored.yml" -o "$$CV_TEX"; \
 	elif [ -n "$$CV_TEX" ]; then \
 		echo "📄 Rendering CV from root $(DATA_DIR)/cv.yml..."; \
 		$(PYTHON) scripts/render.py -d "$(DATA_DIR)/cv.yml" -o "$$CV_TEX"; \
@@ -207,6 +211,20 @@ app: ensure-tex-deps
 			echo "   💡 Trim content in cv-tailored.yml or coverletter.yml"; \
 		fi; \
 	done
+	@if [ -n "$(DRIVE_DIR)" ]; then \
+		$(PYTHON) scripts/drive_deposit.py "$(APP_DIR)/$(NAME)" "$(DRIVE_DIR)"; \
+	fi
+
+# stdio MCP (consumer sets DATA_DIR/APP_DIR/OUT_DIR). HTTP: MCP_TOKEN required.
+mcp:
+	@$(PYTHON) cv_mcp/run.py
+
+mcp-http:
+	@$(PYTHON) cv_mcp/run.py --http
+
+drive:
+	@test -n "$(NAME)" || (echo "Usage: make drive NAME=2026-09-chainguard DRIVE_DIR=/path/to/GoogleDrive/CV" && exit 1)
+	@$(PYTHON) scripts/drive_deposit.py "$(APP_DIR)/$(NAME)" "$(DRIVE_DIR)"
 
 # Scaffold a new application (local only, no git operations)
 # Usage: make new COMPANY=Snowflake POSITION="Senior Director SE"
@@ -319,10 +337,10 @@ apply:
 
 # Tailor CV and/or cover letter with AI (default: Gemini)
 # Runs ATS score before and after tailoring to show improvement
-# Usage: make tailor NAME=2026-02-snowflake [AI=gemini|claude|openai|mistral|ollama] [TARGET=cl|cv|both] [MODEL=...]
+# Usage: make tailor NAME=2026-02-snowflake [AI=gemini|claude|openai|mistral|ollama|grok|cursor|codex|opencode] [TARGET=cl|cv|both] [MODEL=...]
 # TARGET: cl (default) = cover letter only, cv = CV only, both = CV + cover letter
-# MODEL: optional model override (e.g. MODEL=claude-opus-4-6, MODEL=gemini-2.0-flash)
-# Requires: API key env var for the chosen provider (see .env.example)
+# MODEL: optional model override (e.g. MODEL=claude-opus-4-6, MODEL=openai/gpt-5.4)
+# Auth: API key if set, else a logged-in CLI (grok/claude/gemini/cursor-agent/codex/opencode).
 TARGET ?= cl
 MODEL ?=
 tailor:
@@ -330,12 +348,24 @@ tailor:
 	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
 	@case "$(TARGET)" in cv|cl|both) ;; *) echo "❌ TARGET must be cv, cl, or both" && exit 1 ;; esac
 	@case "$(AI)" in \
-		gemini)  test -n "$(GEMINI_API_KEY)"    || (echo "❌ Set GEMINI_API_KEY (https://aistudio.google.com/apikey)"    && exit 1) ;; \
-		claude)  test -n "$(ANTHROPIC_API_KEY)" || (echo "❌ Set ANTHROPIC_API_KEY (https://console.anthropic.com/)"     && exit 1) ;; \
-		openai)  test -n "$(OPENAI_API_KEY)"    || (echo "❌ Set OPENAI_API_KEY (https://platform.openai.com/api-keys)"  && exit 1) ;; \
-		mistral) test -n "$(MISTRAL_API_KEY)"   || (echo "❌ Set MISTRAL_API_KEY (https://console.mistral.ai/)"          && exit 1) ;; \
+		gemini)  test -n "$(GEMINI_API_KEY)"    || command -v gemini >/dev/null \
+			|| (echo "❌ Set GEMINI_API_KEY or log in: gemini" && exit 1) ;; \
+		claude)  test -n "$(ANTHROPIC_API_KEY)" || command -v claude >/dev/null \
+			|| (echo "❌ Set ANTHROPIC_API_KEY or log in: claude" && exit 1) ;; \
+		openai|chatgpt)  test -n "$(OPENAI_API_KEY)"    || command -v codex >/dev/null \
+			|| (echo "❌ Set OPENAI_API_KEY or log in: codex" && exit 1) ;; \
+		mistral) test -n "$(MISTRAL_API_KEY)"   \
+			|| (echo "❌ Set MISTRAL_API_KEY (https://console.mistral.ai/)" && exit 1) ;; \
 		ollama)  ;; \
-		*)       echo "❌ Unknown AI provider: $(AI). Valid: gemini claude openai mistral ollama" && exit 1 ;; \
+		grok)    test -n "$(XAI_API_KEY)"       || command -v grok >/dev/null \
+			|| (echo "❌ Set XAI_API_KEY or log in: grok login" && exit 1) ;; \
+		cursor)  command -v cursor-agent >/dev/null \
+			|| (echo "❌ Install cursor-agent and log in" && exit 1) ;; \
+		codex)   command -v codex >/dev/null \
+			|| (echo "❌ Log in: codex login" && exit 1) ;; \
+		opencode) command -v opencode >/dev/null || test -n "$(OPENCODE_URL)" \
+			|| (echo "❌ opencode CLI or OPENCODE_URL=http://127.0.0.1:4096" && exit 1) ;; \
+		*)       echo "❌ Unknown AI provider: $(AI). Valid: gemini claude openai chatgpt mistral ollama grok cursor codex opencode" && exit 1 ;; \
 	esac
 	@if [ -f "$(APP_DIR)/$(NAME)/job.txt" ]; then \
 		echo "📊 Pre-tailoring ATS score:"; \
@@ -350,7 +380,7 @@ tailor:
 		cl)  TAILOR_FLAGS="$$TAILOR_FLAGS --cl-only" ;; \
 	esac; \
 	if [ -n "$(MODEL)" ]; then TAILOR_FLAGS="$$TAILOR_FLAGS --model $(MODEL)"; fi; \
-	$(PYTHON) scripts/ai-tailor.py "$(APP_DIR)/$(NAME)" --provider "$(AI)" $$TAILOR_FLAGS
+	$(PYTHON) scripts/ai-tailor.py "$(APP_DIR)/$(NAME)" --provider "$(AI)" --cv-data "$(DATA_DIR)/cv.yml" $$TAILOR_FLAGS
 	@# Render tailored YAML → LaTeX
 	@if [ "$(TARGET)" != "cl" ] && [ -f "$(APP_DIR)/$(NAME)/cv-tailored.yml" ]; then \
 		echo ""; \

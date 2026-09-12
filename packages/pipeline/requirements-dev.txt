@@ -8,3 +8,4 @@ ruff>=0.4
 types-PyYAML
 types-requests
 pypdf>=4.0
+mcp>=1.9,<2.0

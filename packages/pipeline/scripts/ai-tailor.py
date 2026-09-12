@@ -134,11 +134,16 @@ def extract_yaml_block(text):
     """Extract YAML content from a response that may contain markdown fences."""
     match = re.search(r"```ya?ml\s*\n(.*?)```", text, re.DOTALL)
     if match:
-        return fix_yaml_bold(match.group(1).strip())
-    match = re.search(r"```\s*\n(.*?)```", text, re.DOTALL)
-    if match:
-        return fix_yaml_bold(match.group(1).strip())
-    return fix_yaml_bold(text.strip())
+        body = match.group(1).strip()
+    else:
+        match = re.search(r"```\s*\n(.*?)```", text, re.DOTALL)
+        body = match.group(1).strip() if match else text.strip()
+    for marker in ("personal:", "recipient:"):
+        idx = body.find(marker)
+        if idx > 0:
+            body = body[idx:]
+            break
+    return fix_yaml_bold(body)
 
 
 # ---------------------------------------------------------------------------
@@ -452,6 +457,11 @@ def main():
         choices=sorted(VALID_PROVIDERS),
         help="AI provider to use (default: gemini, or set AI_PROVIDER env var)",
     )
+    parser.add_argument(
+        "--cv-data",
+        default=os.path.join(os.environ.get("DATA_DIR", "data"), "cv.yml"),
+        help="Source CV YAML (default: $DATA_DIR/cv.yml)",
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--cv-only", action="store_true", help="Only tailor CV")
     group.add_argument("--cl-only", action="store_true", help="Only generate cover letter")
@@ -477,18 +487,18 @@ def main():
 
     log = setup_logging(args.verbose)
 
-    provider = args.provider
+    from lib.ai_cli import canonical_provider, cli_available
+
+    provider = canonical_provider(args.provider)
     model = args.model or None
     dry_run = args.dry_run
-
     if dry_run:
         print("[DRY RUN] No files will be written and no compilation will run.")
 
-    # Resolve API key for the chosen provider
     key_var = KEY_ENV[provider]
     api_key = os.environ.get(key_var) if key_var else None
-    if key_var and not api_key:
-        log.error("Set %s environment variable", key_var)
+    if key_var and not api_key and not cli_available(provider):
+        log.error("Set %s or log in with the provider CLI", key_var)
         log.error("   export %s=your-key-here", key_var)
         sys.exit(1)
 
@@ -546,7 +556,16 @@ def main():
     cv_yml_path = None
     if not args.cl_only:
         print("🤖 Tailoring CV (YAML)...")
-        cv_yml_path = tailor_cv(app_dir, job_url, job_text, api_key, provider, model=model, dry_run=dry_run)
+        cv_yml_path = tailor_cv(
+            app_dir,
+            job_url,
+            job_text,
+            api_key,
+            provider,
+            cv_data_path=args.cv_data,
+            model=model,
+            dry_run=dry_run,
+        )
         if cv_yml_path:
             print(f"   ✅ {cv_yml_path}")
             if args.auto_trim and meta_company and meta_position:
@@ -562,7 +581,16 @@ def main():
     cl_yml_path = None
     if not args.cv_only:
         print("🤖 Generating cover letter (YAML)...")
-        cl_yml_path = generate_cover_letter(app_dir, job_url, job_text, api_key, provider, model=model, dry_run=dry_run)
+        cl_yml_path = generate_cover_letter(
+            app_dir,
+            job_url,
+            job_text,
+            api_key,
+            provider,
+            cv_data_path=args.cv_data,
+            model=model,
+            dry_run=dry_run,
+        )
         if cl_yml_path:
             print(f"   ✅ {cl_yml_path}")
             if args.auto_trim and meta_company and meta_position:
