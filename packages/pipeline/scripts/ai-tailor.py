@@ -18,6 +18,7 @@ Flow:
 """
 
 import argparse
+import importlib
 import logging
 import os
 import re
@@ -154,18 +155,10 @@ def extract_yaml_block(text):
 def count_pdf_pages(pdf_path):
     """Count pages in a PDF. Returns -1 on failure."""
     try:
-        r = subprocess.run(["pdfinfo", pdf_path], capture_output=True, text=True, timeout=10)
-        for line in r.stdout.splitlines():
-            if line.startswith("Pages:"):
-                return int(line.split(":")[1].strip())
-    except Exception:
-        pass
-    # Regex fallback (reads raw PDF binary)
-    try:
-        with open(pdf_path, "rb") as f:
-            content = f.read()
-        m = re.search(rb"/Type\s*/Pages\b[^>]*/Count\s+(\d+)", content)
-        return int(m.group(1)) if m else -1
+        from pathlib import Path
+
+        check_pages = importlib.import_module("check-pages")
+        return check_pages.count_pages(Path(pdf_path))
     except Exception:
         return -1
 

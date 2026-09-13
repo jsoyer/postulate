@@ -11,7 +11,39 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+import zlib
 from pathlib import Path
+
+_COUNT_PATTERNS = (
+    rb"/Type\s*/Pages.{0,400}/Count\s+(\d+)",
+    rb"/Count\s+(\d+).{0,80}/Type\s*/Pages",
+    rb"/Type\s*/Pages/Count\s+(\d+)",
+)
+
+
+def _count_in(blob: bytes) -> int:
+    for pat in _COUNT_PATTERNS:
+        m = re.search(pat, blob, re.DOTALL)
+        if m:
+            return int(m.group(1))
+    return -1
+
+
+def _inflate_streams(data: bytes) -> list[bytes]:
+    out: list[bytes] = []
+    for m in re.finditer(rb"stream\r?\n(.*?)endstream", data, re.DOTALL):
+        chunk = m.group(1)
+        if chunk.endswith(b"\r\n"):
+            chunk = chunk[:-2]
+        elif chunk.endswith(b"\n"):
+            chunk = chunk[:-1]
+        for wbits in (zlib.MAX_WBITS, -zlib.MAX_WBITS):
+            try:
+                out.append(zlib.decompress(chunk, wbits))
+                break
+            except zlib.error:
+                continue
+    return out
 
 
 def count_pages(path: Path) -> int:
@@ -28,8 +60,14 @@ def count_pages(path: Path) -> int:
         data = path.read_bytes()
     except OSError:
         return -1
-    m = re.search(rb"/Type\s*/Pages\b[^>]*/Count\s+(\d+)", data)
-    return int(m.group(1)) if m else -1
+    n = _count_in(data)
+    if n > 0:
+        return n
+    for blob in _inflate_streams(data):
+        n = _count_in(blob)
+        if n > 0:
+            return n
+    return -1
 
 
 def page_limit(name: str) -> int:

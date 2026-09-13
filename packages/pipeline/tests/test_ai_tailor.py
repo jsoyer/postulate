@@ -321,3 +321,22 @@ class TestCheckPages:
         pdf = tmp_path / "CoverLetter - Acme - SE.pdf"
         pdf.write_bytes(b"%PDF-1.4\n/Type /Pages /Count 2\n")
         assert check_pages.main([str(pdf)]) == 1
+
+    def test_counts_pages_inside_flate_stream(self, tmp_path, monkeypatch):
+        import zlib
+
+        check_pages = importlib.import_module("check-pages")
+
+        def no_pdfinfo(*a, **k):
+            raise FileNotFoundError("pdfinfo")
+
+        monkeypatch.setattr(check_pages.subprocess, "run", no_pdfinfo)
+        payload = zlib.compress(b"/Type/Pages/Count 2/Kids[]")
+        pdf = tmp_path / "CV.pdf"
+        pdf.write_bytes(
+            b"%PDF-1.5\n1 0 obj\n<< /Filter /FlateDecode >>\nstream\n"
+            + payload
+            + b"\nendstream\nendobj\n"
+        )
+        assert check_pages.count_pages(pdf) == 2
+        assert check_pages.main([str(pdf)]) == 0
