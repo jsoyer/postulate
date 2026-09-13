@@ -18,6 +18,7 @@ Flow:
 """
 
 import argparse
+import importlib
 import logging
 import os
 import re
@@ -154,18 +155,10 @@ def extract_yaml_block(text):
 def count_pdf_pages(pdf_path):
     """Count pages in a PDF. Returns -1 on failure."""
     try:
-        r = subprocess.run(["pdfinfo", pdf_path], capture_output=True, text=True, timeout=10)
-        for line in r.stdout.splitlines():
-            if line.startswith("Pages:"):
-                return int(line.split(":")[1].strip())
-    except Exception:
-        pass
-    # Regex fallback (reads raw PDF binary)
-    try:
-        with open(pdf_path, "rb") as f:
-            content = f.read()
-        m = re.search(rb"/Type\s*/Pages\b[^>]*/Count\s+(\d+)", content)
-        return int(m.group(1)) if m else -1
+        from pathlib import Path
+
+        check_pages = importlib.import_module("check-pages")
+        return check_pages.count_pages(Path(pdf_path))
     except Exception:
         return -1
 
@@ -174,11 +167,13 @@ def render_and_compile(yml_path, tex_path, app_dir, xelatex):
     """Render YAML → LaTeX (via render.py) then compile to PDF (via xelatex).
     Returns PDF path on success, None on failure."""
     is_cl = "coverletter" in os.path.basename(yml_path).lower()
-    render_cmd = ["python3", _RENDER_PY, "-d", yml_path, "-o", tex_path]
+    python = os.environ.get("PYTHON") or sys.executable
+    render_cmd = [python, _RENDER_PY, "-d", yml_path, "-o", tex_path]
     if is_cl:
         cv_data = os.path.join(app_dir, "cv-tailored.yml")
         if not os.path.exists(cv_data):
-            cv_data = os.path.join(str(REPO_ROOT), "data", "cv.yml")
+            data_dir = os.environ.get("DATA_DIR") or os.path.join(str(REPO_ROOT), "data")
+            cv_data = os.path.join(data_dir, "cv.yml")
         render_cmd += ["--cv-data", cv_data]
     try:
         subprocess.run(render_cmd, check=True, capture_output=True, cwd=str(REPO_ROOT))
@@ -187,7 +182,8 @@ def render_and_compile(yml_path, tex_path, app_dir, xelatex):
         return None
 
     env = os.environ.copy()
-    env["TEXINPUTS"] = os.path.join(str(REPO_ROOT), "awesome-cv") + ":" + env.get("TEXINPUTS", "")
+    awesome = os.environ.get("AWESOME_CV_DIR") or os.path.join(str(REPO_ROOT), "awesome-cv")
+    env["TEXINPUTS"] = os.path.abspath(awesome) + ":" + env.get("TEXINPUTS", "")
     try:
         subprocess.run(
             [xelatex, "-interaction=nonstopmode", "-output-directory", app_dir, tex_path],
@@ -196,7 +192,7 @@ def render_and_compile(yml_path, tex_path, app_dir, xelatex):
             env=env,
             cwd=str(REPO_ROOT),
         )
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         log.warning("xelatex failed (check %s manually)", tex_path)
         return None
 
@@ -204,8 +200,19 @@ def render_and_compile(yml_path, tex_path, app_dir, xelatex):
     return pdf_path if os.path.exists(pdf_path) else None
 
 
+def _app_tex_path(app_dir, kind, company, position):
+    """kind is 'CV' or 'CoverLetter'."""
+    if company and position:
+        return os.path.join(app_dir, f"{kind} - {company} - {position}.tex")
+    return os.path.join(app_dir, f"{kind}.tex")
+
+
 def trim_to_pages(app_dir, yml_path, tex_path, api_key, provider, page_limit, max_iterations=3, model=None):
-    """Render → compile → check pages → AI-trim loop until the PDF fits within page_limit."""
+    """Render → compile → check pages → AI-trim loop until the PDF fits within page_limit.
+
+    Exits 1 if the document is still over the limit after max_iterations (or
+    if compile/page-count fails). Skip only when xelatex is missing.
+    """
     xelatex = os.environ.get("XELATEX") or shutil.which("xelatex")
     if not xelatex:
         log.warning("xelatex not in PATH — skipping auto-trim (set XELATEX env var to override)")
@@ -213,22 +220,24 @@ def trim_to_pages(app_dir, yml_path, tex_path, api_key, provider, page_limit, ma
 
     is_cl = "coverletter" in os.path.basename(yml_path).lower()
 
+    def _fail(msg, *args):
+        log.error(msg, *args)
+        sys.exit(1)
+
     for i in range(max_iterations):
-        print(f"   🔄 Compiling to check page count (attempt {i + 1}/{max_iterations})...", flush=True)
+        print(f"   Compiling to check page count (attempt {i + 1}/{max_iterations})...", flush=True)
         pdf_path = render_and_compile(yml_path, tex_path, app_dir, xelatex)
         if not pdf_path:
-            log.warning("Compilation failed — skipping auto-trim")
-            return
+            _fail("Compilation failed — cannot enforce %d-page limit on %s", page_limit, yml_path)
 
         pages = count_pdf_pages(pdf_path)
         if pages == -1:
-            log.warning("Could not count pages — skipping auto-trim")
-            return
+            _fail("Could not count pages — cannot enforce %d-page limit on %s", page_limit, yml_path)
         if pages <= page_limit:
-            print(f"   ✅ Fits in {pages} page(s) (limit: {page_limit})")
+            print(f"   Fits in {pages} page(s) (limit: {page_limit})")
             return
 
-        print(f"   📏 {pages} page(s) — needs trimming (limit: {page_limit})", flush=True)
+        print(f"   {pages} page(s) — needs trimming (limit: {page_limit})", flush=True)
 
         with open(yml_path, encoding="utf-8") as f:
             yaml_text = f.read()
@@ -249,26 +258,24 @@ def trim_to_pages(app_dir, yml_path, tex_path, api_key, provider, page_limit, ma
             )
 
         model_label = f" ({model})" if model else ""
-        print(f"   🤖 Asking {provider}{model_label} to trim...", flush=True)
+        print(f"   Asking {provider}{model_label} to trim...", flush=True)
         result = call_ai(prompt, provider, api_key, model=model)
         trimmed = extract_yaml_block(result)
 
         try:
             yaml.safe_load(trimmed)
         except Exception as e:
-            log.warning("Trim returned invalid YAML: %s — stopping", e)
-            return
+            _fail("Trim returned invalid YAML: %s", e)
 
         _atomic_write(yml_path, trimmed)
 
-    # Final check
     pdf_path = render_and_compile(yml_path, tex_path, app_dir, xelatex)
     if pdf_path:
         pages = count_pdf_pages(pdf_path)
         if pages <= page_limit:
-            print(f"   ✅ Fits in {pages} page(s) after {max_iterations} trim(s)")
+            print(f"   Fits in {pages} page(s) after {max_iterations} trim(s)")
             return
-    log.warning("Still too long after %d trim(s) — review %s manually", max_iterations, yml_path)
+    _fail("Still too long after %d trim(s) — %s exceeds %d pages", max_iterations, yml_path, page_limit)
 
 
 # ---------------------------------------------------------------------------
@@ -568,12 +575,10 @@ def main():
         )
         if cv_yml_path:
             print(f"   ✅ {cv_yml_path}")
-            if args.auto_trim and meta_company and meta_position:
-                cv_tex = os.path.join(app_dir, f"CV - {meta_company} - {meta_position}.tex")
+            if args.auto_trim:
+                cv_tex = _app_tex_path(app_dir, "CV", meta_company, meta_position)
                 print("📏 Auto-trimming CV to 2 pages...")
                 trim_to_pages(app_dir, cv_yml_path, cv_tex, api_key, provider, page_limit=2, model=model)
-            elif args.auto_trim:
-                log.warning("meta.yml missing company/position — skipping auto-trim")
         elif not dry_run:
             log.error("CV tailoring failed — see raw output above")
 
@@ -593,12 +598,10 @@ def main():
         )
         if cl_yml_path:
             print(f"   ✅ {cl_yml_path}")
-            if args.auto_trim and meta_company and meta_position:
-                cl_tex = os.path.join(app_dir, f"CoverLetter - {meta_company} - {meta_position}.tex")
+            if args.auto_trim:
+                cl_tex = _app_tex_path(app_dir, "CoverLetter", meta_company, meta_position)
                 print("📏 Auto-trimming Cover Letter to 1 page...")
                 trim_to_pages(app_dir, cl_yml_path, cl_tex, api_key, provider, page_limit=1, model=model)
-            elif args.auto_trim:
-                log.warning("meta.yml missing company/position — skipping auto-trim")
         elif not dry_run:
             log.error("Cover letter generation failed — see raw output above")
 

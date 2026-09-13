@@ -261,3 +261,82 @@ class TestGenerateCoverLetter:
 
         assert result is None
         assert not (app_dir / "coverletter.yml").exists()
+
+
+# ---------------------------------------------------------------------------
+# trim_to_pages — hard 2-page (CV) / 1-page (CL) gate
+# ---------------------------------------------------------------------------
+
+
+class TestTrimToPages:
+    def test_returns_when_within_limit(self, tmp_path, monkeypatch):
+        yml = tmp_path / "cv-tailored.yml"
+        yml.write_text("profile: short\n")
+        monkeypatch.setenv("XELATEX", "/usr/bin/xelatex")
+        monkeypatch.setattr(
+            ai_tailor, "render_and_compile", lambda *a, **k: str(tmp_path / "cv.pdf")
+        )
+        monkeypatch.setattr(ai_tailor, "count_pdf_pages", lambda p: 2)
+        ai_tailor.trim_to_pages(
+            str(tmp_path), str(yml), str(tmp_path / "CV.tex"), "k", "gemini", page_limit=2
+        )
+
+    def test_exits_when_still_over_limit(self, tmp_path, monkeypatch):
+        yml = tmp_path / "cv-tailored.yml"
+        yml.write_text("experience:\n- items: [{text: x}]\n")
+        monkeypatch.setenv("XELATEX", "/usr/bin/xelatex")
+        monkeypatch.setattr(
+            ai_tailor, "render_and_compile", lambda *a, **k: str(tmp_path / "cv.pdf")
+        )
+        monkeypatch.setattr(ai_tailor, "count_pdf_pages", lambda p: 3)
+        with patch.object(ai_tailor, "call_ai", return_value="experience:\n- items: [{text: x}]\n"):
+            with pytest.raises(SystemExit) as exc:
+                ai_tailor.trim_to_pages(
+                    str(tmp_path),
+                    str(yml),
+                    str(tmp_path / "CV.tex"),
+                    "k",
+                    "gemini",
+                    page_limit=2,
+                    max_iterations=1,
+                )
+        assert exc.value.code == 1
+
+
+class TestCheckPages:
+    def test_cv_over_two_pages_fails(self, tmp_path):
+        check_pages = importlib.import_module("check-pages")
+        pdf = tmp_path / "CV - Acme - SE.pdf"
+        pdf.write_bytes(b"%PDF-1.4\n/Type /Pages /Count 3\n")
+        assert check_pages.main([str(pdf)]) == 1
+
+    def test_cv_two_pages_ok(self, tmp_path):
+        check_pages = importlib.import_module("check-pages")
+        pdf = tmp_path / "CV.pdf"
+        pdf.write_bytes(b"%PDF-1.4\n/Type /Pages /Count 2\n")
+        assert check_pages.main([str(pdf)]) == 0
+
+    def test_cover_letter_over_one_page_fails(self, tmp_path):
+        check_pages = importlib.import_module("check-pages")
+        pdf = tmp_path / "CoverLetter - Acme - SE.pdf"
+        pdf.write_bytes(b"%PDF-1.4\n/Type /Pages /Count 2\n")
+        assert check_pages.main([str(pdf)]) == 1
+
+    def test_counts_pages_inside_flate_stream(self, tmp_path, monkeypatch):
+        import zlib
+
+        check_pages = importlib.import_module("check-pages")
+
+        def no_pdfinfo(*a, **k):
+            raise FileNotFoundError("pdfinfo")
+
+        monkeypatch.setattr(check_pages.subprocess, "run", no_pdfinfo)
+        payload = zlib.compress(b"/Type/Pages/Count 2/Kids[]")
+        pdf = tmp_path / "CV.pdf"
+        pdf.write_bytes(
+            b"%PDF-1.5\n1 0 obj\n<< /Filter /FlateDecode >>\nstream\n"
+            + payload
+            + b"\nendstream\nendobj\n"
+        )
+        assert check_pages.count_pages(pdf) == 2
+        assert check_pages.main([str(pdf)]) == 0

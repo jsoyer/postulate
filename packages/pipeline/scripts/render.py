@@ -515,15 +515,15 @@ def render_cv(data, theme=None, pdfa=False, draft=False, lang=None):
     sections.append("")
     sections.append("")
 
-    # Work Experience
+    # Work Experience then Early Career flow naturally — no forced \\newpage.
+    # A hard page break left leftover empty \\cventry blocks on a blank page 2
+    # whenever page 1 already overflowed (Chainguard 3-page case).
     sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tWORK EXPERIENCE")
     sections.append("%-------------------------------------------------------------------------------")
     sections.append(render_experience(data["experience"]))
     sections.append("")
-    sections.append("\\newpage")
     sections.append("")
-
     # Early Career
     sections.append("%-------------------------------------------------------------------------------")
     sections.append("%\tEARLY CAREER")
