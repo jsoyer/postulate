@@ -14,6 +14,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from cv_mcp.pipeline import (  # noqa: E402
     CvRepo,
+    _start_engine,
     application_name,
     deposit_pdfs,
     draft_application,
@@ -250,6 +251,31 @@ def test_deposit_pdfs_copies_into_drive_tree(tmp_path: Path, monkeypatch) -> Non
     dest = drive / "2026-08-Acme-SE" / "CV-Acme-SE.pdf"
     assert dest.is_file()
     assert any(str(dest) in c or c.endswith("CV-Acme-SE.pdf") for c in copied)
+
+
+def test_start_engine_creates_log_when_app_dir_missing(tmp_path: Path, monkeypatch) -> None:
+    repo = CvRepo(tmp_path, engine_root=tmp_path / "engine")
+    (tmp_path / "engine").mkdir()
+    (tmp_path / "engine" / "Makefile").write_text("all:\n")
+
+    class FakeProc:
+        pid = 4242
+
+    monkeypatch.setattr(
+        "cv_mcp.pipeline.subprocess.Popen",
+        lambda *a, **k: FakeProc(),
+    )
+    result = _start_engine(repo, "2026-09-elevenlabs", "grok", None)
+    log = tmp_path / "applications" / "2026-09-elevenlabs" / "engine.log"
+    assert log.is_file()
+    assert result["pid"] == 4242
+    assert str(log.relative_to(tmp_path)) == result["log"]
+
+
+def test_start_engine_rejects_unsafe_name(tmp_path: Path) -> None:
+    repo = CvRepo(tmp_path, engine_root=tmp_path / "engine")
+    with pytest.raises(ValueError, match="invalid application name"):
+        _start_engine(repo, "..", "grok", None)
 
 def test_server_registers_expected_tools() -> None:
     pytest.importorskip("mcp")
