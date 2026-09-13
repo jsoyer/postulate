@@ -471,13 +471,17 @@ def _run_make(repo: CvRepo, args: list[str], timeout: int) -> dict[str, Any]:
 
 def _start_engine(repo: CvRepo, name: str, ai: str, model: str | None) -> dict[str, Any]:
     """Kick tailor+build in the background. Cloudflare/Grok Bot cannot wait 3 min."""
-    log_path = repo.apps / name / "engine.log"
+    safe = Path(name).name
+    if not safe or safe in {".", ".."}:
+        raise ValueError(f"invalid application name: {name!r}")
+    log_path = repo.apps / safe / "engine.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     extra = _contract_args(repo)
-    tailor = ["make", "tailor", f"NAME={name}", f"AI={ai}"]
+    tailor = ["make", "tailor", f"NAME={safe}", f"AI={ai}"]
     if model:
         tailor.append(f"MODEL={model}")
     tailor.extend(extra)
-    build = ["make", "app", f"NAME={name}", *extra]
+    build = ["make", "app", f"NAME={safe}", *extra]
     script = f"{shlex.join(tailor)} && {shlex.join(build)}"
     with log_path.open("ab") as log:
         proc = subprocess.Popen(
