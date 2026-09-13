@@ -130,7 +130,6 @@ current:
 		exit 1; \
 	fi
 
-# Build master resume and cover letter PDFs
 all:
 	@$(MAKE) --no-print-directory render
 	@echo "🔨 Compiling PDFs..."
@@ -138,6 +137,8 @@ all:
 	@if [ -f $(OUT_DIR)/CoverLetter.tex ]; then \
 		$(XELATEX) -output-directory=$(OUT_DIR) $(OUT_DIR)/CoverLetter.tex > /dev/null 2>&1 && echo "   ✅ CoverLetter.pdf" || echo "   ❌ CoverLetter.tex — compilation failed"; \
 	fi
+	@echo "📏 Page check:"
+	@$(PYTHON) scripts/check-pages.py $(OUT_DIR)/CV.pdf $(OUT_DIR)/CoverLetter.pdf
 	@echo "✅ Build complete"
 
 # Build and open PDFs in Preview
@@ -199,18 +200,7 @@ app: ensure-tex-deps
 	@echo "✅ Built: $(APP_DIR)/$(NAME)/"
 	@echo ""
 	@echo "📏 Page check:"
-	@PASS=true; \
-	find "$(APP_DIR)/$(NAME)" -name "*.pdf" | while IFS= read -r f; do \
-		PAGES=$$(pdfinfo "$$f" 2>/dev/null | awk '/^Pages:/{print $$2}'); \
-		BASE=$$(basename "$$f"); \
-		echo "$$BASE" | grep -qi "coverletter" && LIMIT=1 || LIMIT=2; \
-		if [ "$${PAGES:-0}" -le "$$LIMIT" ] 2>/dev/null; then \
-			echo "   ✅ $$BASE: $$PAGES page(s)"; \
-		else \
-			echo "   ❌ $$BASE: $$PAGES page(s) — exceeds $$LIMIT-page limit"; \
-			echo "   💡 Trim content in cv-tailored.yml or coverletter.yml"; \
-		fi; \
-	done
+	@$(PYTHON) scripts/check-pages.py "$(APP_DIR)/$(NAME)"
 	@if [ -n "$(DRIVE_DIR)" ]; then \
 		$(PYTHON) scripts/drive_deposit.py "$(APP_DIR)/$(NAME)" "$(DRIVE_DIR)"; \
 	fi
@@ -973,21 +963,7 @@ review: ensure-tex-deps
 	@echo ""
 	@# 3. Page count validation
 	@echo "📏 Page count:"
-	@for f in "$(APP_DIR)/$(NAME)/"*.pdf; do \
-		[ -f "$$f" ] || continue; \
-		PAGES=$$($(PYTHON) -c "import re; d=open('$$f','rb').read(); m=re.search(rb'/Type\s*/Pages\b[^>]*/Count\s+(\d+)',d); print(m.group(1).decode() if m else '?')"); \
-		BASENAME=$$(basename "$$f"); \
-		if echo "$$BASENAME" | grep -q "^CoverLetter"; then \
-			LIMIT=1; \
-		else \
-			LIMIT=2; \
-		fi; \
-		if [ "$$PAGES" -le "$$LIMIT" ] 2>/dev/null; then \
-			echo "   ✅ $$BASENAME: $$PAGES page(s) (max $$LIMIT)"; \
-		else \
-			echo "   ❌ $$BASENAME: $$PAGES page(s) (max $$LIMIT)"; \
-		fi; \
-	done
+	@$(PYTHON) scripts/check-pages.py "$(APP_DIR)/$(NAME)"
 	@echo ""
 	@# 4. Placeholder check
 	@echo "🔍 Placeholder check:"

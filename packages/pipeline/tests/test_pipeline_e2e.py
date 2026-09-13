@@ -115,6 +115,11 @@ class TestRenderPipeline:
         first_company = cv_data["experience"][0]["company"]
         assert first_company in tex or render.process_text(first_company) in tex
 
+
+    def test_tex_has_no_forced_newpage(self, cv_data):
+        tex = render.render_cv(cv_data)
+        assert "\\newpage" not in tex
+
     def test_tex_has_education(self, cv_data):
         tex = render.render_cv(cv_data)
         first_school = cv_data["education"][0]["school"]
