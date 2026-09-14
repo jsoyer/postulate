@@ -124,7 +124,7 @@ def call_gemini(
                 data=payload,
                 headers={
                     "Content-Type": "application/json",
-                    "Authorization": f"Bearer {api_key}",
+                    "x-goog-api-key": api_key,
                 },
             )
             try:

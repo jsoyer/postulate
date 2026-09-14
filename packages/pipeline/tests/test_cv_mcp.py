@@ -257,19 +257,25 @@ def test_start_engine_creates_log_when_app_dir_missing(tmp_path: Path, monkeypat
     repo = CvRepo(tmp_path, engine_root=tmp_path / "engine")
     (tmp_path / "engine").mkdir()
     (tmp_path / "engine" / "Makefile").write_text("all:\n")
+    seen: dict = {}
 
     class FakeProc:
         pid = 4242
 
-    monkeypatch.setattr(
-        "cv_mcp.pipeline.subprocess.Popen",
-        lambda *a, **k: FakeProc(),
-    )
+    def fake_popen(cmd, **kwargs):
+        seen["cmd"] = cmd
+        return FakeProc()
+
+    monkeypatch.setattr("cv_mcp.pipeline.subprocess.Popen", fake_popen)
     result = _start_engine(repo, "2026-09-elevenlabs", "grok", None)
     log = tmp_path / "applications" / "2026-09-elevenlabs" / "engine.log"
     assert log.is_file()
     assert result["pid"] == 4242
     assert str(log.relative_to(tmp_path)) == result["log"]
+    script = seen["cmd"][2]
+    assert "TARGET=both" in script
+    assert "make tailor" in script
+    assert "make app" in script
 
 
 def test_start_engine_rejects_unsafe_name(tmp_path: Path) -> None:

@@ -477,7 +477,7 @@ def _start_engine(repo: CvRepo, name: str, ai: str, model: str | None) -> dict[s
     log_path = repo.apps / safe / "engine.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     extra = _contract_args(repo)
-    tailor = ["make", "tailor", f"NAME={safe}", f"AI={ai}"]
+    tailor = ["make", "tailor", f"NAME={safe}", f"AI={ai}", "TARGET=both"]
     if model:
         tailor.append(f"MODEL={model}")
     tailor.extend(extra)
