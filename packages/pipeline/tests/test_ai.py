@@ -168,6 +168,20 @@ class TestCallGemini:
             result = call_gemini("test prompt", api_key="fake-key", retries=1)
         assert result == "Hello from Gemini"
 
+    def test_sends_api_key_header_not_bearer(self):
+        payload = {"candidates": [{"content": {"parts": [{"text": "ok"}]}}]}
+        mock_resp = _make_mock_response(payload)
+        seen: dict = {}
+
+        def fake_urlopen(req, timeout=None):
+            seen["headers"] = {k.lower(): v for k, v in req.header_items()}
+            return mock_resp
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            call_gemini("prompt", api_key="fake-key", retries=1)
+        assert seen["headers"].get("x-goog-api-key") == "fake-key"
+        assert "bearer" not in seen["headers"].get("authorization", "").lower()
+
     def test_invalid_json_raises_runtime_error(self):
         mock_resp = MagicMock()
         mock_resp.read.return_value = b"not-json"
