@@ -273,6 +273,7 @@ def test_start_engine_creates_log_when_app_dir_missing(tmp_path: Path, monkeypat
     assert result["pid"] == 4242
     assert str(log.relative_to(tmp_path)) == result["log"]
     script = seen["cmd"][2]
+    assert seen["cmd"][:2] == ["bash", "-c"]
     assert "TARGET=both" in script
     assert "make tailor" in script
     assert "make app" in script
