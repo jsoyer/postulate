@@ -485,7 +485,7 @@ def _start_engine(repo: CvRepo, name: str, ai: str, model: str | None) -> dict[s
     script = f"{shlex.join(tailor)} && {shlex.join(build)}"
     with log_path.open("ab") as log:
         proc = subprocess.Popen(
-            ["bash", "-lc", script],
+            ["bash", "-c", script],
             cwd=str(repo.engine),
             stdout=log,
             stderr=subprocess.STDOUT,
