@@ -121,6 +121,23 @@ class TestCallAiDispatcher:
         ):
             assert call_ai("prompt", "gemini", api_key=None) == "from-cli"
 
+    def test_gemini_cli_failure_falls_back_to_api_key(self):
+        with (
+            patch("lib.ai_cli.cli_available", return_value=True),
+            patch("lib.ai_cli.call_cli", side_effect=RuntimeError("OAuth expired")),
+            patch("lib.ai.call_gemini", return_value="from-api") as mock_api,
+        ):
+            assert call_ai("prompt", "gemini", api_key="k") == "from-api"
+            mock_api.assert_called_once()
+
+    def test_cli_failure_without_key_still_raises(self):
+        with (
+            patch("lib.ai_cli.cli_available", return_value=True),
+            patch("lib.ai_cli.call_cli", side_effect=RuntimeError("OAuth expired")),
+        ):
+            with pytest.raises(RuntimeError, match="OAuth expired"):
+                call_ai("prompt", "gemini", api_key=None)
+
     def test_opencode_uses_http_when_url_set(self, monkeypatch):
         monkeypatch.setenv("OPENCODE_URL", "http://127.0.0.1:4096")
         with patch("lib.opencode_api.call_opencode_http", return_value="via-http"):

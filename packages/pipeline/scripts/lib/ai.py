@@ -372,6 +372,7 @@ def call_ai(
     """Dispatch to subscription CLI if logged in, else API key.
 
     Set AI_PREFER_API=1 to force the key path when both exist.
+    If the CLI is on PATH but auth fails, fall back to api_key when set.
     """
     from lib.ai_cli import call_cli, canonical_provider, cli_available, cli_spec_for
 
@@ -397,7 +398,12 @@ def call_ai(
 
     prefer_api = os.environ.get("AI_PREFER_API", "").strip().lower() in {"1", "true", "yes"}
     if not prefer_api and cli_available(provider):
-        return call_cli(provider, prompt, model=model)
+        try:
+            return call_cli(provider, prompt, model=model)
+        except Exception as exc:
+            if not api_key:
+                raise
+            log.warning("%s CLI failed (%s); falling back to API key", provider, exc)
 
     if api_key:
         if provider == "gemini":
