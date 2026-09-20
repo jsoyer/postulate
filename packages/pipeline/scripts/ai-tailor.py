@@ -72,18 +72,36 @@ Return ONLY valid YAML with the exact same structure and keys — no markdown fe
 {yaml_text}"""
 
 
-# ---------------------------------------------------------------------------
-# Atomic file write helper
-# ---------------------------------------------------------------------------
+
+_KEEP_FROM_MASTER = (
+    "personal",
+    "early_career",
+    "education",
+    "certifications",
+    "awards",
+    "publications",
+    "languages",
+    "interests",
+)
+
+
+def _fill_from_master(data: dict, master: dict) -> dict:
+    """Copy sections the prompt forbids changing if the model dropped them."""
+    if not isinstance(master, dict):
+        return data
+    for key in _KEEP_FROM_MASTER:
+        if key not in data or data[key] in (None, "", [], {}):
+            if key in master:
+                data[key] = master[key]
+    master_exp = master.get("experience") or []
+    tailored_exp = data.get("experience") or []
+    if master_exp and tailored_exp and len(tailored_exp) < len(master_exp):
+        data["experience"] = [tailored_exp[0]] + master_exp[1:]
+    return data
 
 
 def _atomic_write(path: str, content: str) -> None:
-    """Write content to path atomically using a temp file + os.replace.
-
-    Prevents partially-written files if the process crashes mid-write.
-    The temp file is created in the same directory as path so that
-    os.replace (rename) is guaranteed to be atomic on POSIX.
-    """
+    """Write content to path atomically using a temp file + os.replace."""
     fd, tmp = tempfile.mkstemp(dir=os.path.dirname(os.path.abspath(path)), suffix=".tmp")
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -200,6 +218,10 @@ def render_and_compile(yml_path, tex_path, app_dir, xelatex):
     return pdf_path if os.path.exists(pdf_path) else None
 
 
+class TrimFailed(RuntimeError):
+    """Auto-trim could not compile or fit the page limit. Cover letter should still run."""
+
+
 def _app_tex_path(app_dir, kind, company, position):
     """kind is 'CV' or 'CoverLetter'."""
     if company and position:
@@ -210,8 +232,8 @@ def _app_tex_path(app_dir, kind, company, position):
 def trim_to_pages(app_dir, yml_path, tex_path, api_key, provider, page_limit, max_iterations=3, model=None):
     """Render → compile → check pages → AI-trim loop until the PDF fits within page_limit.
 
-    Exits 1 if the document is still over the limit after max_iterations (or
-    if compile/page-count fails). Skip only when xelatex is missing.
+    Raises TrimFailed if the document is still over the limit after max_iterations
+    (or if compile/page-count fails). Skip only when xelatex is missing.
     """
     xelatex = os.environ.get("XELATEX") or shutil.which("xelatex")
     if not xelatex:
@@ -222,7 +244,7 @@ def trim_to_pages(app_dir, yml_path, tex_path, api_key, provider, page_limit, ma
 
     def _fail(msg, *args):
         log.error(msg, *args)
-        sys.exit(1)
+        raise TrimFailed(msg % args if args else msg)
 
     for i in range(max_iterations):
         print(f"   Compiling to check page count (attempt {i + 1}/{max_iterations})...", flush=True)
@@ -344,6 +366,10 @@ No markdown fences, no comments, no explanations — just raw YAML.
         log.warning("Raw output saved to: %s", raw_path)
         log.warning("Fix the YAML manually and save as cv-tailored.yml")
         return None
+
+    master = yaml.safe_load(cv_yaml) or {}
+    data = _fill_from_master(data, master)
+    yaml_text = yaml.safe_dump(data, allow_unicode=True, sort_keys=False)
 
     output = os.path.join(app_dir, "cv-tailored.yml")
     if dry_run:
@@ -578,7 +604,10 @@ def main():
             if args.auto_trim:
                 cv_tex = _app_tex_path(app_dir, "CV", meta_company, meta_position)
                 print("📏 Auto-trimming CV to 2 pages...")
-                trim_to_pages(app_dir, cv_yml_path, cv_tex, api_key, provider, page_limit=2, model=model)
+                try:
+                    trim_to_pages(app_dir, cv_yml_path, cv_tex, api_key, provider, page_limit=2, model=model)
+                except TrimFailed as exc:
+                    log.error("%s — continuing with cover letter", exc)
         elif not dry_run:
             log.error("CV tailoring failed — see raw output above")
 
@@ -601,7 +630,10 @@ def main():
             if args.auto_trim:
                 cl_tex = _app_tex_path(app_dir, "CoverLetter", meta_company, meta_position)
                 print("📏 Auto-trimming Cover Letter to 1 page...")
-                trim_to_pages(app_dir, cl_yml_path, cl_tex, api_key, provider, page_limit=1, model=model)
+                try:
+                    trim_to_pages(app_dir, cl_yml_path, cl_tex, api_key, provider, page_limit=1, model=model)
+                except TrimFailed as exc:
+                    log.error("%s — cover letter YAML kept", exc)
         elif not dry_run:
             log.error("Cover letter generation failed — see raw output above")
 

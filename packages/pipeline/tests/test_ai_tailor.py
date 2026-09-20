@@ -42,6 +42,24 @@ class TestExtractYamlBlock:
         assert "**My Bold Title**" in result
 
 
+
+def test_fill_from_master_restores_dropped_sections() -> None:
+    master = {
+        "personal": {"first_name": "Jane"},
+        "education": [{"school": "ICEP"}],
+        "early_career": [{"title": "R&D"}],
+        "experience": [{"title": "RVP", "items": [1]}, {"title": "SE"}],
+    }
+    data = {
+        "personal": {"first_name": "Jane"},
+        "experience": [{"title": "RVP tailored", "items": [1]}],
+    }
+    out = ai_tailor._fill_from_master(data, master)
+    assert out["education"] == master["education"]
+    assert out["early_career"] == master["early_career"]
+    assert out["experience"][0]["title"] == "RVP tailored"
+    assert out["experience"][1]["title"] == "SE"
+
 # ---------------------------------------------------------------------------
 # fix_yaml_bold
 # ---------------------------------------------------------------------------
@@ -290,7 +308,7 @@ class TestTrimToPages:
         )
         monkeypatch.setattr(ai_tailor, "count_pdf_pages", lambda p: 3)
         with patch.object(ai_tailor, "call_ai", return_value="experience:\n- items: [{text: x}]\n"):
-            with pytest.raises(SystemExit) as exc:
+            with pytest.raises(ai_tailor.TrimFailed, match="exceeds 2 pages"):
                 ai_tailor.trim_to_pages(
                     str(tmp_path),
                     str(yml),
@@ -300,7 +318,6 @@ class TestTrimToPages:
                     page_limit=2,
                     max_iterations=1,
                 )
-        assert exc.value.code == 1
 
 
 class TestCheckPages:
