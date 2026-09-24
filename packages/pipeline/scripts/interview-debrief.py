@@ -102,7 +102,7 @@ def main():
     parser.add_argument("app_dir", help="Application directory")
     parser.add_argument("--stage", default="", help="Interview stage")
     parser.add_argument("--notes", default="", help="Your interview notes (or omit to type interactively)")
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
     load_env()

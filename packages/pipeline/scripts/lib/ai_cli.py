@@ -59,9 +59,18 @@ def _claude_argv(binary: str, prompt_file: Path, model: str | None) -> list[str]
     return cmd
 
 
-def _gemini_argv(binary: str, prompt_file: Path, model: str | None) -> list[str]:
+def _antigravity_argv(binary: str, prompt_file: Path, model: str | None) -> list[str]:
     prompt = prompt_file.read_text(encoding="utf-8")
-    cmd = [binary, "-p", prompt, "--approval-mode", "plan", "-o", "text"]
+    cmd = [
+        binary,
+        "-p",
+        prompt,
+        "--approval-mode",
+        "plan",
+        "-o",
+        "text",
+        "--skip-trust",
+    ]
     if model:
         cmd.extend(["-m", model])
     return cmd
@@ -108,7 +117,11 @@ class CliSpec:
 CLI_SPECS: dict[str, CliSpec] = {
     "grok": CliSpec(binary="grok", argv=_grok_argv, aliases=("xai",)),
     "claude": CliSpec(binary="claude", argv=_claude_argv),
-    "gemini": CliSpec(binary="gemini", argv=_gemini_argv),
+    "antigravity": CliSpec(
+        binary="agy",
+        argv=_antigravity_argv,
+        aliases=("agy", "gemini"),
+    ),
     "cursor": CliSpec(
         binary="cursor-agent",
         argv=_cursor_argv,

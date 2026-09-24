@@ -37,7 +37,7 @@ except ImportError:
     print("❌ pyyaml required: pip install pyyaml")
     sys.exit(1)
 
-from lib.ai import call_ai, KEY_ENV, VALID_PROVIDERS, PROVIDER_MODELS
+from lib.ai import DEFAULT_AI, call_ai, KEY_ENV, VALID_PROVIDERS, PROVIDER_MODELS
 from lib.common import company_from_dirname, setup_logging, REPO_ROOT
 
 # --- Script paths (resolved at import time) ---
@@ -478,7 +478,7 @@ closing_paragraph: >-
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Tailor CV and cover letter using AI (Gemini, Claude, OpenAI, Mistral, Ollama)"
+        description="Tailor CV and cover letter using a logged-in CLI (claude, grok, codex, antigravity) or OpenCode HTTP"
     )
     parser.add_argument(
         "app_dir",
@@ -486,9 +486,9 @@ def main():
     )
     parser.add_argument(
         "--provider",
-        default=os.environ.get("AI_PROVIDER", "gemini"),
-        choices=sorted(VALID_PROVIDERS),
-        help="AI provider to use (default: gemini, or set AI_PROVIDER env var)",
+        default=os.environ.get("AI_PROVIDER", DEFAULT_AI),
+        choices=sorted(VALID_PROVIDERS | {"gemini", "agy"}),
+        help="AI provider (default: claude, or set AI_PROVIDER)",
     )
     parser.add_argument(
         "--cv-data",

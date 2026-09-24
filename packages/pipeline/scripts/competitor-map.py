@@ -149,7 +149,7 @@ def save_output(app_dir: Path, meta: dict, raw_output: str, provider: str) -> Pa
 def main():
     parser = argparse.ArgumentParser(description="Generate competitor landscape map for a target company")
     parser.add_argument("app_dir", help="Application directory")
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS), help="AI provider (default: gemini)")
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS), help="AI provider (default: claude)")
     args = parser.parse_args()
 
     load_env()

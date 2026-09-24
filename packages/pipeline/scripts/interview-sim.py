@@ -177,7 +177,7 @@ def main():
         choices=list(TYPE_LABEL),
         help="Interview type (default: mixed)",
     )
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
     load_env()

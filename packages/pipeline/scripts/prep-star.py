@@ -123,7 +123,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate STAR stories from CV achievements")
     parser.add_argument("app_dir", help="Application directory")
     parser.add_argument("--count", type=int, default=5, help="Number of stories (default: 5)")
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
     load_env()

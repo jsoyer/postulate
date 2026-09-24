@@ -132,7 +132,7 @@ Keep the candidate's voice — no "I am excited to" or "I am passionate about".
 def main():
     parser = argparse.ArgumentParser(description="AI cover letter critique vs job description")
     parser.add_argument("app_dir", help="Application directory")
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
     load_env()
