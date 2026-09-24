@@ -87,11 +87,11 @@ class RunPipelineInput(BaseModel):
     )
     force: bool = Field(default=False, description="Run even if qualify says skip")
     ai: str = Field(
-        default="gemini",
+        default="claude",
         description=(
-            "Tailor backend. Logged-in CLI first: gemini, claude, grok, "
-            "chatgpt/openai (Codex), cursor, codex, opencode. "
-            "API key only if no CLI (or AI_PREFER_API=1)."
+            "Tailor backend. CLI: claude, grok, codex, antigravity (agy). "
+            "OpenCode Go: opencode (OPENCODE_URL HTTP). "
+            "chatgpt/openai uses Codex CLI."
         ),
     )
     model: str | None = Field(

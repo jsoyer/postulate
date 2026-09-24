@@ -112,8 +112,8 @@ def parse_args():
         "--ai",
         metavar="PROVIDER",
         dest="ai_provider",
-        default="gemini",
-        help="AI provider: gemini | claude | openai | mistral (default: gemini)",
+        default="claude",
+        help="AI provider: gemini | claude | openai | mistral (default: claude)",
     )
     parser.add_argument(
         "--continue-on-error",

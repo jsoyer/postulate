@@ -133,7 +133,7 @@ Fill in with role-specific names/titles from the job description context.
 def main():
     parser = argparse.ArgumentParser(description="Generate 30/60/90-day onboarding plan")
     parser.add_argument("app_dir", help="Application directory")
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
     load_env()

@@ -128,7 +128,7 @@ def main():
         help="Post type (default: open-to-work)",
     )
     parser.add_argument("--topic", default="", help="Additional context or specific topic/achievement to cover")
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
     load_env()

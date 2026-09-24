@@ -144,7 +144,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate interview-day brief")
     parser.add_argument("app_dir", help="Application directory")
     parser.add_argument("--stage", default="", help="Interview stage (auto-detected if omitted)")
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
     load_env()

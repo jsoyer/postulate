@@ -30,8 +30,12 @@ def test_aliases() -> None:
     assert canonical_provider("xai") == "grok"
     assert canonical_provider("cursor-agent") == "cursor"
     assert canonical_provider("chatgpt") == "openai"
+    assert canonical_provider("gemini") == "antigravity"
+    assert canonical_provider("agy") == "antigravity"
     assert cli_spec_for("openai") is not None
     assert cli_spec_for("chatgpt").binary == "codex"
+    assert cli_spec_for("gemini").binary == "agy"
+    assert cli_spec_for("antigravity").binary == "agy"
 
 
 def test_cli_available_uses_which() -> None:

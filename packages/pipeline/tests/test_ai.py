@@ -14,7 +14,6 @@ from lib.ai import (
     VALID_PROVIDERS,
     call_ai,
     call_claude,
-    call_gemini,
 )
 
 
@@ -29,7 +28,6 @@ class TestValidProviders:
 
     def test_contains_expected_providers(self):
         assert VALID_PROVIDERS == {
-            "gemini",
             "claude",
             "openai",
             "chatgpt",
@@ -39,6 +37,7 @@ class TestValidProviders:
             "cursor",
             "codex",
             "opencode",
+            "antigravity",
         }
 
         for provider in VALID_PROVIDERS:
@@ -50,8 +49,9 @@ class TestValidProviders:
 
 
 class TestKeyEnv:
-    def test_gemini_maps_to_gemini_api_key(self):
-        assert KEY_ENV["gemini"] == "GEMINI_API_KEY"
+    def test_antigravity_has_no_key(self):
+        assert KEY_ENV["antigravity"] is None
+
 
     def test_claude_maps_to_anthropic_api_key(self):
         assert KEY_ENV["claude"] == "ANTHROPIC_API_KEY"
@@ -67,8 +67,8 @@ class TestKeyEnv:
 
 
 class TestProviderModels:
-    def test_gemini_has_models(self):
-        assert len(PROVIDER_MODELS["gemini"]) > 0
+    def test_antigravity_is_cli_only(self):
+        assert PROVIDER_MODELS["antigravity"] == []
 
     def test_claude_has_models(self):
         assert len(PROVIDER_MODELS["claude"]) > 0
@@ -99,10 +99,10 @@ class TestCallAiDispatcher:
         with pytest.raises(ValueError, match="Unknown provider"):
             call_ai("prompt", "nonexistent_provider")
 
-    def test_gemini_without_api_key_raises_value_error(self):
+    def test_antigravity_without_cli_raises_value_error(self):
         with patch("lib.ai_cli.cli_available", return_value=False):
-            with pytest.raises(ValueError, match="gemini requires an API key"):
-                call_ai("prompt", "gemini", api_key=None)
+            with pytest.raises(ValueError, match="antigravity requires a logged-in CLI"):
+                call_ai("prompt", "antigravity", api_key=None)
 
     def test_claude_without_api_key_raises_value_error(self):
         with patch("lib.ai_cli.cli_available", return_value=False):
@@ -115,19 +115,19 @@ class TestCallAiDispatcher:
         ):
             assert call_ai("prompt", "openai", api_key=None) == "from-cli"
 
-    def test_gemini_without_key_uses_cli_when_available(self):
+    def test_antigravity_uses_cli_when_available(self):
         with patch("lib.ai_cli.cli_available", return_value=True), patch(
             "lib.ai_cli.call_cli", return_value="from-cli"
         ):
-            assert call_ai("prompt", "gemini", api_key=None) == "from-cli"
+            assert call_ai("prompt", "antigravity", api_key=None) == "from-cli"
 
-    def test_gemini_cli_failure_falls_back_to_api_key(self):
+    def test_claude_cli_failure_falls_back_to_api_key(self):
         with (
             patch("lib.ai_cli.cli_available", return_value=True),
             patch("lib.ai_cli.call_cli", side_effect=RuntimeError("OAuth expired")),
-            patch("lib.ai.call_gemini", return_value="from-api") as mock_api,
+            patch("lib.ai.call_claude", return_value="from-api") as mock_api,
         ):
-            assert call_ai("prompt", "gemini", api_key="k") == "from-api"
+            assert call_ai("prompt", "claude", api_key="k") == "from-api"
             mock_api.assert_called_once()
 
     def test_cli_failure_without_key_still_raises(self):
@@ -136,7 +136,7 @@ class TestCallAiDispatcher:
             patch("lib.ai_cli.call_cli", side_effect=RuntimeError("OAuth expired")),
         ):
             with pytest.raises(RuntimeError, match="OAuth expired"):
-                call_ai("prompt", "gemini", api_key=None)
+                call_ai("prompt", "antigravity", api_key=None)
 
     def test_opencode_uses_http_when_url_set(self, monkeypatch):
         monkeypatch.setenv("OPENCODE_URL", "http://127.0.0.1:4096")
@@ -153,7 +153,7 @@ class TestCallAiDispatcher:
 
 
 # ---------------------------------------------------------------------------
-# call_gemini — mocked HTTP
+# HTTP mocks shared by Claude tests
 # ---------------------------------------------------------------------------
 
 
@@ -175,78 +175,6 @@ def _make_http_error(code: int) -> urllib.error.HTTPError:
         hdrs=None,
         fp=io.BytesIO(b""),
     )
-
-
-class TestCallGemini:
-    def test_successful_response(self):
-        payload = {"candidates": [{"content": {"parts": [{"text": "Hello from Gemini"}]}}]}
-        mock_resp = _make_mock_response(payload)
-        with patch("urllib.request.urlopen", return_value=mock_resp):
-            result = call_gemini("test prompt", api_key="fake-key", retries=1)
-        assert result == "Hello from Gemini"
-
-    def test_sends_api_key_header_not_bearer(self):
-        payload = {"candidates": [{"content": {"parts": [{"text": "ok"}]}}]}
-        mock_resp = _make_mock_response(payload)
-        seen: dict = {}
-
-        def fake_urlopen(req, timeout=None):
-            seen["headers"] = {k.lower(): v for k, v in req.header_items()}
-            return mock_resp
-
-        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
-            call_gemini("prompt", api_key="fake-key", retries=1)
-        assert seen["headers"].get("x-goog-api-key") == "fake-key"
-        assert "bearer" not in seen["headers"].get("authorization", "").lower()
-
-    def test_invalid_json_raises_runtime_error(self):
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = b"not-json"
-        mock_resp.__enter__ = lambda s: s
-        mock_resp.__exit__ = MagicMock(return_value=False)
-        with patch("urllib.request.urlopen", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="invalid JSON"):
-                call_gemini("prompt", api_key="fake-key", model="gemini-2.5-flash", retries=1)
-
-    def test_unexpected_response_structure_raises_runtime_error(self):
-        payload = {"unexpected": "shape"}
-        mock_resp = _make_mock_response(payload)
-        with patch("urllib.request.urlopen", return_value=mock_resp):
-            with pytest.raises(RuntimeError, match="unexpected response structure"):
-                call_gemini("prompt", api_key="fake-key", model="gemini-2.5-flash", retries=1)
-
-    def test_retry_on_429_then_success(self):
-        payload = {"candidates": [{"content": {"parts": [{"text": "retry worked"}]}}]}
-        success_resp = _make_mock_response(payload)
-        http_error_429 = _make_http_error(429)
-
-        call_count = {"n": 0}
-
-        def side_effect(req, timeout):
-            call_count["n"] += 1
-            if call_count["n"] == 1:
-                raise http_error_429
-            return success_resp
-
-        with patch("urllib.request.urlopen", side_effect=side_effect), patch("time.sleep") as mock_sleep:
-            result = call_gemini(
-                "prompt",
-                api_key="fake-key",
-                model="gemini-2.5-flash",
-                retries=3,
-            )
-
-        assert result == "retry worked"
-        # sleep must have been called once for the first 429.
-        mock_sleep.assert_called_once()
-
-    def test_exhausted_retries_propagate_http_error(self):
-        # When the fallback model is also rate-limited and has no further fallback,
-        # the last HTTPError propagates (the function re-raises it).
-        http_error_429 = _make_http_error(429)
-        with patch("urllib.request.urlopen", side_effect=http_error_429), patch("time.sleep"):
-            with pytest.raises(urllib.error.HTTPError):
-                call_gemini("prompt", api_key="fake-key", retries=1)
 
 
 # ---------------------------------------------------------------------------

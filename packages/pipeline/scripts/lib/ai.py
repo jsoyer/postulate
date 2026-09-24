@@ -2,12 +2,13 @@
 
 Usage::
 
-    from lib.ai import call_ai, KEY_ENV, VALID_PROVIDERS
+    from lib.ai import call_ai, KEY_ENV, VALID_PROVIDERS, DEFAULT_AI
 
-    text = call_ai(prompt, "gemini", api_key)
-    text = call_ai(prompt, "claude", api_key, model="claude-opus-4-6", temperature=0.7)
-    text = call_ai(prompt, "grok")  # grok CLI OAuth
-    text = call_ai(prompt, "chatgpt")  # Codex CLI (ChatGPT subscription)
+    text = call_ai(prompt, "claude")
+    text = call_ai(prompt, "grok")
+    text = call_ai(prompt, "codex")
+    text = call_ai(prompt, "antigravity")
+    text = call_ai(prompt, "opencode")  # OPENCODE_URL HTTP
 """
 
 from __future__ import annotations
@@ -21,9 +22,11 @@ import urllib.request
 
 log = logging.getLogger(__name__)
 
+DEFAULT_AI = "claude"
+
 __all__ = [
+    "DEFAULT_AI",
     "call_ai",
-    "call_gemini",
     "call_claude",
     "call_openai_compat",
     "call_ollama",
@@ -35,9 +38,6 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Model defaults
 # ---------------------------------------------------------------------------
-
-GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_FALLBACK = "gemini-2.0-flash-lite"
 
 CLAUDE_MODEL = "claude-sonnet-4-6"
 CLAUDE_FALLBACK = "claude-haiku-4-5-20251001"
@@ -53,7 +53,6 @@ MISTRAL_ENDPOINT = "https://api.mistral.ai/v1/chat/completions"
 GROK_MODEL = "grok-4"
 GROK_ENDPOINT = "https://api.x.ai/v1/chat/completions"
 VALID_PROVIDERS: set[str] = {
-    "gemini",
     "claude",
     "openai",
     "chatgpt",
@@ -63,10 +62,10 @@ VALID_PROVIDERS: set[str] = {
     "cursor",
     "codex",
     "opencode",
+    "antigravity",
 }
 
 PROVIDER_MODELS: dict[str, list[str]] = {
-    "gemini": ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro"],
     "claude": ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5-20251001"],
     "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "o1-mini"],
     "chatgpt": ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "o1-mini"],
@@ -76,10 +75,10 @@ PROVIDER_MODELS: dict[str, list[str]] = {
     "cursor": [],
     "codex": [],
     "opencode": ["openai/gpt-5.4"],
+    "antigravity": [],
 }
 
 KEY_ENV: dict[str, str | None] = {
-    "gemini": "GEMINI_API_KEY",
     "claude": "ANTHROPIC_API_KEY",
     "openai": "OPENAI_API_KEY",
     "chatgpt": "OPENAI_API_KEY",
@@ -89,79 +88,13 @@ KEY_ENV: dict[str, str | None] = {
     "cursor": None,
     "codex": None,
     "opencode": None,
+    "antigravity": None,
 }
+
 
 # ---------------------------------------------------------------------------
 # Provider implementations
 # ---------------------------------------------------------------------------
-
-
-def call_gemini(
-    prompt: str,
-    api_key: str,
-    *,
-    model: str | None = None,
-    temperature: float = 0.4,
-    max_tokens: int = 8192,
-    retries: int = 6,
-) -> str:
-    """Call Gemini API with exponential backoff on 429 and model fallback."""
-    models_to_try = [model] if model else [GEMINI_MODEL, GEMINI_FALLBACK]
-    for m in models_to_try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent"
-        payload = json.dumps(
-            {
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {
-                    "temperature": temperature,
-                    "maxOutputTokens": max_tokens,
-                },
-            }
-        ).encode()
-        for attempt in range(retries):
-            req = urllib.request.Request(
-                url,
-                data=payload,
-                headers={
-                    "Content-Type": "application/json",
-                    "x-goog-api-key": api_key,
-                },
-            )
-            try:
-                with urllib.request.urlopen(req, timeout=120) as resp:
-                    body = resp.read()
-                try:
-                    result = json.loads(body)
-                except json.JSONDecodeError as e:
-                    raise RuntimeError(f"Gemini returned invalid JSON: {e}")
-                if m != models_to_try[0]:
-                    log.debug("Used fallback model: %s", m)
-                try:
-                    return result["candidates"][0]["content"]["parts"][0]["text"]
-                except (KeyError, IndexError, TypeError) as e:
-                    raise RuntimeError(f"Gemini unexpected response structure: {e} — {str(result)[:200]}")
-            except urllib.error.HTTPError as e:
-                if e.code == 429 and attempt < retries - 1:
-                    wait = min(2 ** (attempt + 2), 120)
-                    log.warning(
-                        "Rate limited (429) on %s, retrying in %ds... (%d/%d)",
-                        m,
-                        wait,
-                        attempt + 1,
-                        retries,
-                    )
-                    time.sleep(wait)
-                elif e.code == 429 and m != models_to_try[-1]:
-                    log.warning(
-                        "%s still rate-limited, switching to %s...",
-                        m,
-                        models_to_try[-1],
-                    )
-                    break
-                else:
-                    raise
-    tried = model or f"{GEMINI_MODEL} and {GEMINI_FALLBACK}"
-    raise RuntimeError(f"Gemini API rate-limited on {tried}. Try again later.")
 
 
 def call_claude(
@@ -406,14 +339,6 @@ def call_ai(
             log.warning("%s CLI failed (%s); falling back to API key", provider, exc)
 
     if api_key:
-        if provider == "gemini":
-            return call_gemini(
-                prompt,
-                api_key,
-                model=model,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
         if provider == "claude":
             return call_claude(
                 prompt,

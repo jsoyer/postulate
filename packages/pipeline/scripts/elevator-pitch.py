@@ -104,7 +104,7 @@ def main():
     parser.add_argument(
         "--context", default="networking", choices=list(CONTEXT_LABEL), help="Delivery context (default: networking)"
     )
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
     load_env()

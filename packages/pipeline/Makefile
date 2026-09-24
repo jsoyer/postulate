@@ -39,7 +39,7 @@ LANG :=
 
 # AI provider for make tailor (default: gemini)
 # Usage: make tailor NAME=... AI=claude
-AI ?= gemini
+AI ?= claude
 
 # ---------------------------------------------------------------------------
 # Parameterized, CWD-independent engine surface (Shared Contract).
@@ -325,12 +325,8 @@ apply:
 		echo "   4. Ready:   gh pr ready"; \
 	}
 
-# Tailor CV and/or cover letter with AI (default: Gemini)
-# Runs ATS score before and after tailoring to show improvement
-# Usage: make tailor NAME=2026-02-snowflake [AI=gemini|claude|openai|mistral|ollama|grok|cursor|codex|opencode] [TARGET=cl|cv|both] [MODEL=...]
-# TARGET: cl (default) = cover letter only, cv = CV only, both = CV + cover letter
-# MODEL: optional model override (e.g. MODEL=claude-opus-4-6, MODEL=openai/gpt-5.4)
-# Auth: API key if set, else a logged-in CLI (grok/claude/gemini/cursor-agent/codex/opencode).
+# Tailor CV and/or cover letter with AI (default: claude CLI)
+# Usage: make tailor NAME=... [AI=claude|grok|codex|antigravity|opencode] [TARGET=cl|cv|both] [MODEL=...]
 TARGET ?= cl
 MODEL ?=
 tailor:
@@ -338,8 +334,6 @@ tailor:
 	@test -d "$(APP_DIR)/$(NAME)" || (echo "Directory $(APP_DIR)/$(NAME) not found" && exit 1)
 	@case "$(TARGET)" in cv|cl|both) ;; *) echo "❌ TARGET must be cv, cl, or both" && exit 1 ;; esac
 	@case "$(AI)" in \
-		gemini)  test -n "$(GEMINI_API_KEY)"    || command -v gemini >/dev/null \
-			|| (echo "❌ Set GEMINI_API_KEY or log in: gemini" && exit 1) ;; \
 		claude)  test -n "$(ANTHROPIC_API_KEY)" || command -v claude >/dev/null \
 			|| (echo "❌ Set ANTHROPIC_API_KEY or log in: claude" && exit 1) ;; \
 		openai|chatgpt)  test -n "$(OPENAI_API_KEY)"    || command -v codex >/dev/null \
@@ -355,7 +349,9 @@ tailor:
 			|| (echo "❌ Log in: codex login" && exit 1) ;; \
 		opencode) command -v opencode >/dev/null || test -n "$(OPENCODE_URL)" \
 			|| (echo "❌ opencode CLI or OPENCODE_URL=http://127.0.0.1:4096" && exit 1) ;; \
-		*)       echo "❌ Unknown AI provider: $(AI). Valid: gemini claude openai chatgpt mistral ollama grok cursor codex opencode" && exit 1 ;; \
+		antigravity|agy|gemini) command -v agy >/dev/null \
+			|| (echo "❌ Install Antigravity CLI: curl -fsSL https://antigravity.google/cli/install.sh | bash" && exit 1) ;; \
+		*)       echo "❌ Unknown AI provider: $(AI). Valid: claude grok codex antigravity opencode openai chatgpt cursor mistral ollama" && exit 1 ;; \
 	esac
 	@if [ -f "$(APP_DIR)/$(NAME)/job.txt" ]; then \
 		echo "📊 Pre-tailoring ATS score:"; \

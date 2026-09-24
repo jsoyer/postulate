@@ -174,7 +174,7 @@ def main():
         default="business,technical,culture",
         help="Comma-separated angles to generate (default: business,technical,culture)",
     )
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS), help="AI provider (default: gemini)")
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS), help="AI provider (default: claude)")
     args = parser.parse_args()
 
     load_env()

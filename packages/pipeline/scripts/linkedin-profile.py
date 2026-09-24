@@ -288,7 +288,7 @@ def main():
     parser.add_argument(
         "app_dir", nargs="?", default="", help="Application directory (optional — uses cv-tailored.yml if present)"
     )
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS), help="AI provider (default: gemini)")
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS), help="AI provider (default: claude)")
     parser.add_argument("--lang", default="en", choices=["en", "fr"], help="Output language: en (default) or fr")
     args = parser.parse_args()
 

@@ -183,7 +183,7 @@ def main():
         "--type", choices=["recruiter", "hm", "referral"], default="recruiter", help="Message type (default: recruiter)"
     )
     parser.add_argument("--contact", default="", help="Contact name to address (from contacts.md)")
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS), help="AI provider (default: gemini)")
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS), help="AI provider (default: claude)")
     args = parser.parse_args()
 
     load_env()

@@ -163,7 +163,7 @@ Ranked by likelihood of killing your candidacy:
 def main():
     parser = argparse.ArgumentParser(description="AI blind spot analysis for a job application")
     parser.add_argument("app_dir", help="Application directory")
-    parser.add_argument("--ai", default="gemini", choices=sorted(VALID_PROVIDERS))
+    parser.add_argument("--ai", default="claude", choices=sorted(VALID_PROVIDERS))
     args = parser.parse_args()
 
     load_env()

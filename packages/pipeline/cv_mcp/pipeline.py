@@ -527,7 +527,7 @@ def run_pipeline(
     job_text: str | None = None,
     confirm: bool = False,
     force: bool = False,
-    ai: str = "gemini",
+    ai: str = "claude",
     model: str | None = None,
     preferences: dict[str, Any] | None = None,
     when: date | None = None,
