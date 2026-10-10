@@ -24,14 +24,14 @@ ArgvBuilder = Callable[[str, Path, str | None], list[str]]
 def _grok_argv(binary: str, prompt_file: Path, model: str | None) -> list[str]:
     effort = (os.environ.get("GROK_EFFORT") or "high").strip() or "high"
     chosen = model or os.environ.get("GROK_MODEL") or "grok-4.6"
-    cmd = [
+    prompt = prompt_file.read_text(encoding="utf-8")
+    return [
         binary,
-        "--prompt-file",
-        str(prompt_file),
-        "--verbatim",
-        "--max-turns",
-        "8",
+        "-p",
+        prompt,
         "--disable-web-search",
+        "--no-subagents",
+        "--no-plan",
         "--output-format",
         "plain",
         "--reasoning-effort",
@@ -39,7 +39,6 @@ def _grok_argv(binary: str, prompt_file: Path, model: str | None) -> list[str]:
         "-m",
         chosen,
     ]
-    return cmd
 
 
 def _claude_argv(binary: str, prompt_file: Path, model: str | None) -> list[str]:
