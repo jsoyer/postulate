@@ -556,18 +556,35 @@ def main():
         with open(job_url_file, encoding="utf-8") as f:
             job_url = f.read().strip().replace("\\", "")
 
+    fetched = ""
     if job_url:
         print(f"🌐 Fetching: {job_url}")
         try:
-            job_text = fetch_url_text(job_url)
-            print(f"   Extracted {len(job_text)} characters")
+            fetched = fetch_url_text(job_url)
+            print(f"   Extracted {len(fetched)} characters")
         except Exception as e:
             log.warning("Could not fetch URL: %s", e)
 
-    if not job_text and os.path.exists(job_txt_file):
+    local = ""
+    if os.path.exists(job_txt_file):
         with open(job_txt_file, encoding="utf-8") as f:
-            job_text = f.read()
-        print(f"   Using fallback: {job_txt_file}")
+            local = f.read()
+
+    def _usable(text: str) -> bool:
+        low = (text or "").lower()
+        if len(low) < 400:
+            return False
+        if "enable javascript" in low or "you need to enable javascript" in low:
+            return False
+        return True
+
+    if _usable(fetched) and (not local or len(fetched) >= len(local)):
+        job_text = fetched
+    elif local.strip():
+        job_text = local
+        print(f"   Using fallback: {job_txt_file} ({len(local)} chars)")
+    else:
+        job_text = fetched
 
     if not job_text:
         log.error("No job description found. Provide job.url or job.txt")
