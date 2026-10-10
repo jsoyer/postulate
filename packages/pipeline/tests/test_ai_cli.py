@@ -62,8 +62,10 @@ def test_call_cli_runs_in_isolation() -> None:
     assert text == "YAML_OK"
     cmd = seen["cmd"]
     assert cmd[0] == "/opt/grok"
-    assert "--prompt-file" in cmd
-    assert "--max-turns" in cmd
+    assert cmd[1] == "-p"
+    assert "write a cover letter" in cmd[2]
+    assert "--prompt-file" not in cmd
+    assert "--max-turns" not in cmd
     assert "--reasoning-effort" in cmd
     assert cmd[cmd.index("--reasoning-effort") + 1] == "high"
     assert "-m" in cmd
